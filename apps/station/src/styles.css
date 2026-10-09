@@ -1311,3 +1311,19 @@ a:focus-visible {
     grid-template-rows: 10rem minmax(0, 1fr);
   }
 }
+
+.pr-link {
+  margin: 0.4rem 0 0;
+  font: 500 0.8rem var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.pr-link a,
+a.button {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pr-link a {
+  color: var(--check);
+}

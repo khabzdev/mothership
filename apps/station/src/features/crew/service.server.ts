@@ -95,6 +95,14 @@ export class CrewService {
     return { cwd: row.cwd, repoPath, ownWorktree: !!row.branch && row.cwd !== repoPath };
   }
 
+  /** Remember a crew member's pull request, so O shows it from then on. */
+  setPr(crewId: string, prUrl: string): void {
+    const row = this.#row(crewId);
+    if (!row) return;
+    this.#deps.db.update(crew).set({ prUrl }).where(eq(crew.id, crewId)).run();
+    this.#broadcast(row.deckId);
+  }
+
   async hire(input: HireInput): Promise<CrewInfo> {
     return this.#seat(input, "claude-code");
   }

@@ -39,6 +39,7 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
           <Key k="E" label="Open terminal" />
           <Key k="P" label={`Prompt ${member.name}`} />
           <Key k="C" label="Changes" />
+          {member.branch && <Key k="O" label={member.prUrl ? "See PR" : "Open PR"} />}
           {member.status === "asleep" && (
             <Key k="R" label={member.kind === "shell" ? "Restart" : "Resume"} />
           )}

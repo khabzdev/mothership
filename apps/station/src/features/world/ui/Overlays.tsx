@@ -127,6 +127,35 @@ function ChangesWindow({ member }: { member: CrewInfo }) {
   );
 }
 
+function PrWindow({ member }: { member: CrewInfo }) {
+  const url = member.prUrl ?? "";
+  const number = /\/pull\/(\d+)/.exec(url)?.[1];
+  return (
+    <Modal
+      title={`🔀 ${member.name}'s pull request${number ? ` #${number}` : ""}`}
+      subtitle={`🌿 ${member.branch ?? ""}`}
+    >
+      <p className="pr-link">
+        <a href={url} target="_blank" rel="noreferrer noopener">
+          {url}
+        </a>
+      </p>
+      <footer className="modal__foot">
+        <button
+          type="button"
+          className="button button--ghost"
+          onClick={() => void navigator.clipboard?.writeText(url)}
+        >
+          Copy link
+        </button>
+        <a className="button" href={url} target="_blank" rel="noreferrer noopener">
+          Open on GitHub ↗
+        </a>
+      </footer>
+    </Modal>
+  );
+}
+
 /** Whichever game window is open. */
 export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
   const overlay = useWorld((s) => s.overlay);
@@ -149,6 +178,10 @@ export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] })
     case "changes": {
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <ChangesWindow member={member} /> : null;
+    }
+    case "pr": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member?.prUrl ? <PrWindow member={member} /> : null;
     }
     case "sendHome": {
       const member = crew.find((c) => c.id === overlay.crewId);
