@@ -8,8 +8,22 @@ import type {
   TransitionResult,
 } from "./types.ts";
 
-export function createMission(brief: Brief): Mission {
-  return { state: "briefing", brief, attempts: 0 };
+export const DEFAULT_MAX_ATTEMPTS = 3;
+
+export interface MissionOptions {
+  maxAttempts?: number;
+}
+
+export function createMission(brief: Brief, options: MissionOptions = {}): Mission {
+  const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+    throw new RangeError("maxAttempts must be ≥ 1");
+  }
+  return { state: "briefing", brief, attempts: 0, maxAttempts };
+}
+
+export function fuelRemaining(mission: Mission): number {
+  return Math.max(0, mission.maxAttempts - mission.attempts);
 }
 
 export function transition(mission: Mission, event: MissionEvent): TransitionResult {
@@ -40,6 +54,8 @@ export function transition(mission: Mission, event: MissionEvent): TransitionRes
         : reject;
     case "resume":
       return mission.state === "redAlert" ? resume(mission) : reject;
+    case "refuel":
+      return refuel(mission, event.extraAttempts, reject);
   }
 }
 
@@ -68,6 +84,18 @@ function finishPreflight(mission: Mission, reported: CriterionResult[]): Transit
   const failures = results.filter((r) => r.verdict === "nogo");
   const next = { ...mission, lastPreflight: results };
 
+  if (failures.length > 0 && fuelRemaining(mission) === 0) {
+    const criteria = failures.length === 1 ? "criterion" : "criteria";
+    return ok({
+      ...next,
+      state: "redAlert",
+      alert: {
+        reason: "outOfFuel",
+        detail: `${failures.length} ${criteria} still NO-GO after ${mission.attempts} attempts`,
+      },
+      resumeTo: "building",
+    });
+  }
   if (failures.length > 0) {
     return ok(
       { ...next, state: "building", attempts: mission.attempts + 1 },
@@ -101,6 +129,9 @@ function raiseAlert(mission: Mission, event: AlertEvent): TransitionResult {
 }
 
 function resume(mission: Mission): TransitionResult {
+  if (mission.alert?.reason === "outOfFuel") {
+    return { ok: false, error: "Out of fuel: refuel to continue" };
+  }
   const { alert: _alert, resumeTo, ...rest } = mission;
   const state = resumeTo ?? "building";
   const resumed: Mission = { ...rest, state };
@@ -112,4 +143,29 @@ function resume(mission: Mission): TransitionResult {
     });
   }
   return ok(resumed);
+}
+
+function refuel(
+  mission: Mission,
+  extraAttempts: number,
+  reject: TransitionResult,
+): TransitionResult {
+  if (mission.state !== "redAlert") return reject;
+  if (mission.alert?.reason !== "outOfFuel") {
+    return { ok: false, error: `Cannot refuel while redAlert (${mission.alert?.reason})` };
+  }
+  if (!Number.isInteger(extraAttempts) || extraAttempts < 1) {
+    return { ok: false, error: "Refuel must add at least 1 attempt" };
+  }
+  const { alert: _alert, resumeTo: _resumeTo, ...rest } = mission;
+  const failures = (mission.lastPreflight ?? []).filter((r) => r.verdict === "nogo");
+  return ok(
+    {
+      ...rest,
+      state: "building",
+      maxAttempts: mission.maxAttempts + extraAttempts,
+      attempts: mission.attempts + 1,
+    },
+    { type: "sendFeedback", failures },
+  );
 }

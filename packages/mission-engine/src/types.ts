@@ -25,7 +25,7 @@ export interface CriterionResult {
 }
 
 export interface Alert {
-  reason: "needsInput" | "crashed" | "launchFailed";
+  reason: "needsInput" | "crashed" | "launchFailed" | "outOfFuel";
   detail: string;
 }
 
@@ -34,6 +34,8 @@ export interface Mission {
   brief: Brief;
   /** Build attempts so far, including NO-GO rebuilds. */
   attempts: number;
+  /** Fuel tank: build attempts allowed before an out-of-fuel alert. */
+  maxAttempts: number;
   lastPreflight?: CriterionResult[];
   alert?: Alert;
   /** State to return to when a red alert is resolved. */
@@ -49,7 +51,8 @@ export type MissionEvent =
   | { type: "preflightFinished"; results: CriterionResult[] }
   | { type: "launchSucceeded"; prUrl: string }
   | { type: "launchFailed"; detail: string }
-  | { type: "resume" };
+  | { type: "resume" }
+  | { type: "refuel"; extraAttempts: number };
 
 /** Side effects the runtime must perform after a transition. */
 export type MissionEffect =

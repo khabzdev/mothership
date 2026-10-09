@@ -50,7 +50,7 @@ function inState(state: MissionState): Mission {
 describe("createMission", () => {
   test("starts in briefing with no attempts", () => {
     const mission = createMission(brief);
-    expect(mission).toMatchObject({ state: "briefing", attempts: 0, brief });
+    expect(mission).toMatchObject({ state: "briefing", attempts: 0, maxAttempts: 3, brief });
   });
 });
 
@@ -171,6 +171,7 @@ describe("transition table", () => {
     { type: "launchSucceeded", prUrl: "u" },
     { type: "launchFailed", detail: "x" },
     { type: "resume" },
+    { type: "refuel", extraAttempts: 1 },
   ];
 
   const allowed: Record<MissionState, MissionEvent["type"][]> = {
@@ -189,7 +190,7 @@ describe("transition table", () => {
         const result = transition(inState(state), event);
         expect(result.ok).toBe(ok);
         if (!result.ok) {
-          expect(result.error).toBe(`Cannot ${event.type} while ${state}`);
+          expect(result.error.startsWith(`Cannot ${event.type} while ${state}`)).toBe(true);
         }
       });
     }
