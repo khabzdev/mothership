@@ -10,7 +10,17 @@ export default defineConfig({
   preview: { host: "127.0.0.1" },
   // App plugins start servers and devtools; unit tests don't need them.
   plugins: lazyPlugins(() =>
-    process.env.VITEST ? [] : [devtools(), nitro(), tanstackStart(), viteReact()],
+    process.env.VITEST
+      ? []
+      : [
+          devtools(),
+          nitro({
+            features: { websocket: true },
+            routes: { "/_ws": "./src/shared/realtime/socket.server.ts" },
+          }),
+          tanstackStart(),
+          viteReact(),
+        ],
   ),
   test: { environment: "node" },
 });

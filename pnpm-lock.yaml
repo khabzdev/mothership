@@ -220,6 +220,9 @@ importers:
       '@mothership/mission-engine':
         specifier: workspace:*
         version: link:../../packages/mission-engine
+      '@mothership/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
       '@tanstack/react-devtools':
         specifier: 0.10.13
         version: 0.10.13(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(solid-js@1.9.17)
