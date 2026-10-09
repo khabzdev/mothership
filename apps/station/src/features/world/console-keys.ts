@@ -1,6 +1,6 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect } from "react";
-import { sendHomeCrew } from "../crew/crew.functions";
+import { openShell, resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { gameKeysEnabled, useWorld } from "./store";
 
 /** Send a crew member without a worktree of its own home at once (agent-office's X). */
@@ -12,8 +12,25 @@ export function sendHomeNow(member: CrewInfo): void {
   );
 }
 
+/** R: wake an asleep crew member in its own session, or restart its shell. */
+function resume(member: CrewInfo): void {
+  const { say } = useWorld.getState();
+  if (member.status !== "asleep") return say(`${member.name} is already running`);
+  say(member.kind === "shell" ? "🐚 Restarting the shell" : `⏰ Waking ${member.name} up`);
+  resumeCrew({ data: { crewId: member.id } }).catch((error: Error) => say(`⚠️ ${error.message}`));
+}
+
+/** B: a shell at an empty console, with its terminal open. */
+function shell(deckId: string, consoleId: number): void {
+  const { say, open } = useWorld.getState();
+  openShell({ data: { deckId, consoleId, task: "", worktree: false } }).then(
+    (member) => open({ kind: "terminal", crewId: member.id }),
+    (error: Error) => say(`⚠️ ${error.message}`),
+  );
+}
+
 /** The keys at a console: agent-office's desk keys. */
-export function useConsoleKeys(crew: CrewInfo[]): void {
+export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!gameKeysEnabled(e)) return;
@@ -44,9 +61,19 @@ export function useConsoleKeys(crew: CrewInfo[]): void {
           if (member.branch) open({ kind: "sendHome", crewId: member.id });
           else sendHomeNow(member);
           return;
+        case "KeyR":
+          if (!member) return;
+          e.preventDefault();
+          resume(member);
+          return;
+        case "KeyB":
+          if (member) return;
+          e.preventDefault();
+          shell(deckId, consoleId);
+          return;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [crew]);
+  }, [deckId, crew]);
 }

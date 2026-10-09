@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, test } from "vite-plus/test";
-import { HOOK_EVENTS, claudeCode, type LaunchOptions } from "../src/index.ts";
+import { HOOK_EVENTS, claudeCode, shell, type LaunchOptions } from "../src/index.ts";
 
 const options: LaunchOptions = {
   crewId: "crew-1",
@@ -46,6 +46,18 @@ describe("launchPlan", () => {
   test("adds the model when given", () => {
     const plan = claudeCode.launchPlan({ ...options, model: "claude-opus-5-5" });
     expect(plan.args.slice(0, 2)).toEqual(["--model", "claude-opus-5-5"]);
+  });
+
+  test("resumes an earlier session when given one", () => {
+    const plan = claudeCode.launchPlan({ ...options, prompt: "", resume: "abc-123" });
+    expect(plan.args.slice(0, 2)).toEqual(["--resume", "abc-123"]);
+    expect(plan.args).not.toContain("--");
+  });
+
+  test("reads the session id off a hook payload, and nothing odd", () => {
+    expect(claudeCode.sessionOf?.({ session_id: "abc-123" })).toBe("abc-123");
+    expect(claudeCode.sessionOf?.({ session_id: "../etc" })).toBeUndefined();
+    expect(claudeCode.sessionOf?.(null)).toBeUndefined();
   });
 
   test("a prompt that looks like a flag stays a prompt", () => {
@@ -214,5 +226,14 @@ describe("hook commands (run the way Claude runs them)", () => {
     const result = await runHook(command, plan.env, "{}");
     expect(result.code).toBe(0);
     expect(result.ms).toBeLessThan(3000);
+  });
+});
+
+describe("shell", () => {
+  test("is a login shell in the console's folder with no hooks", () => {
+    const plan = shell.launchPlan(options);
+    expect(plan).toMatchObject({ args: ["-l"], cwd: options.cwd, env: {} });
+    expect(plan.command).toMatch(/sh$/);
+    expect(shell.parseHook({ hook_event_name: "Stop" })).toBeNull();
   });
 });

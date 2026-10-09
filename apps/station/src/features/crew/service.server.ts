@@ -1,6 +1,7 @@
 import type { CrewInfo, CrewStatus, ServerMsg } from "@mothership/protocol";
 import type { CrewSignal } from "@mothership/providers";
 import { and, asc, eq } from "drizzle-orm";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Db } from "../../shared/db/client.server";
 import { crew, decks } from "../../shared/db/schema";
@@ -45,6 +46,7 @@ const SUBMIT_DELAY_MS = 120;
 function toInfo(row: Row): CrewInfo {
   return {
     id: row.id,
+    kind: row.provider === "shell" ? "shell" : "agent",
     deckId: row.deckId,
     consoleId: row.consoleId,
     name: row.name,
@@ -79,7 +81,49 @@ export class CrewService {
       .map(toInfo);
   }
 
+  member(crewId: string): CrewInfo {
+    const row = this.#row(crewId);
+    if (!row) throw new Error(`No such crew member: ${crewId}`);
+    return toInfo(row);
+  }
+
   async hire(input: HireInput): Promise<CrewInfo> {
+    return this.#seat(input, "claude-code");
+  }
+
+  /** A plain shell at an empty console, in the deck's own checkout (agent-office's B). */
+  async openShell(input: { deckId: string; consoleId: number }): Promise<CrewInfo> {
+    const member = await this.#seat({ ...input, task: "", worktree: false }, "shell");
+    // A shell has no hooks: it's ready as soon as it's running.
+    this.#update(member.id, "idle", { action: null, detail: null });
+    return toInfo(this.#row(member.id)!);
+  }
+
+  /** Wake an asleep crew member: resume its agent's session, or restart its shell (R). */
+  async resume(crewId: string): Promise<CrewInfo> {
+    const row = this.#row(crewId);
+    if (!row) throw new Error(`No such crew member: ${crewId}`);
+    if (row.status !== "asleep") throw new Error(`${row.name} is still running`);
+    if (!existsSync(row.cwd)) throw new Error(`${row.name}'s worktree is gone: ${row.cwd}`);
+    const shell = row.provider === "shell";
+    this.#update(crewId, shell ? "idle" : "starting", { action: null, detail: null });
+    try {
+      await this.#deps.launcher.launch({
+        crewId,
+        missionId: crewId,
+        provider: row.provider,
+        prompt: "",
+        cwd: row.cwd,
+        ...(row.sessionId && !shell && { resume: row.sessionId }),
+      });
+    } catch (error) {
+      this.#update(crewId, "asleep", { action: null, detail: null });
+      throw error;
+    }
+    return toInfo(this.#row(crewId)!);
+  }
+
+  async #seat(input: HireInput, provider: string): Promise<CrewInfo> {
     const { db, home, launcher } = this.#deps;
     const deck = db.select().from(decks).where(eq(decks.id, input.deckId)).get();
     if (!deck) throw new Error(`No such deck: ${input.deckId}`);
@@ -116,6 +160,7 @@ export class CrewService {
         name,
         color: CREW_COLORS[slot % CREW_COLORS.length]!,
         character: CREW_CHARACTERS[slot % CREW_CHARACTERS.length]!,
+        provider,
         task: input.task,
         cwd,
         branch,
@@ -124,13 +169,7 @@ export class CrewService {
     this.#broadcast(deck.id);
 
     try {
-      await launcher.launch({
-        crewId: id,
-        missionId: id,
-        provider: "claude-code",
-        prompt: input.task,
-        cwd,
-      });
+      await launcher.launch({ crewId: id, missionId: id, provider, prompt: input.task, cwd });
     } catch (error) {
       db.delete(crew).where(eq(crew.id, id)).run();
       this.#broadcast(deck.id);
@@ -183,7 +222,18 @@ export class CrewService {
     return () => this.#goneListeners.delete(listener);
   }
 
-  handleSignal({ crewId, signal }: { crewId: string; signal: CrewSignal }): void {
+  handleSignal({
+    crewId,
+    signal,
+    sessionId,
+  }: {
+    crewId: string;
+    signal: CrewSignal;
+    sessionId?: string;
+  }): void {
+    if (sessionId) {
+      this.#deps.db.update(crew).set({ sessionId }).where(eq(crew.id, crewId)).run();
+    }
     const action =
       signal.type === "working" && signal.activity
         ? (toolAction(signal.activity.tool, signal.activity.command) ?? null)

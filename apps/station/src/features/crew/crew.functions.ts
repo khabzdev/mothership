@@ -28,3 +28,19 @@ export const crewWorktree = createServerFn()
 export const sendHomeCrew = createServerFn({ method: "POST" })
   .validator(parseSendHomeInput)
   .handler(({ data }) => getStation().crew.sendHome(data.crewId, data.worktree));
+
+export const openShell = createServerFn({ method: "POST" })
+  .validator(parseHireInput)
+  .handler(({ data }) => getStation().crew.openShell(data));
+
+export const resumeCrew = createServerFn({ method: "POST" })
+  .validator(parseCrewIdInput)
+  .handler(async ({ data }) => {
+    const station = getStation();
+    const member = station.crew.member(data.crewId);
+    if (member.kind === "agent") {
+      const blocker = crewBlocker(await station.diagnostics());
+      if (blocker) throw new Error(blocker);
+    }
+    return station.crew.resume(data.crewId);
+  });

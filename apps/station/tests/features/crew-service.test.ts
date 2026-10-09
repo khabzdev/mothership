@@ -91,6 +91,7 @@ describe("hire", () => {
         cwd: repo,
       },
     ]);
+    expect(nova.kind).toBe("agent");
     expect(rosters.at(-1)?.crew.map((c) => c.name)).toEqual(["Nova"]);
   });
 
@@ -286,5 +287,42 @@ describe("send home", () => {
     expect(branches()).toContain(keep.branch);
     expect(branches()).toContain(remove.branch);
     expect(branches()).not.toContain(del.branch);
+  });
+});
+
+describe("shells and resuming", () => {
+  test("B opens a ready shell in the deck's checkout", async () => {
+    const shell = await service.openShell({ deckId: "deck-1", consoleId: 6 });
+    expect(shell).toMatchObject({ kind: "shell", status: "idle", task: "" });
+    expect(launcher.launches.at(-1)).toMatchObject({ provider: "shell", cwd: repo, prompt: "" });
+  });
+
+  test("R resumes an asleep agent's own session", async () => {
+    const nova = await hire(1);
+    service.handleSignal({ crewId: nova.id, signal: { type: "idle" }, sessionId: "sess-1" });
+    await expect(service.resume(nova.id)).rejects.toThrow("still running");
+    service.handleExit(nova.id);
+    const woken = await service.resume(nova.id);
+    expect(woken.status).toBe("starting");
+    expect(launcher.launches.at(-1)).toMatchObject({
+      crewId: nova.id,
+      prompt: "",
+      resume: "sess-1",
+    });
+  });
+
+  test("R restarts an exited shell, ready at once", async () => {
+    const shell = await service.openShell({ deckId: "deck-1", consoleId: 6 });
+    service.handleExit(shell.id);
+    expect((await service.resume(shell.id)).status).toBe("idle");
+    expect(launcher.launches.at(-1)).not.toHaveProperty("resume");
+  });
+
+  test("a failed resume leaves it asleep", async () => {
+    const nova = await hire(1);
+    service.handleExit(nova.id);
+    launcher.failWith = new Error("Command not found: claude");
+    await expect(service.resume(nova.id)).rejects.toThrow("Command not found");
+    expect(service.member(nova.id).status).toBe("asleep");
   });
 });

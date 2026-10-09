@@ -14,6 +14,7 @@ import {
 
 const nova: CrewInfo = {
   id: "c1",
+  kind: "agent",
   deckId: "d1",
   consoleId: 3,
   name: "Nova",

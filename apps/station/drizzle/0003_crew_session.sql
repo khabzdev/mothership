@@ -1,0 +1,1 @@
+ALTER TABLE `crew` ADD `session_id` text;

@@ -88,6 +88,20 @@ describe("CrewRegistry persistence", () => {
 });
 
 describe("handleHookRequest", () => {
+  test("passes on the agent's session id for resuming later", async () => {
+    const { token, published, deps } = setup();
+    await handleHookRequest(
+      post(
+        { hook_event_name: "SessionStart", session_id: "sess-9" },
+        { "x-mothership-crew": "crew-1", "x-mothership-token": token },
+      ),
+      deps,
+    );
+    expect(published).toEqual([
+      { crewId: "crew-1", missionId: "m1", signal: { type: "idle" }, sessionId: "sess-9" },
+    ]);
+  });
+
   test("accepts an authenticated hook and publishes the crew signal", async () => {
     const { token, published, deps } = setup();
     const res = await handleHookRequest(

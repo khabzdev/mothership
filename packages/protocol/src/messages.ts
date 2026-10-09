@@ -25,9 +25,14 @@ export type CrewActivity = {
   command?: string;
 };
 
+export const CREW_KINDS = ["agent", "shell"] as const;
+/** An agent (Claude Code) or a plain shell opened at a console (agent-office's B). */
+export type CrewKind = (typeof CREW_KINDS)[number];
+
 /** A crew member at a console on a deck (agent-office's WorkerInfo). */
 export interface CrewInfo {
   id: CrewId;
+  kind: CrewKind;
   deckId: DeckId;
   consoleId: number;
   name: string;

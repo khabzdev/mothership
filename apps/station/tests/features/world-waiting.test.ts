@@ -13,6 +13,7 @@ import {
 function crew(id: string, patch: Partial<CrewInfo> = {}): CrewInfo {
   return {
     id,
+    kind: "agent",
     deckId: "d",
     consoleId: 0,
     name: id,

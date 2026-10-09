@@ -1,4 +1,5 @@
 import {
+  CREW_KINDS,
   CREW_STATUSES,
   type ClientMsg,
   type CrewInfo,
@@ -117,6 +118,7 @@ function isCrewInfo(value: unknown): value is CrewInfo {
   const c = value as Record<string, unknown>;
   return (
     isId(c.id) &&
+    CREW_KINDS.includes(c.kind as CrewInfo["kind"]) &&
     typeof c.consoleId === "number" &&
     typeof c.name === "string" &&
     CREW_STATUSES.includes(c.status as CrewInfo["status"])

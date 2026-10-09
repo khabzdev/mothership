@@ -10,7 +10,7 @@ import { ActProps, type ActPropsHandle } from "./ActProps";
 import { Beacon } from "./Beacon";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { PoseLayer, poseDebug, poseFor } from "./pose";
-import { STATUS_CHIPS, STATUS_COLORS } from "./status";
+import { STATUS_COLORS, chipFor } from "./status";
 
 /** Seated at the console unless it's waving for you or celebrating (agent-office's stances). */
 export function stanceFor(crew: Pick<CrewInfo, "status" | "action">): {
@@ -88,7 +88,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
             <span className="crew-tag__name" style={{ color: crew.color }}>
               {crew.name}
             </span>
-            <span className="crew-tag__chip">{STATUS_CHIPS[crew.status]}</span>
+            <span className="crew-tag__chip">{chipFor(crew)}</span>
             {crew.task && <span className="crew-tag__task">{crew.task.split("\n")[0]}</span>}
           </div>
         </Html>

@@ -96,7 +96,7 @@ export function Game({ deck }: { deck: Deck }) {
   const toast = useWorld((s) => s.toast);
   const [loaded, setLoaded] = useState(false);
   const ready = useCallback(() => setLoaded(true), []);
-  useConsoleKeys(crew);
+  useConsoleKeys(deck.id, crew);
   useNextUp(crew);
   useSoundUnlock();
 

@@ -109,6 +109,7 @@ describe("applyServerMsg", () => {
     const crew = [
       {
         id: "c1",
+        kind: "agent" as const,
         deckId: "d1",
         consoleId: 0,
         name: "Nova",

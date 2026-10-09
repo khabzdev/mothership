@@ -1,4 +1,4 @@
-import type { CrewStatus } from "@mothership/protocol";
+import type { CrewInfo, CrewStatus } from "@mothership/protocol";
 
 /** Helmet-light colours: agent-office's antenna bulb colours. */
 export const STATUS_COLORS: Record<CrewStatus, string> = {
@@ -18,3 +18,9 @@ export const STATUS_CHIPS: Record<CrewStatus, string> = {
   done: "✅ DONE",
   asleep: "💤 ASLEEP",
 };
+
+/** A shell's chip: it's running or it has exited; it never works or waits by itself. */
+export function chipFor(crew: Pick<CrewInfo, "kind" | "status">): string {
+  if (crew.kind === "shell") return crew.status === "asleep" ? "💤 EXITED" : "🐚 SHELL";
+  return STATUS_CHIPS[crew.status];
+}

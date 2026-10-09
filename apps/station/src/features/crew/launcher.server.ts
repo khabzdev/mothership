@@ -18,6 +18,8 @@ export interface LaunchRequest {
   provider: string;
   prompt: string;
   cwd: string;
+  /** An earlier session of the agent's to pick up. */
+  resume?: string;
 }
 
 /** Starts crew processes and types into them. */
@@ -83,6 +85,7 @@ export class PtyCrewLauncher implements CrewLauncher, TerminalSource, ScreenSour
       cwd: request.cwd,
       hookUrl: `${this.#options.stationUrl}/api/hooks`,
       hookToken: token,
+      ...(request.resume && { resume: request.resume }),
     });
     try {
       await client.spawn({

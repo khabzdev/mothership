@@ -37,6 +37,8 @@ export const crew = sqliteTable(
     cwd: text("cwd").notNull(),
     branch: text("branch"),
     prUrl: text("pr_url"),
+    /** The agent's own session, for resuming it after it exits (R). */
+    sessionId: text("session_id"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   },
   (t) => [

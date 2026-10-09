@@ -17,6 +17,8 @@ export interface LaunchOptions {
   /** Per-crew secret the station checks on every hook post. */
   hookToken: string;
   model?: string;
+  /** Pick up this earlier session (from sessionOf) instead of starting a new one. */
+  resume?: string;
 }
 
 export interface LaunchPlan {
@@ -33,4 +35,6 @@ export interface ProviderAdapter {
   launchPlan(options: LaunchOptions): LaunchPlan;
   /** Map a raw hook payload to a crew signal; null for events that don't change status. */
   parseHook(payload: unknown): CrewSignal | null;
+  /** The agent's own session id in a hook payload, for resuming it later. */
+  sessionOf?(payload: unknown): string | undefined;
 }

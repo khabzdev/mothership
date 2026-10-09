@@ -38,6 +38,9 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
           </span>
           <Key k="E" label="Open terminal" />
           <Key k="P" label={`Prompt ${member.name}`} />
+          {member.status === "asleep" && (
+            <Key k="R" label={member.kind === "shell" ? "Restart" : "Resume"} />
+          )}
           <Key k="X" label="Send home" />
         </>
       ) : (
@@ -45,6 +48,7 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
           <span className="hint__what">{label} · empty</span>
           <Key k="E" label="Hire crew" />
           <Key k="P" label="Hire with a task" />
+          <Key k="B" label="Shell" />
         </>
       )}
     </div>

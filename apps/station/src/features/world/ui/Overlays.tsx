@@ -4,7 +4,7 @@ import { useState } from "react";
 import { TerminalPanel } from "../../crew/ui/TerminalPanel";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
-import { STATUS_CHIPS } from "../scene/status";
+import { chipFor } from "../scene/status";
 import { useWorld } from "../store";
 import { Lift } from "./Lift";
 import { Modal } from "./Modal";
@@ -83,7 +83,7 @@ function PromptWindow({ member }: { member: CrewInfo }) {
   const close = useWorld((s) => s.close);
   const prompt = useMutation(promptMutation());
   return (
-    <Modal title={`💬 Prompt ${member.name}`} subtitle={STATUS_CHIPS[member.status]}>
+    <Modal title={`💬 Prompt ${member.name}`} subtitle={chipFor(member)}>
       <TaskBox
         placeholder={`Tell ${member.name} what to do next`}
         required
@@ -105,8 +105,8 @@ function TerminalWindow({ member }: { member: CrewInfo }) {
   return (
     <Modal
       wide
-      title={`${member.name} · Claude Code`}
-      subtitle={`${STATUS_CHIPS[member.status]}${member.task ? ` · ${member.task.split("\n")[0]}` : ""}`}
+      title={`${member.name} · ${member.kind === "shell" ? "Shell" : "Claude Code"}`}
+      subtitle={`${chipFor(member)}${member.task ? ` · ${member.task.split("\n")[0]}` : ""}`}
     >
       <TerminalPanel crewId={member.id} />
     </Modal>

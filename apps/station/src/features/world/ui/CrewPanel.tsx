@@ -1,6 +1,6 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect, useState } from "react";
-import { STATUS_CHIPS } from "../scene/status";
+import { chipFor } from "../scene/status";
 import { needyFirst, waited } from "../waiting";
 
 const COLLAPSED_KEY = "mothership.crewPanel.collapsed";
@@ -66,7 +66,7 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                     {c.name}
                     {sub && <span className="crew-panel__sub">{sub}</span>}
                   </span>
-                  <span className="crew-panel__pill">{STATUS_CHIPS[c.status]}</span>
+                  <span className="crew-panel__pill">{chipFor(c)}</span>
                   {needs && (
                     <span className="crew-panel__ask">
                       🙋 {c.detail ?? "Waiting on an answer"}

@@ -7,6 +7,8 @@ export interface CrewSignalEvent {
   crewId: string;
   missionId: string;
   signal: CrewSignal;
+  /** The agent's own session id, when the hook says. */
+  sessionId?: string;
 }
 
 export interface HookDeps {
@@ -31,10 +33,12 @@ export async function handleHookRequest(request: Request, deps: HookDeps): Promi
     return new Response("Malformed JSON", { status: 400 });
   }
 
-  const signal = deps.providers[crew.provider]?.parseHook(payload) ?? null;
+  const adapter = deps.providers[crew.provider];
+  const signal = adapter?.parseHook(payload) ?? null;
   if (signal) {
+    const sessionId = adapter?.sessionOf?.(payload);
     try {
-      deps.publish({ crewId, missionId: crew.missionId, signal });
+      deps.publish({ crewId, missionId: crew.missionId, signal, ...(sessionId && { sessionId }) });
     } catch (error) {
       // The hook already did its job; a broken subscriber must not make Claude retry or stall.
       console.error("Crew signal subscriber failed", error);

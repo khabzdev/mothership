@@ -43,6 +43,7 @@ function launchPlan(options: LaunchOptions): LaunchPlan {
     command: "claude",
     args: [
       ...(options.model ? ["--model", options.model] : []),
+      ...(options.resume ? ["--resume", options.resume] : []),
       "--settings",
       JSON.stringify(hookSettings()),
       // End of options: a task starting with "-" must not be read as a flag.
@@ -110,4 +111,15 @@ function clip(text: string): string {
   return text.length > MAX_DETAIL ? `${text.slice(0, MAX_DETAIL - 1)}…` : text;
 }
 
-export const claudeCode: ProviderAdapter = { id: "claude-code", launchPlan, parseHook };
+function sessionOf(payload: unknown): string | undefined {
+  if (typeof payload !== "object" || payload === null) return undefined;
+  const id = (payload as Record<string, unknown>).session_id;
+  return typeof id === "string" && /^[\w-]{1,128}$/.test(id) ? id : undefined;
+}
+
+export const claudeCode: ProviderAdapter = {
+  id: "claude-code",
+  launchPlan,
+  parseHook,
+  sessionOf,
+};
