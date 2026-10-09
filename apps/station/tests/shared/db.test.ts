@@ -34,14 +34,14 @@ const member = (deckId: string, consoleId = 0) =>
     .get();
 
 describe("database", () => {
-  test("applies all migrations, leaving decks, crew and console labels", () => {
+  test("applies all migrations, leaving decks, crew, console labels and the task queue", () => {
     const tables = db.$client
       .prepare(
         "select name from sqlite_master where type = 'table' and name not like '\\_\\_%' escape '\\' and name not like 'sqlite_%' order by name",
       )
       .all()
       .map((row) => (row as { name: string }).name);
-    expect(tables).toEqual(["console_labels", "crew", "decks"]);
+    expect(tables).toEqual(["console_labels", "crew", "decks", "queue_tasks"]);
   });
 
   test("enables foreign keys", () => {
