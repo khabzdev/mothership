@@ -1,7 +1,9 @@
-import { Input, Loader } from "@cloudflare/kumo";
+import { Empty, Input, Loader } from "@cloudflare/kumo";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
+import { Icon } from "../../../shared/ui/Icon";
 import { useWorld } from "../../world/store";
 import { searchTerminals } from "../search.functions";
 
@@ -54,7 +56,12 @@ export function SearchWindow({ deckId }: { deckId: string }) {
           </p>
         )}
         {query.length > 1 && results.isSuccess && !hits.length && (
-          <p className="board__empty">No terminal on this deck has “{query}”.</p>
+          <Empty
+            size="sm"
+            icon={<Icon icon={Search01Icon} size={24} />}
+            title="No matches"
+            description={`No terminal on this deck has “${query}”.`}
+          />
         )}
         {byCrew.map((group) => (
           <section key={group.crewId} className="search__group">

@@ -224,7 +224,7 @@ export function Palette({
       .filter((d) => d.id !== deckId)
       .map((d) => ({
         id: `d:${d.id}`,
-        title: `Deck ${d.name.toUpperCase()}`,
+        title: `Deck ${d.name}`,
         subtitle: d.repoPath,
         icon: ArrowUpDownIcon,
         run: () => choose(d.id),

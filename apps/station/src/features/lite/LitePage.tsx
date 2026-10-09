@@ -247,7 +247,7 @@ function LiteDeck({
             if (v) choose(v);
             setSelected(null);
           }}
-          items={Object.fromEntries(decks.map((d) => [d.id, `Deck ${d.name.toUpperCase()}`]))}
+          items={Object.fromEntries(decks.map((d) => [d.id, d.name]))}
         />
         {needs > 0 && <Badge variant="error">{needs} need you</Badge>}
         {done > 0 && <Badge variant="success">{done} done</Badge>}
@@ -277,7 +277,15 @@ function LiteDeck({
                 </button>
               </li>
             ))}
-            {!list.length && <li className="muted lite-list__empty">No crew on this deck yet.</li>}
+            {!list.length && (
+              <li>
+                <Empty
+                  size="sm"
+                  title="No crew on this deck yet"
+                  description="Hire someone below to get started."
+                />
+              </li>
+            )}
           </ul>
           <HireForm deckId={deckId} crew={crew} />
         </>

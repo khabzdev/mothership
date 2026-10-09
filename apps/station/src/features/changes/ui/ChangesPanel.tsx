@@ -60,7 +60,12 @@ function Diff({ crewId, file }: { crewId: string; file: ChangedFile }) {
   const diff = useQuery(diffQuery(crewId, file.path));
   if (file.binary) return <p className="changes__note">Binary file: no diff to show.</p>;
   if (diff.isPending) return <p className="changes__note">Loading the diff…</p>;
-  if (diff.error) return <p className="changes__note error">{diff.error.message}</p>;
+  if (diff.error)
+    return (
+      <div className="changes__note">
+        <ErrorNote error={diff.error} />
+      </div>
+    );
   const lines = diffLines(diff.data.diff);
   if (!lines.length) return <p className="changes__note">No line changes.</p>;
   return (

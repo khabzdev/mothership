@@ -1538,10 +1538,6 @@ kbd {
   text-overflow: ellipsis;
 }
 
-.lite-list__empty {
-  padding: 1rem 0;
-}
-
 .lite-hire,
 .lite-crew {
   display: grid;
