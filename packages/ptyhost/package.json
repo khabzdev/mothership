@@ -1,0 +1,34 @@
+{
+  "name": "@mothership/ptyhost",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone PTY host for Mothership crew terminals; survives station restarts.",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./bin": "./dist/bin.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "start": "node src/bin.ts"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "catalog:",
+    "@xterm/addon-serialize": "catalog:",
+    "@xterm/headless": "catalog:",
+    "ws": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/ws": "catalog:",
+    "typescript": "^7.0.2",
+    "vite-plus": "catalog:"
+  }
+}

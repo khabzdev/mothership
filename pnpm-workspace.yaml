@@ -11,14 +11,19 @@ allowBuilds:
   lightningcss: true
 
 catalog:
+  "@lydell/node-pty": 1.2.0-beta.15
   "@types/better-sqlite3": ^9.6.0
   "@types/node": ^24
+  "@types/ws": ^8.18.2
+  "@xterm/addon-serialize": ^0.14.0
+  "@xterm/headless": ^6.0.0
   better-sqlite3: ^13.0.3
   drizzle-kit: ^0.31.11
   drizzle-orm: ^0.45.4
   typescript: ^7.0.2
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vite-plus: 1.0.0
+  ws: ^8.22.0
 overrides:
   vite@*: "catalog:"
 peerDependencyRules:
