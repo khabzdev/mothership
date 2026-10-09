@@ -38,6 +38,7 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
           </span>
           <Key k="E" label="Open terminal" />
           <Key k="P" label={`Prompt ${member.name}`} />
+          <Key k="X" label="Send home" />
         </>
       ) : (
         <>

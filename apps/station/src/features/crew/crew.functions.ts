@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { crewBlocker } from "../../app/diagnostics";
 import { getStation } from "../../app/station.server";
 import { parseDeckIdInput } from "../decks/model";
-import { parseHireInput, parsePromptInput } from "./model";
+import { parseCrewIdInput, parseHireInput, parsePromptInput, parseSendHomeInput } from "./model";
 
 export const listCrew = createServerFn()
   .validator(parseDeckIdInput)
@@ -20,3 +20,11 @@ export const hireCrew = createServerFn({ method: "POST" })
 export const promptCrew = createServerFn({ method: "POST" })
   .validator(parsePromptInput)
   .handler(({ data }) => getStation().crew.prompt(data.crewId, data.text));
+
+export const crewWorktree = createServerFn()
+  .validator(parseCrewIdInput)
+  .handler(({ data }) => getStation().crew.worktree(data.crewId));
+
+export const sendHomeCrew = createServerFn({ method: "POST" })
+  .validator(parseSendHomeInput)
+  .handler(({ data }) => getStation().crew.sendHome(data.crewId, data.worktree));

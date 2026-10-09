@@ -2,7 +2,10 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   CONSOLES,
   SPAWN,
+  AIRLOCK,
+  COLLIDERS,
   addCollider,
+  airlockPath,
   consoleInReach,
   consoleSeat,
   moveWithCollisions,
@@ -35,5 +38,24 @@ describe("deck layout", () => {
     expect(moveWithCollisions(8, 9.5, 1, 0).x).toBe(8);
     remove();
     expect(moveWithCollisions(8, 9.5, 1, 0).x).toBe(9);
+  });
+
+  test("every crew member's way to the airlock stays clear of the consoles", () => {
+    for (const c of CONSOLES) {
+      const path = airlockPath(c);
+      expect(path.at(-1)).toEqual({ x: AIRLOCK.x - 0.7, z: AIRLOCK.z });
+      // Skip the first leg: that's getting up out of its own chair.
+      for (let i = 1; i < path.length - 1; i++) {
+        const [a, b] = [path[i]!, path[i + 1]!];
+        for (let t = 0; t <= 1; t += 0.02) {
+          const x = a.x + (b.x - a.x) * t;
+          const z = a.z + (b.z - a.z) * t;
+          const inside = COLLIDERS.some(
+            (box) => x > box.minX && x < box.maxX && z > box.minZ && z < box.maxZ,
+          );
+          expect(inside, `console ${c.id} leg ${i} at ${x},${z}`).toBe(false);
+        }
+      }
+    }
   });
 });

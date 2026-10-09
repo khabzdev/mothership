@@ -76,3 +76,27 @@ export function parsePromptInput(input: unknown): { crewId: string; text: string
   if (!text) throw new Error("Empty prompt");
   return { crewId, text };
 }
+
+export function parseCrewIdInput(input: unknown): { crewId: string } {
+  const crewId = isObject(input) && typeof input.crewId === "string" ? input.crewId.trim() : "";
+  if (!crewId) throw new Error("crewId is required");
+  return { crewId };
+}
+
+export const WORKTREE_CHOICES = ["keep", "remove", "delete"] as const;
+/** What to do with a crew member's own worktree when it goes home. */
+export type WorktreeChoice = (typeof WORKTREE_CHOICES)[number];
+
+export interface SendHomeInput {
+  crewId: string;
+  worktree: WorktreeChoice;
+}
+
+export function parseSendHomeInput(input: unknown): SendHomeInput {
+  const { crewId } = parseCrewIdInput(input);
+  const worktree = (isObject(input) && input.worktree) || "keep";
+  if (!WORKTREE_CHOICES.includes(worktree as WorktreeChoice)) {
+    throw new Error("worktree must be keep, remove or delete");
+  }
+  return { crewId, worktree: worktree as WorktreeChoice };
+}

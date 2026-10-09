@@ -6,8 +6,20 @@ import type { Db } from "../../shared/db/client.server";
 import { crew, decks } from "../../shared/db/schema";
 import { toolAction } from "./actions";
 import type { CrewLauncher } from "./launcher.server";
-import { CREW_CHARACTERS, CREW_COLORS, CREW_NAMES, type HireInput } from "./model";
-import { branchName, createWorktree } from "./worktree.server";
+import {
+  CREW_CHARACTERS,
+  CREW_COLORS,
+  CREW_NAMES,
+  type HireInput,
+  type WorktreeChoice,
+} from "./model";
+import {
+  branchName,
+  createWorktree,
+  removeWorktree,
+  worktreeState,
+  type WorktreeState,
+} from "./worktree.server";
 
 export interface CrewServiceDeps {
   db: Db;
@@ -51,6 +63,7 @@ function toInfo(row: Row): CrewInfo {
 /** Crew at consoles: hiring, prompting, and keeping their status in step with their hooks. */
 export class CrewService {
   readonly #deps: CrewServiceDeps;
+  readonly #goneListeners = new Set<(crewId: string) => void>();
 
   constructor(deps: CrewServiceDeps) {
     this.#deps = deps;
@@ -133,6 +146,43 @@ export class CrewService {
     setTimeout(() => void this.#deps.launcher.write(crewId, "\r"), SUBMIT_DELAY_MS);
   }
 
+  /** What its own worktree holds that sending it home could lose; null without one. */
+  async worktree(crewId: string): Promise<WorktreeState | null> {
+    const row = this.#row(crewId);
+    if (!row) throw new Error(`No such crew member: ${crewId}`);
+    const deck = this.#deck(row.deckId);
+    if (!row.branch || row.cwd === deck.repoPath) return null;
+    return worktreeState(deck.repoPath, row.cwd);
+  }
+
+  /**
+   * Send a crew member home: its process stops, its console is free at once, and its own
+   * worktree is kept, removed, or removed with its branch.
+   */
+  async sendHome(crewId: string, choice: WorktreeChoice): Promise<void> {
+    const row = this.#row(crewId);
+    if (!row) throw new Error(`No such crew member: ${crewId}`);
+    const deck = this.#deck(row.deckId);
+    this.#deps.db.delete(crew).where(eq(crew.id, crewId)).run();
+    this.#broadcast(row.deckId);
+    for (const listener of this.#goneListeners) listener(crewId);
+    await this.#deps.launcher.stop(crewId);
+    if (choice !== "keep" && row.branch && row.cwd !== deck.repoPath) {
+      await removeWorktree({
+        repoPath: deck.repoPath,
+        path: row.cwd,
+        branch: row.branch,
+        deleteBranch: choice === "delete",
+      });
+    }
+  }
+
+  /** Called when a crew member leaves the deck. */
+  onGone(listener: (crewId: string) => void): () => void {
+    this.#goneListeners.add(listener);
+    return () => this.#goneListeners.delete(listener);
+  }
+
   handleSignal({ crewId, signal }: { crewId: string; signal: CrewSignal }): void {
     const action =
       signal.type === "working" && signal.activity
@@ -154,6 +204,12 @@ export class CrewService {
     for (const row of this.#deps.db.select().from(crew).all()) {
       if (!alive.has(row.id) && row.status !== "asleep") this.handleExit(row.id);
     }
+  }
+
+  #deck(id: string): typeof decks.$inferSelect {
+    const deck = this.#deps.db.select().from(decks).where(eq(decks.id, id)).get();
+    if (!deck) throw new Error(`No such deck: ${id}`);
+    return deck;
   }
 
   #row(id: string): Row | undefined {

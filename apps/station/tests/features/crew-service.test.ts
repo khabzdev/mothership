@@ -4,6 +4,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type { CrewLauncher, LaunchRequest } from "../../src/features/crew/launcher.server.ts";
 import { parseHireInput, parsePromptInput } from "../../src/features/crew/model.ts";
@@ -21,6 +22,10 @@ class FakeLauncher implements CrewLauncher {
   }
   async write(crewId: string, data: string) {
     this.writes.push([crewId, data]);
+  }
+  stopped: string[] = [];
+  async stop(crewId: string) {
+    this.stopped.push(crewId);
   }
 }
 
@@ -222,5 +227,64 @@ describe("input parsing", () => {
       text: "hi\nthere",
     });
     expect(() => parsePromptInput({ crewId: "c", text: "  " })).toThrow("Empty prompt");
+  });
+});
+
+describe("send home", () => {
+  const branches = () =>
+    execFileSync("git", ["-C", repo, "branch", "--format=%(refname:short)"], { encoding: "utf8" });
+
+  test("frees the console and stops the process", async () => {
+    const nova = await hire(4);
+    const gone: string[] = [];
+    service.onGone((id) => gone.push(id));
+    await service.sendHome(nova.id, "keep");
+    expect(service.roster("deck-1")).toEqual([]);
+    expect(rosters.at(-1)?.crew).toEqual([]);
+    expect(launcher.stopped).toEqual([nova.id]);
+    expect(gone).toEqual([nova.id]);
+    expect(await service.worktree(nova.id).catch((e: Error) => e.message)).toMatch("No such");
+  });
+
+  test("without its own worktree there's nothing to ask about", async () => {
+    const nova = await hire(4);
+    expect(await service.worktree(nova.id)).toBeNull();
+  });
+
+  test("reports uncommitted and unpushed work in its worktree", async () => {
+    const nova = await hire(4, "Add dark mode", true);
+    const cwd = launcher.launches[0]!.cwd;
+    expect(await service.worktree(nova.id)).toEqual({ missing: false, dirty: 0, unpushed: 0 });
+    writeFileSync(join(cwd, "a.txt"), "a");
+    execFileSync("git", ["-C", cwd, "add", "."]);
+    execFileSync("git", [
+      "-C",
+      cwd,
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@t",
+      "commit",
+      "-qm",
+      "a",
+    ]);
+    writeFileSync(join(cwd, "b.txt"), "b");
+    expect(await service.worktree(nova.id)).toEqual({ missing: false, dirty: 1, unpushed: 1 });
+  });
+
+  test("keeps, removes, or removes the worktree and its branch", async () => {
+    const keep = await hire(0, "Keep me", true);
+    const remove = await hire(1, "Remove me", true);
+    const del = await hire(2, "Delete me", true);
+    const [keepCwd, removeCwd, delCwd] = launcher.launches.map((l) => l.cwd);
+    await service.sendHome(keep.id, "keep");
+    await service.sendHome(remove.id, "remove");
+    await service.sendHome(del.id, "delete");
+    expect(existsSync(keepCwd!)).toBe(true);
+    expect(existsSync(removeCwd!)).toBe(false);
+    expect(existsSync(delCwd!)).toBe(false);
+    expect(branches()).toContain(keep.branch);
+    expect(branches()).toContain(remove.branch);
+    expect(branches()).not.toContain(del.branch);
   });
 });

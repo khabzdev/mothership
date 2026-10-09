@@ -8,6 +8,7 @@ import { STATUS_CHIPS } from "../scene/status";
 import { useWorld } from "../store";
 import { Lift } from "./Lift";
 import { Modal } from "./Modal";
+import { SendHomeWindow } from "./SendHome";
 import { TaskBox } from "./TaskBox";
 
 const WORKTREE_PREF = "mothership.worktree";
@@ -130,6 +131,10 @@ export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] })
       ) : (
         <TerminalWindow member={member} />
       );
+    }
+    case "sendHome": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <SendHomeWindow member={member} /> : null;
     }
     case "lift":
       return <Lift />;

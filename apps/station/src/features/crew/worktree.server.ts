@@ -39,3 +39,44 @@ export async function createWorktree(options: {
   await run("git", ["-C", repoPath, "worktree", "add", "-b", branch, path, "HEAD"]);
   return { path, branch };
 }
+
+export interface WorktreeState {
+  /** The worktree folder is gone (deleted outside the station). */
+  missing: boolean;
+  /** Files with uncommitted changes. */
+  dirty: number;
+  /** Commits only this branch has: on no remote, and not in the deck's own checkout. */
+  unpushed: number;
+}
+
+/** What sending a crew member home would throw away (agent-office's worktree check). */
+export async function worktreeState(repoPath: string, path: string): Promise<WorktreeState> {
+  if (!existsSync(path)) return { missing: true, dirty: 0, unpushed: 0 };
+  const status = await run("git", ["-C", path, "status", "--porcelain"]);
+  const dirty = status.stdout.split("\n").filter(Boolean).length;
+  const { stdout: home } = await run("git", ["-C", repoPath, "rev-parse", "HEAD"]);
+  const ahead = await run("git", [
+    "-C",
+    path,
+    "rev-list",
+    "--count",
+    "HEAD",
+    "--not",
+    "--remotes",
+    home.trim(),
+  ]);
+  return { missing: false, dirty, unpushed: Number(ahead.stdout.trim()) || 0 };
+}
+
+/** Remove a crew member's worktree, and its branch too when `deleteBranch`. */
+export async function removeWorktree(options: {
+  repoPath: string;
+  path: string;
+  branch: string;
+  deleteBranch: boolean;
+}): Promise<void> {
+  const { repoPath, path, branch, deleteBranch } = options;
+  if (existsSync(path)) await run("git", ["-C", repoPath, "worktree", "remove", "--force", path]);
+  await run("git", ["-C", repoPath, "worktree", "prune"]);
+  if (deleteBranch) await run("git", ["-C", repoPath, "branch", "-D", branch]).catch(() => {});
+}

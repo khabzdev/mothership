@@ -112,3 +112,25 @@ export function consoleInReach(x: number, z: number, reach = 1.4): ConsoleDef | 
   }
   return best;
 }
+
+/** The airlock: a chamber outside the east bulkhead, its inner door in the wall at z = 0. */
+export const AIRLOCK = { x: DECK.maxX, z: 0, halfWidth: 0.9, depth: 2.2 } as const;
+
+/** Clear lanes between and beside the console clusters, and the aisle down the middle (z = 0). */
+const LANES_X = [-14.6, -6, 2.6];
+
+/**
+ * The way a crew member walks from its console to the airlock: back out of its chair, along the
+ * row to the nearest lane between clusters, down it to the middle aisle, and east to the inner door.
+ */
+export function airlockPath(c: ConsoleDef): { x: number; z: number }[] {
+  const back = consoleSeat(c, 1.7);
+  const lane = LANES_X.reduce((a, b) => (Math.abs(b - c.x) < Math.abs(a - c.x) ? b : a));
+  return [
+    consoleSeat(c, 0.85),
+    back,
+    { x: lane, z: back.z },
+    { x: lane, z: AIRLOCK.z },
+    { x: AIRLOCK.x - 0.7, z: AIRLOCK.z },
+  ];
+}

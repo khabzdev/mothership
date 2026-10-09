@@ -1,7 +1,8 @@
 import { Stars } from "@react-three/drei";
 import { useRef } from "react";
 import type { Object3D } from "three";
-import { DECK } from "../layout";
+import { AIRLOCK, DECK } from "../layout";
+import { Airlock } from "./Airlock";
 import { Furniture } from "./Furniture";
 import { useProp } from "./models";
 import { useSolid } from "./solid";
@@ -9,6 +10,8 @@ import { useSolid } from "./solid";
 const WIDTH = DECK.maxX - DECK.minX;
 const DEPTH = DECK.maxZ - DECK.minZ;
 const WALL_H = 3.2;
+/** Half the airlock doorway's width, a little wider than its door. */
+const DOORWAY = AIRLOCK.halfWidth + 0.2;
 
 function Prop({
   name,
@@ -58,7 +61,15 @@ export function Deck() {
         { p: [0, WALL_H / 2, DECK.minZ] as const, s: [WIDTH, WALL_H, 0.3] as const },
         { p: [0, WALL_H / 2, DECK.maxZ] as const, s: [WIDTH, WALL_H, 0.3] as const },
         { p: [DECK.minX, WALL_H / 2, 0] as const, s: [0.3, WALL_H, DEPTH] as const },
-        { p: [DECK.maxX, WALL_H / 2, 0] as const, s: [0.3, WALL_H, DEPTH] as const },
+        // East bulkhead, with the airlock's doorway in the middle.
+        {
+          p: [DECK.maxX, WALL_H / 2, (DECK.minZ + AIRLOCK.z - DOORWAY) / 2] as const,
+          s: [0.3, WALL_H, AIRLOCK.z - DOORWAY - DECK.minZ] as const,
+        },
+        {
+          p: [DECK.maxX, WALL_H / 2, (DECK.maxZ + AIRLOCK.z + DOORWAY) / 2] as const,
+          s: [0.3, WALL_H, DECK.maxZ - AIRLOCK.z - DOORWAY] as const,
+        },
       ].map((w, i) => (
         <mesh key={i} position={w.p} castShadow receiveShadow>
           <boxGeometry args={w.s} />
@@ -72,6 +83,8 @@ export function Deck() {
           <meshToonMaterial color="#ff5f1f" />
         </mesh>
       ))}
+
+      <Airlock />
 
       {/* Cargo bay corner (north-east). */}
       <Prop

@@ -24,6 +24,8 @@ export interface LaunchRequest {
 export interface CrewLauncher {
   launch(request: LaunchRequest): Promise<void>;
   write(crewId: string, data: string): Promise<void>;
+  /** Kill the crew member's process and forget its session. */
+  stop(crewId: string): Promise<void>;
 }
 
 export interface PtyCrewLauncherOptions {
@@ -121,7 +123,13 @@ export class PtyCrewLauncher implements CrewLauncher, TerminalSource, ScreenSour
 
   async stop(crewId: string): Promise<void> {
     this.#options.registry.unregister(crewId);
-    await (await this.#connect()).kill(crewId);
+    this.#tails.delete(crewId);
+    const client = await this.#connect();
+    const session = (await client.list()).find((s) => s.id === crewId);
+    if (!session) return;
+    // Sent home on purpose: its exit is not news.
+    if (!session.exited) this.#replacing.add(crewId);
+    await client.dispose(crewId);
   }
 
   async sessions(): Promise<{ id: string; exited: boolean; exitCode?: number }[]> {

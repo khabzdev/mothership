@@ -46,6 +46,7 @@ export function getStation(): Station {
     launcher.onExit(({ crewId }) => crew.handleExit(crewId));
     const screens = new ScreenRelay(launcher, (msg) => hub.broadcast(msg));
     screens.start();
+    crew.onGone((crewId) => screens.forget(crewId));
     hub.onPeerOpen((peer) => {
       for (const msg of screens.current()) hub.send(peer, msg);
     });

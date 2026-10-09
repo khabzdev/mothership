@@ -5,11 +5,13 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { rosterQuery } from "../crew/queries";
 import type { Deck } from "../decks/model";
+import { useConsoleKeys } from "./console-keys";
 import { CONSOLES } from "./layout";
 import { Captain, jumpTo } from "./scene/Captain";
 import { Console } from "./scene/Console";
 import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
+import { Departures } from "./scene/Departures";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
@@ -63,35 +65,6 @@ function useSoundUnlock() {
     window.addEventListener("pointerdown", unlock);
     return unlock;
   }, []);
-}
-
-/** E and P at a console: agent-office's desk keys. */
-function useConsoleKeys(crew: CrewInfo[]) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!gameKeysEnabled(e)) return;
-      const { consoleId, open } = useWorld.getState();
-      if (consoleId === null) return;
-      const member = crew.find((c) => c.consoleId === consoleId);
-      if (e.code === "KeyE") {
-        e.preventDefault();
-        open(
-          member
-            ? { kind: "terminal", crewId: member.id }
-            : { kind: "hire", consoleId, withTask: false },
-        );
-      } else if (e.code === "KeyP") {
-        e.preventDefault();
-        open(
-          member
-            ? { kind: "prompt", crewId: member.id }
-            : { kind: "hire", consoleId, withTask: true },
-        );
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [crew]);
 }
 
 /** The boarding screen over the deck until its models have loaded, then a fade out. */
@@ -163,6 +136,7 @@ export function Game({ deck }: { deck: Deck }) {
             const def = CONSOLES[member.consoleId];
             return def ? <CrewMember key={member.id} crew={member} def={def} /> : null;
           })}
+          <Departures deckId={deck.id} crew={crew} />
           <Captain />
           <Ready onReady={ready} />
         </Suspense>

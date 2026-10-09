@@ -1029,3 +1029,66 @@ a:focus-visible {
     visibility: hidden;
   }
 }
+
+.button--danger {
+  background: var(--alert);
+  color: #fff;
+}
+
+/* Send-home choices (agent-office's worktree dialog). */
+.choices {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.choice {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--accent);
+  background: #ff5f1f14;
+}
+
+.choice input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+
+.choice small {
+  display: block;
+  margin-top: 0.15rem;
+  font: 400 0.72rem var(--font-mono);
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+}
+
+.wt-status {
+  margin: 0.8rem 0 0;
+  font: 500 0.75rem var(--font-mono);
+  color: var(--ink-dim);
+}
+
+.wt-status[data-risk] {
+  color: #ff8a8a;
+}
+
+/* A speech bubble over a crew member (pleading at the airlock). */
+.speech {
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--paper-ink);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px -8px #000;
+  pointer-events: none;
+}
