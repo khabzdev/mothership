@@ -3,7 +3,10 @@
 import { CONSOLE_COUNT } from "../crew/model";
 
 export const DECK = { minX: -18, maxX: 18, minZ: -13, maxZ: 13 } as const;
-export const CONSOLE_SIZE = { width: 2.2, depth: 1.1, height: 0.78 } as const;
+/** Spacing between neighbouring consoles (agent-office's desk width). */
+export const CONSOLE_PITCH = 2.2;
+/** The console's footprint: a KayKit desk slightly narrower than its slot. */
+export const CONSOLE_SIZE = { width: 2.1, depth: 1.1, height: 0.7 } as const;
 export const SPAWN = { x: 8, z: 7 } as const;
 
 export interface ConsoleDef {
@@ -29,7 +32,7 @@ function buildConsoles(): ConsoleDef[] {
         [pod.back, Math.PI],
         [pod.front, 0],
       ] as const) {
-        for (const dx of [-CONSOLE_SIZE.width / 2, CONSOLE_SIZE.width / 2]) {
+        for (const dx of [-CONSOLE_PITCH / 2, CONSOLE_PITCH / 2]) {
           const id = consoles.length;
           consoles.push({ id, x: cx + dx, z, rotY, label: `Console ${id + 1}` });
         }

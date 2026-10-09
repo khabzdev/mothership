@@ -5,6 +5,10 @@ import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 const CHARACTER_URL = (name: string) => `/models/crew/${name}.glb`;
 const PROP_URL = (name: string) => `/models/space-base/${name}.gltf`;
+const FURNITURE_URL = (name: string) => `/models/furniture/${name}.gltf`;
+
+/** One scale for every KayKit model, so characters and furniture stay in proportion (crew ≈ 1.6 m). */
+export const KAYKIT_SCALE = 0.7;
 
 /** Body parts we keep: weapons, shields, hats and capes are fantasy gear, not spacewear. */
 const BODY = /_(Body|Head|Head_Hooded|ArmLeft|ArmRight|LegLeft|LegRight)$/;
@@ -27,7 +31,16 @@ export function useCharacter(name: string) {
 
 /** A static KayKit Space Base prop. */
 export function useProp(name: string) {
-  const gltf = useGLTF(PROP_URL(name));
+  return useStatic(PROP_URL(name));
+}
+
+/** A static KayKit Furniture Bits piece. */
+export function useFurniture(name: string) {
+  return useStatic(FURNITURE_URL(name));
+}
+
+function useStatic(url: string) {
+  const gltf = useGLTF(url);
   return useMemo(() => {
     const copy = gltf.scene.clone();
     copy.traverse((node: Object3D) => {

@@ -4,33 +4,21 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type { Group, Mesh } from "three";
 import { consoleSeat, type ConsoleDef } from "../layout";
-import { useCharacter } from "./models";
+import { KAYKIT_SCALE, useCharacter } from "./models";
 import { STATUS_CHIPS, STATUS_COLORS } from "./status";
 
-/** The clip a crew member plays for its status and current action (agent-office's stances). */
-export function clipFor(crew: Pick<CrewInfo, "status" | "action">): string {
+/** Seated at the console unless it's waving for you or celebrating (agent-office's stances). */
+export function stanceFor(crew: Pick<CrewInfo, "status" | "action">): {
+  clip: string;
+  seated: boolean;
+} {
   switch (crew.status) {
-    case "working":
-      switch (crew.action) {
-        case "read":
-          return "Use_Item";
-        case "web":
-          return "Spellcasting";
-        case "test":
-          return "Block";
-        case "failing":
-          return "Hit_B";
-        default:
-          return "Interact";
-      }
     case "needs_input":
-      return "Spellcast_Raise";
+      return { clip: "Spellcast_Raise", seated: false };
     case "done":
-      return "Cheer";
-    case "asleep":
-      return "Sit_Floor_Idle";
+      return { clip: "Cheer", seated: false };
     default:
-      return "Idle";
+      return { clip: "Sit_Chair_Idle", seated: true };
   }
 }
 
@@ -40,8 +28,9 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   const body = useRef<Group>(null);
   const light = useRef<Mesh>(null);
   const { actions } = useAnimations(animations, body);
-  const clip = clipFor(crew);
-  const seat = consoleSeat(def, 0.85);
+  const { clip, seated } = stanceFor(crew);
+  // Seated in the console's chair, or standing just behind it.
+  const seat = consoleSeat(def, seated ? 0.85 : 1.45);
 
   useEffect(() => {
     const action = actions[clip] ?? actions.Idle;
@@ -57,14 +46,14 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
 
   return (
     <group position={[seat.x, 0, seat.z]} rotation={[0, def.rotY + Math.PI, 0]}>
-      <group ref={body} scale={0.55}>
+      <group ref={body} scale={KAYKIT_SCALE}>
         <primitive object={scene} />
       </group>
-      <mesh ref={light} position={[0, 1.55, 0]}>
+      <mesh ref={light} position={[0, seated ? 1.45 : 1.85, 0]}>
         <sphereGeometry args={[0.09, 16, 16]} />
         <meshBasicMaterial color={STATUS_COLORS[crew.status]} toneMapped={false} />
       </mesh>
-      <Html position={[0, 1.95, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
+      <Html position={[0, seated ? 1.9 : 2.3, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
         <div className="crew-tag" data-status={crew.status}>
           <span className="crew-tag__name" style={{ color: crew.color }}>
             {crew.name}

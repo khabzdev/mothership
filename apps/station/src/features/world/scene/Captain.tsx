@@ -4,12 +4,12 @@ import { useEffect, useRef } from "react";
 import { MathUtils, Vector3, type Group } from "three";
 import { CONSOLES, SPAWN, consoleInReach, consoleSeat, moveWithCollisions } from "../layout";
 import { gameKeysEnabled, useWorld } from "../store";
-import { useCharacter } from "./models";
+import { KAYKIT_SCALE, useCharacter } from "./models";
 
 // agent-office's player tuning (src/client/player).
 const WALK = 4.6;
 const RUN = 7.5;
-const CAMERA = { distance: 7.5, pitch: 0.42, height: 1.3, minDistance: 3, maxDistance: 16 };
+const CAMERA = { distance: 7.5, pitch: 0.42, height: 1.4, minDistance: 3, maxDistance: 16 };
 
 /** Where the Captain is, for systems outside the scene (e.g. jumping to a crew member). */
 export const captain: { x: number; z: number; facing: number } = {
@@ -161,7 +161,7 @@ export function Captain() {
   });
 
   return (
-    <group ref={body} scale={0.55}>
+    <group ref={body} scale={KAYKIT_SCALE}>
       <primitive object={scene} />
     </group>
   );

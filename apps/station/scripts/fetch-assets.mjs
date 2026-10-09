@@ -37,6 +37,46 @@ const SPACE = {
   out: "space-base",
 };
 
+const FURNITURE = {
+  repo: "KayKit-Furniture-Bits-1.0",
+  sha: "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+  dir: "addons/kaykit_furniture_bits/Assets/gltf",
+  files: ["furniturebits_texture.png"],
+  models: [
+    "armchair",
+    "armchair_pillows",
+    "book_set",
+    "cabinet_medium",
+    "cabinet_medium_decorated",
+    "cabinet_small",
+    "cactus_medium_A",
+    "cactus_medium_B",
+    "cactus_small_A",
+    "chair_A",
+    "chair_B",
+    "chair_C",
+    "chair_stool",
+    "couch",
+    "couch_pillows",
+    "lamp_standing",
+    "lamp_table",
+    "pictureframe_large_A",
+    "pictureframe_large_B",
+    "pictureframe_medium",
+    "rug_oval_A",
+    "rug_rectangle_A",
+    "rug_rectangle_stripes_A",
+    "shelf_A_big",
+    "shelf_B_large",
+    "shelf_B_large_decorated",
+    "table_low",
+    "table_medium",
+    "table_medium_long",
+    "table_small",
+  ],
+  out: "furniture",
+};
+
 const CREW = {
   repo: "KayKit-Character-Pack-Adventures-1.0",
   sha: "672074b73ba276876a19e8816ecdc5241817ab47",
@@ -74,6 +114,20 @@ for (const name of SPACE.models) {
 }
 for (const file of SPACE.files)
   jobs.push([raw(SPACE.repo, SPACE.sha, `${SPACE.dir}/${file}`), join(root, SPACE.out, file)]);
+for (const name of FURNITURE.models) {
+  for (const ext of [".gltf", ".bin"]) {
+    jobs.push([
+      raw(FURNITURE.repo, FURNITURE.sha, `${FURNITURE.dir}/${name}${ext}`),
+      join(root, FURNITURE.out, name + ext),
+    ]);
+  }
+}
+for (const file of FURNITURE.files) {
+  jobs.push([
+    raw(FURNITURE.repo, FURNITURE.sha, `${FURNITURE.dir}/${file}`),
+    join(root, FURNITURE.out, file),
+  ]);
+}
 for (const file of CREW.files)
   jobs.push([raw(CREW.repo, CREW.sha, `${CREW.dir}/${file}`), join(root, CREW.out, file)]);
 
