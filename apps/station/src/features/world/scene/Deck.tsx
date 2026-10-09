@@ -1,24 +1,19 @@
 import { Stars } from "@react-three/drei";
 import { useRef } from "react";
 import type { Object3D } from "three";
-import { AIRLOCK, DECK } from "../layout";
+import { DECK } from "../layout";
 import type { DeckPaint } from "../paint";
 import { Airlock } from "./Airlock";
 import { Furniture } from "./Furniture";
-import { useProp } from "./models";
+import { KAYKIT_SCALE, useProp } from "./models";
+import { Shell } from "./Shell";
 import { useSolid } from "./solid";
-
-const WIDTH = DECK.maxX - DECK.minX;
-const DEPTH = DECK.maxZ - DECK.minZ;
-const WALL_H = 3.2;
-/** Half the airlock doorway's width, a little wider than its door. */
-const DOORWAY = AIRLOCK.halfWidth + 0.2;
 
 function Prop({
   name,
   position,
   rotation = 0,
-  scale = 1,
+  scale = KAYKIT_SCALE,
   solid = false,
 }: {
   name: string;
@@ -41,49 +36,13 @@ function Prop({
   );
 }
 
-/** The deck shell: plated floor, low bulkheads with viewports to space, cargo along the walls. */
+/** The deck: its shell (bulkheads, windows, floor), the airlock, cargo and furniture. */
 export function Deck({ paint }: { paint: DeckPaint }) {
   return (
     <group>
       <Stars radius={120} depth={60} count={4000} factor={4} fade speed={0.4} />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[WIDTH, DEPTH]} />
-        <meshToonMaterial color={paint.floor} />
-      </mesh>
-      <gridHelper
-        args={[WIDTH, WIDTH / 2, paint.grid[0], paint.grid[1]]}
-        position={[0, 0.01, 0]}
-        scale={[1, 1, DEPTH / WIDTH]}
-      />
-
-      {/* Bulkheads: low walls so the stars show above them. */}
-      {[
-        { p: [0, WALL_H / 2, DECK.minZ] as const, s: [WIDTH, WALL_H, 0.3] as const },
-        { p: [0, WALL_H / 2, DECK.maxZ] as const, s: [WIDTH, WALL_H, 0.3] as const },
-        { p: [DECK.minX, WALL_H / 2, 0] as const, s: [0.3, WALL_H, DEPTH] as const },
-        // East bulkhead, with the airlock's doorway in the middle.
-        {
-          p: [DECK.maxX, WALL_H / 2, (DECK.minZ + AIRLOCK.z - DOORWAY) / 2] as const,
-          s: [0.3, WALL_H, AIRLOCK.z - DOORWAY - DECK.minZ] as const,
-        },
-        {
-          p: [DECK.maxX, WALL_H / 2, (DECK.maxZ + AIRLOCK.z + DOORWAY) / 2] as const,
-          s: [0.3, WALL_H, DECK.maxZ - AIRLOCK.z - DOORWAY] as const,
-        },
-      ].map((w, i) => (
-        <mesh key={i} position={w.p} castShadow receiveShadow>
-          <boxGeometry args={w.s} />
-          <meshToonMaterial color={paint.wall} />
-        </mesh>
-      ))}
-      {/* Orange trim along the base of the bulkheads. */}
-      {[DECK.minZ + 0.2, DECK.maxZ - 0.2].map((z) => (
-        <mesh key={z} position={[0, 0.15, z]}>
-          <boxGeometry args={[WIDTH - 0.4, 0.3, 0.05]} />
-          <meshToonMaterial color={paint.trim} />
-        </mesh>
-      ))}
+      <Shell paint={paint} />
 
       <Airlock />
 
@@ -99,7 +58,7 @@ export function Deck({ paint }: { paint: DeckPaint }) {
       {/* Lounge (south-east), like agent-office's couches by the windows. */}
       <Furniture
         name="rug_rectangle_stripes_A"
-        position={[12.5, 0.01, 8.5]}
+        position={[12.5, 0.005, 8.5]}
         scale={[1.6, 1, 1.6]}
       />
       <Furniture name="couch_pillows" position={[12.5, 0, 11.2]} rotation={Math.PI} solid />

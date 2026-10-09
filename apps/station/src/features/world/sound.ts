@@ -57,6 +57,12 @@ export function playDone(): void {
   bell(880, 0.12, 0.3, 0.25);
 }
 
+/** The lift's doors opening: one soft low ding (only if sound is already on). */
+export function playLiftChime(): void {
+  if (ctx?.state !== "running") return;
+  bell(523, 0, 0.12, 0.6);
+}
+
 // ---- Ambience: crew typing and the Captain's footsteps (agent-office's sound/typing.ts, feet.ts) ----
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);

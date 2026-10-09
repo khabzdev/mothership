@@ -1,85 +1,123 @@
 import { useFrame } from "@react-three/fiber";
-import { useRef } from "react";
-import type { Group, Mesh, MeshBasicMaterial, PointLight } from "three";
+import { useMemo, useRef, type MutableRefObject } from "react";
+import type { MeshStandardMaterial, PointLight } from "three";
+import { DOOR_MODULE, DOOR_OPENING, WALL_H } from "../bulkheads";
 import { AIRLOCK } from "../layout";
+import { GLOW, KIT } from "./materials";
+import { useStationPiece, type StationPiece } from "./models";
+import { SlidingDoors } from "./SlidingDoors";
 
 /** The airlock's doors and lights, set each frame by whoever is going through it. */
 export const airlock = { inner: 0, outer: 0, red: false, using: null as string | null };
 
-const H = 2.5;
-const W = AIRLOCK.halfWidth * 2;
+const OPEN_W = DOOR_MODULE * DOOR_OPENING.width;
+const OPEN_H = WALL_H * DOOR_OPENING.height;
 const D = AIRLOCK.depth;
-const HULL = "#c7ccd6";
-const DOOR = "#8d96a8";
+/** Half a bulkhead's thickness. */
+const FACE = 0.15;
+const IDLE = "#9fb4d8";
 
-/** A chamber outside the east bulkhead: an inner door that rises, an outer hatch that parts. */
+/** One Kenney piece, placed once. */
+function KitPiece({
+  name,
+  position,
+  rotY = 0,
+  scale,
+}: {
+  name: StationPiece;
+  position: [number, number, number];
+  rotY?: number;
+  scale: [number, number, number];
+}) {
+  const scene = useStationPiece(name);
+  return <primitive object={scene} position={position} rotation={[0, rotY, 0]} scale={scale} />;
+}
+
+/** A door's opening read live from the airlock state, for SlidingDoors. */
+function useLive(read: () => number): MutableRefObject<number> {
+  return useMemo(
+    () => ({
+      get current() {
+        return read();
+      },
+      set current(_: number) {},
+    }),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+}
+
+/**
+ * A chamber outside the east bulkhead: the inner door in the bulkhead's door frame, the outer one
+ * in its own frame onto space, both parting into the walls. Built facing the deck along +z, then
+ * turned so the deck is to the west.
+ */
 export function Airlock() {
-  const inner = useRef<Mesh>(null);
-  const outerL = useRef<Mesh>(null);
-  const outerR = useRef<Mesh>(null);
   const lamp = useRef<PointLight>(null);
-  const strip = useRef<Mesh>(null);
-  const lights = useRef<Group>(null);
+  const strip = useRef<MeshStandardMaterial>(null);
+  const inner = useLive(() => airlock.inner);
+  const outer = useLive(() => airlock.outer);
+  const side = OPEN_W / 2 + FACE;
+  const length = D - FACE;
 
   useFrame(({ clock }) => {
-    if (inner.current) inner.current.position.y = H / 2 + airlock.inner * (H - 0.15);
-    const part = airlock.outer * (W / 2);
-    if (outerL.current) outerL.current.position.z = -W / 4 - part;
-    if (outerR.current) outerR.current.position.z = W / 4 + part;
-    const flash = airlock.red ? 0.6 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 0.4 : 0;
+    const flash = airlock.red ? 0.55 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 0.45 : 0;
     if (lamp.current) {
-      lamp.current.intensity = airlock.red ? 6 * flash : 1.2;
-      lamp.current.color.set(airlock.red ? "#ff2d3c" : "#cfe8ff");
+      lamp.current.intensity = airlock.red ? 8 * flash : 1.5;
+      lamp.current.color.set(airlock.red ? KIT.alarm : KIT.ice);
     }
     if (strip.current) {
-      (strip.current.material as MeshBasicMaterial).color.set(airlock.red ? "#ff2d3c" : "#3b4558");
+      strip.current.color.set(airlock.red ? KIT.alarm : IDLE);
+      strip.current.emissive.set(airlock.red ? KIT.alarm : IDLE);
+      strip.current.emissiveIntensity = airlock.red ? GLOW * flash : 0.8;
     }
   });
 
   return (
-    <group position={[AIRLOCK.x, 0, AIRLOCK.z]}>
-      {/* Chamber shell: floor, roof and side walls, open at both ends for the doors. */}
-      <mesh position={[D / 2, 0.02, 0]} receiveShadow>
-        <boxGeometry args={[D, 0.04, W]} />
-        <meshToonMaterial color="#2c313c" />
-      </mesh>
-      <mesh position={[D / 2, H + 0.1, 0]}>
-        <boxGeometry args={[D, 0.2, W + 0.4]} />
-        <meshToonMaterial color={HULL} />
-      </mesh>
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[D / 2, H / 2, side * (W / 2 + 0.1)]} castShadow>
-          <boxGeometry args={[D, H, 0.2]} />
-          <meshToonMaterial color={HULL} />
-        </mesh>
+    <group position={[AIRLOCK.x, 0, AIRLOCK.z]} rotation={[0, -Math.PI / 2, 0]}>
+      {/* Chamber: side walls, floor and roof from the kit. */}
+      {[-1, 1].map((s) => (
+        <KitPiece
+          key={s}
+          name="wall"
+          position={[s * side, 0, -FACE - length / 2]}
+          rotY={Math.PI / 2}
+          scale={[length, WALL_H, 1]}
+        />
       ))}
-      {/* Hazard stripes round the inner door. */}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[-0.17, H / 2, side * (W / 2 + 0.08)]}>
-          <boxGeometry args={[0.05, H, 0.16]} />
-          <meshToonMaterial color="#ffb020" />
-        </mesh>
-      ))}
-      <mesh ref={inner} position={[0, H / 2, 0]}>
-        <boxGeometry args={[0.12, H, W]} />
-        <meshToonMaterial color={DOOR} />
-      </mesh>
-      {/* Outer hatch: two halves sliding apart onto space. */}
-      <mesh ref={outerL} position={[D, H / 2, -W / 4]}>
-        <boxGeometry args={[0.12, H, W / 2]} />
-        <meshToonMaterial color={DOOR} />
-      </mesh>
-      <mesh ref={outerR} position={[D, H / 2, W / 4]}>
-        <boxGeometry args={[0.12, H, W / 2]} />
-        <meshToonMaterial color={DOOR} />
-      </mesh>
-      <group ref={lights}>
-        <mesh ref={strip} position={[-0.2, H + 0.05, 0]}>
-          <boxGeometry args={[0.08, 0.12, W]} />
-          <meshBasicMaterial color="#3b4558" toneMapped={false} />
-        </mesh>
-        <pointLight ref={lamp} position={[D / 2, H - 0.3, 0]} distance={6} intensity={1.2} />
+      <KitPiece name="floor-panel" position={[0, -0.15, -D / 2]} scale={[side * 2, 0.5, D]} />
+      <KitPiece
+        name="floor"
+        position={[0, WALL_H, -D / 2]}
+        scale={[side * 2 + 0.3, 0.5, D + 0.3]}
+      />
+      {/* Outer frame onto space. */}
+      <KitPiece name="wall-door-wide" position={[0, 0, -D]} scale={[DOOR_MODULE, WALL_H, 1]} />
+
+      <SlidingDoors width={OPEN_W} height={OPEN_H} open={inner} />
+      <group position={[0, 0, -D]}>
+        <SlidingDoors width={OPEN_W} height={OPEN_H} open={outer} />
       </group>
+
+      {/* Status light over the inner door, on the deck side: calm blue, red while cycling. */}
+      <mesh position={[0, OPEN_H + 0.32, FACE + 0.03]}>
+        <boxGeometry args={[OPEN_W - 0.2, 0.07, 0.04]} />
+        <meshStandardMaterial
+          ref={strip}
+          color={IDLE}
+          emissive={IDLE}
+          emissiveIntensity={0.8}
+          toneMapped={false}
+        />
+      </mesh>
+      <pointLight
+        ref={lamp}
+        position={[0, WALL_H - 0.6, -D / 2]}
+        distance={6}
+        decay={2}
+        intensity={1.5}
+        color={KIT.ice}
+      />
     </group>
   );
 }

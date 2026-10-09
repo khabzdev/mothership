@@ -1,14 +1,25 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { CanvasTexture, SRGBColorSpace, type Mesh } from "three";
+import { CanvasTexture, SRGBColorSpace, type MeshStandardMaterial, type PointLight } from "three";
+import { DOOR_MODULE, DOOR_OPENING, WALL_H } from "../bulkheads";
 import { LIFT } from "../layout";
 import type { DeckPaint } from "../paint";
+import { playLiftChime } from "../sound";
 import { captain } from "./Captain";
+import { GLOW, KIT, PAINTED } from "./materials";
+import { SlidingDoors } from "./SlidingDoors";
 
-const H = 2.5;
-const DOOR = LIFT.width / 2;
+/** The doorway in the Kenney door frame. */
+const OPEN_W = DOOR_MODULE * DOOR_OPENING.width;
+const OPEN_H = WALL_H * DOOR_OPENING.height;
+/** Bulkhead faces: the deck side and the back, where the car is. */
+const FACE = 0.15;
+/** The car behind the wall. */
+const CAR = { width: OPEN_W + 0.3, depth: 1.8, height: OPEN_H + 0.25 };
+/** How close you walk before the doors open. */
+const NEAR = 3.4;
 
-/** The deck's name plate over the lift, in its trim colour. */
+/** The deck's name plate over the lift: light text on a dark display, glowing a little. */
 function usePlate(deckName: string, trim: string) {
   const plate = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -16,85 +27,139 @@ function usePlate(deckName: string, trim: string) {
     canvas.height = 128;
     const texture = new CanvasTexture(canvas);
     texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 8;
     return { canvas, texture };
   }, []);
   useEffect(() => {
     const draw = () => {
       const c = plate.canvas.getContext("2d")!;
-      c.fillStyle = "#14130f";
+      c.fillStyle = "#101114";
       c.fillRect(0, 0, 512, 128);
       c.fillStyle = trim;
-      c.fillRect(0, 118, 512, 10);
-      c.font = '800 70px "Big Shoulders Display", "Arial Narrow", sans-serif';
+      c.fillRect(24, 100, 464, 4);
+      c.font = '600 54px "Instrument Sans", system-ui, sans-serif';
       c.textAlign = "center";
       c.textBaseline = "middle";
       c.fillStyle = "#ece6d6";
-      let text = `▲▼ ${deckName.toUpperCase()}`;
-      while (c.measureText(text).width > 480 && text.length > 6) text = `${text.slice(0, -2)}…`;
-      c.fillText(text, 256, 62);
+      let text = `▲▼  ${deckName}`;
+      while (c.measureText(text).width > 460 && text.length > 6) text = `${text.slice(0, -2)}…`;
+      c.fillText(text, 256, 56);
       plate.texture.needsUpdate = true;
     };
     draw();
-    void document.fonts?.load('800 64px "Big Shoulders Display"').then(draw, () => {});
+    void document.fonts?.load('600 54px "Instrument Sans"').then(draw, () => {});
   }, [plate, deckName, trim]);
   useEffect(() => () => plate.texture.dispose(), [plate]);
   return plate.texture;
 }
 
-/** The lift in the north bulkhead: its doors slide open as you walk up (agent-office's elevator). */
+/** The lift car behind the north bulkhead: lit, panelled, with a handrail, seen when the doors part. */
+function Car({ open }: { open: { current: number } }) {
+  const light = useRef<PointLight>(null);
+  const panel = useRef<MeshStandardMaterial>(null);
+  useFrame(() => {
+    // The car lights up as the doors open, so a shut lift isn't glowing through its seams.
+    const on = 0.25 + open.current * 0.75;
+    if (light.current) light.current.intensity = 4 * on;
+    if (panel.current) panel.current.emissiveIntensity = GLOW * on;
+  });
+  const z0 = -FACE - CAR.depth / 2;
+  return (
+    <group position={[0, 0, z0]}>
+      <mesh position={[0, -0.02, 0]} receiveShadow>
+        <boxGeometry args={[CAR.width, 0.04, CAR.depth]} />
+        <meshStandardMaterial color={KIT.charcoal} roughness={0.8} />
+      </mesh>
+      <mesh position={[0, CAR.height / 2, -CAR.depth / 2]} receiveShadow>
+        <boxGeometry args={[CAR.width, CAR.height, 0.06]} />
+        <meshStandardMaterial color={KIT.slate} {...PAINTED} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[(side * CAR.width) / 2, CAR.height / 2, 0]} receiveShadow>
+          <boxGeometry args={[0.06, CAR.height, CAR.depth]} />
+          <meshStandardMaterial color={KIT.slate} {...PAINTED} />
+        </mesh>
+      ))}
+      <mesh position={[0, CAR.height, 0]}>
+        <boxGeometry args={[CAR.width, 0.06, CAR.depth]} />
+        <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
+      </mesh>
+      <mesh position={[0, CAR.height - 0.04, 0]}>
+        <boxGeometry args={[CAR.width * 0.6, 0.02, CAR.depth * 0.6]} />
+        <meshStandardMaterial
+          ref={panel}
+          color={KIT.ice}
+          emissive={KIT.ice}
+          emissiveIntensity={GLOW}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* Handrail along the back wall. */}
+      <mesh position={[0, 0.95, -CAR.depth / 2 + 0.08]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.025, 0.025, CAR.width - 0.3, 12]} />
+        <meshStandardMaterial color={KIT.orange} {...PAINTED} />
+      </mesh>
+      <pointLight
+        ref={light}
+        position={[0, CAR.height - 0.4, 0]}
+        distance={3.5}
+        decay={2}
+        color={KIT.ice}
+      />
+    </group>
+  );
+}
+
+/** The lift in the north bulkhead: its doors part into the wall as you walk up (agent-office's elevator). */
 export function LiftDoors({ deckName, paint }: { deckName: string; paint: DeckPaint }) {
-  const left = useRef<Mesh>(null);
-  const right = useRef<Mesh>(null);
   const open = useRef(0);
+  const button = useRef<MeshStandardMaterial>(null);
   const plate = usePlate(deckName, paint.trim);
 
-  useFrame((_, delta) => {
-    const near = Math.hypot(captain.x - LIFT.x, captain.z - LIFT.z) < 3.4;
-    open.current += ((near ? 1 : 0) - open.current) * Math.min(1, delta * 5);
-    const slide = open.current * (DOOR - 0.08);
-    if (left.current) left.current.position.x = -DOOR / 2 - slide;
-    if (right.current) right.current.position.x = DOOR / 2 + slide;
+  useFrame(() => {
+    const near = Math.hypot(captain.x - LIFT.x, captain.z - LIFT.z) < NEAR;
+    open.current = near ? 1 : 0;
+    if (button.current) button.current.emissiveIntensity = near ? GLOW : 0.6;
   });
 
   return (
-    <group position={[LIFT.x, 0, LIFT.z + 0.16]}>
-      {/* The car behind the doors. */}
-      <mesh position={[0, H / 2, -0.05]}>
-        <planeGeometry args={[LIFT.width, H]} />
-        <meshToonMaterial color="#1a1d24" />
-      </mesh>
-      <mesh ref={left} position={[-DOOR / 2, H / 2, 0.03]}>
-        <boxGeometry args={[DOOR, H, 0.05]} />
-        <meshToonMaterial color="#aab3c2" />
-      </mesh>
-      <mesh ref={right} position={[DOOR / 2, H / 2, 0.03]}>
-        <boxGeometry args={[DOOR, H, 0.05]} />
-        <meshToonMaterial color="#aab3c2" />
-      </mesh>
-      {/* Frame in the deck's trim colour. */}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * (LIFT.width / 2 + 0.12), H / 2, 0.06]}>
-          <boxGeometry args={[0.24, H + 0.1, 0.16]} />
-          <meshToonMaterial color={paint.trim} />
+    <group position={[LIFT.x, 0, LIFT.z]}>
+      <Car open={open} />
+      <SlidingDoors width={OPEN_W} height={OPEN_H} open={open} onOpening={playLiftChime} />
+      {/* Name plate above the frame. */}
+      <group position={[0, OPEN_H + 0.5, FACE + 0.02]}>
+        <mesh>
+          <boxGeometry args={[OPEN_W + 0.1, 0.5, 0.04]} />
+          <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
         </mesh>
-      ))}
-      <mesh position={[0, H + 0.18, 0.06]}>
-        <boxGeometry args={[LIFT.width + 0.48, 0.36, 0.16]} />
-        <meshToonMaterial color={paint.trim} />
-      </mesh>
-      <mesh position={[0, H + 0.18, 0.15]}>
-        <planeGeometry args={[LIFT.width + 0.2, 0.3]} />
-        <meshBasicMaterial map={plate} toneMapped={false} />
-      </mesh>
-      {/* Call button. */}
-      <mesh position={[LIFT.width / 2 + 0.45, 1.15, 0.05]}>
-        <boxGeometry args={[0.18, 0.3, 0.05]} />
-        <meshToonMaterial color="#20242e" />
-      </mesh>
-      <mesh position={[LIFT.width / 2 + 0.45, 1.15, 0.08]}>
-        <circleGeometry args={[0.05, 16]} />
-        <meshBasicMaterial color={paint.trim} toneMapped={false} />
-      </mesh>
+        <mesh position={[0, 0, 0.021]}>
+          <planeGeometry args={[OPEN_W, 0.45]} />
+          <meshStandardMaterial
+            map={plate}
+            emissiveMap={plate}
+            emissive="#ffffff"
+            emissiveIntensity={0.9}
+            roughness={0.4}
+          />
+        </mesh>
+      </group>
+      {/* Call panel beside the frame. */}
+      <group position={[OPEN_W / 2 + 0.55, 1.2, FACE + 0.02]}>
+        <mesh>
+          <boxGeometry args={[0.16, 0.28, 0.04]} />
+          <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
+        </mesh>
+        <mesh position={[0, 0.03, 0.025]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.035, 0.035, 0.015, 20]} />
+          <meshStandardMaterial
+            ref={button}
+            color={paint.trim}
+            emissive={paint.trim}
+            emissiveIntensity={0.6}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }

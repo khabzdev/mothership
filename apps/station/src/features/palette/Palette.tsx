@@ -72,7 +72,8 @@ export function Palette({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== "k" || !(e.ctrlKey || e.metaKey)) return;
-      const target = e.target as HTMLElement | null;
+      // Keys sent to the window or document (not an element) count as on the deck.
+      const target = e.target instanceof HTMLElement ? e.target : null;
       const typing =
         target?.closest(".xterm") ||
         (target &&

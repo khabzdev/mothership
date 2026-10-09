@@ -19,4 +19,4 @@ vp run dev     # start the station
 
 ## Credits
 
-3D models: [KayKit](https://kaylousberg.com) Space Base Bits and Adventurers Character Pack by Kay Lousberg (CC0).
+3D models: [KayKit](https://kaylousberg.com) Space Base Bits and Adventurers Character Pack by Kay Lousberg (CC0). Bulkheads, door frames, windows and floor tiles: [Kenney](https://kenney.nl) Space Station Kit (CC0), in `apps/station/public/models/station`.

@@ -1,11 +1,12 @@
 import { useGLTF } from "@react-three/drei";
 import { useMemo } from "react";
-import type { Object3D } from "three";
+import type { Mesh, MeshStandardMaterial, Object3D } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 const CHARACTER_URL = (name: string) => `/models/crew/${name}.glb`;
 const PROP_URL = (name: string) => `/models/space-base/${name}.gltf`;
 const FURNITURE_URL = (name: string) => `/models/furniture/${name}.gltf`;
+const STATION_URL = (name: string) => `/models/station/${name}.glb`;
 
 /** One scale for every KayKit model, so characters and furniture stay in proportion (crew ≈ 1.6 m). */
 export const KAYKIT_SCALE = 0.7;
@@ -34,6 +35,37 @@ export function useProp(name: string) {
   return useStatic(PROP_URL(name));
 }
 
+/** The Kenney Space Station Kit's pieces in use: bulkheads, door frames, windows and floor tiles. */
+export type StationPiece =
+  | "wall"
+  | "wall-door-wide"
+  | "wall-window"
+  | "wall-pillar"
+  | "wall-detail"
+  | "floor"
+  | "floor-panel";
+
+/**
+ * A Kenney station piece's one mesh (each piece is a single mesh on the kit's colormap), for
+ * instancing: modules are 1 unit wide and tall, so scale them to the bulkhead.
+ */
+export function useStationMesh(name: StationPiece) {
+  const gltf = useGLTF(STATION_URL(name));
+  return useMemo(() => {
+    let mesh: Mesh | undefined;
+    gltf.scene.traverse((node: Object3D) => {
+      if (!mesh && (node as Mesh).isMesh) mesh = node as Mesh;
+    });
+    if (!mesh) throw new Error(`No mesh in station piece ${name}`);
+    return { geometry: mesh.geometry, material: mesh.material as MeshStandardMaterial };
+  }, [gltf.scene, name]);
+}
+
+/** A static Kenney station piece, as its own copy. */
+export function useStationPiece(name: StationPiece) {
+  return useStatic(STATION_URL(name));
+}
+
 /** A static KayKit Furniture Bits piece. */
 export function useFurniture(name: string) {
   return useStatic(FURNITURE_URL(name));
@@ -53,3 +85,13 @@ function useStatic(url: string) {
 
 for (const name of ["Knight", "Barbarian", "Mage", "Rogue", "Rogue_Hooded"])
   useGLTF.preload(CHARACTER_URL(name));
+for (const name of [
+  "wall",
+  "wall-door-wide",
+  "wall-window",
+  "wall-pillar",
+  "wall-detail",
+  "floor",
+  "floor-panel",
+] satisfies StationPiece[])
+  useGLTF.preload(STATION_URL(name));
