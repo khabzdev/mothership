@@ -16,3 +16,7 @@ vp install
 vp run ready   # check + test + build
 vp run dev     # start the station
 ```
+
+## Credits
+
+3D models: [KayKit](https://kaylousberg.com) Space Base Bits and Adventurers Character Pack by Kay Lousberg (CC0).
