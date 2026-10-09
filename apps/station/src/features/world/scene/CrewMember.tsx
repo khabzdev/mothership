@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import type { Group, Mesh } from "three";
 import { ActHold, actFor } from "../acting";
+import { removeTypist, setTyping } from "../sound";
 import { consoleSeat, type ConsoleDef } from "../layout";
 import { ActProps, type ActPropsHandle } from "./ActProps";
 import { Beacon } from "./Beacon";
@@ -49,6 +50,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
     return () => void poseDebug.scenes.delete(crew.name);
   }, [crew.name, scene]);
   const hold = useRef(new ActHold());
+  useEffect(() => () => removeTypist(crew.id), [crew.id]);
   const props = useRef<ActPropsHandle>(null);
   const hands = useMemo(() => {
     const l = scene.getObjectByName("handl") ?? scene.getObjectByName("hand.l");
@@ -63,6 +65,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
     if (import.meta.env.DEV && seated && poseDebug.act) act = poseDebug.act;
     layer.apply((import.meta.env.DEV && seated && poseDebug.pose) || poseFor(act, t), delta);
     props.current?.update(act, t, hands);
+    setTyping(crew.id, seat.x, seat.z, act === "type" || act === "edit");
     if (!light.current) return;
     const pulse = crew.status === "needs_input" ? 1 + Math.sin(clock.elapsedTime * 8) * 0.35 : 1;
     light.current.scale.setScalar(pulse);

@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import { MathUtils, Vector3, type Group } from "three";
 import { CONSOLES, SPAWN, consoleInReach, consoleSeat, moveWithCollisions } from "../layout";
+import { footsteps, scheduleTyping, setListener } from "../sound";
 import { gameKeysEnabled, useWorld } from "../store";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { poseDebug } from "./pose";
@@ -165,6 +166,10 @@ export function Captain() {
     );
     camera.position.lerp(desired, 0.25);
     camera.lookAt(target);
+
+    footsteps(dt, moving, running);
+    setListener(captain.x, captain.z, target.x - camera.position.x, target.z - camera.position.z);
+    scheduleTyping();
 
     setConsole(consoleInReach(captain.x, captain.z)?.id ?? null);
   });

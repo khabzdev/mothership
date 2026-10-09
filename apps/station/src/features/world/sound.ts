@@ -49,3 +49,154 @@ export function playDone(): void {
   bell(660, 0, 0.3, 0.25);
   bell(880, 0.12, 0.3, 0.25);
 }
+
+// ---- Ambience: crew typing and the Captain's footsteps (agent-office's sound/typing.ts, feet.ts) ----
+
+const rand = (a: number, b: number) => a + Math.random() * (b - a);
+const randInt = (a: number, b: number) => Math.floor(rand(a, b + 1));
+
+let clickBuffer: AudioBuffer | null = null;
+
+/** A short burst of decaying noise: filtered, it's a key, a space bar, a mouse click or a step. */
+function click(): AudioBuffer {
+  if (clickBuffer) return clickBuffer;
+  const length = Math.floor(ctx!.sampleRate * 0.06);
+  clickBuffer = ctx!.createBuffer(1, length, ctx!.sampleRate);
+  const data = clickBuffer.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 4;
+  return clickBuffer;
+}
+
+type Sound = "key" | "space" | "enter" | "mouse" | "step";
+const VOICES: Record<Sound, { filter: BiquadFilterType; freq: number; q: number; gain: number }> = {
+  key: { filter: "bandpass", freq: 3800, q: 1.4, gain: 0.5 },
+  space: { filter: "bandpass", freq: 1900, q: 1.2, gain: 0.55 },
+  enter: { filter: "bandpass", freq: 1500, q: 1.1, gain: 0.75 },
+  mouse: { filter: "highpass", freq: 4500, q: 0.7, gain: 0.35 },
+  step: { filter: "lowpass", freq: 420, q: 0.8, gain: 0.5 },
+};
+
+function play(kind: Sound, when: number, dest: AudioNode): void {
+  const voice = VOICES[kind];
+  const src = ctx!.createBufferSource();
+  src.buffer = click();
+  src.playbackRate.value = rand(0.9, 1.1);
+  const filter = ctx!.createBiquadFilter();
+  filter.type = voice.filter;
+  filter.frequency.value = voice.freq * rand(0.9, 1.1);
+  filter.Q.value = voice.q;
+  const gain = ctx!.createGain();
+  gain.gain.value = voice.gain * rand(0.8, 1);
+  src.connect(filter).connect(gain).connect(dest);
+  src.start(when);
+}
+
+function panner(x: number, z: number): PannerNode {
+  const p = ctx!.createPanner();
+  p.panningModel = "equalpower";
+  p.distanceModel = "inverse";
+  p.refDistance = 1.2;
+  p.rolloffFactor = 1.3;
+  p.positionX.value = x;
+  p.positionY.value = 0.9;
+  p.positionZ.value = z;
+  p.connect(ctx!.destination);
+  return p;
+}
+
+/** Where you hear from: the Captain, facing where the camera looks. */
+export function setListener(x: number, z: number, forwardX: number, forwardZ: number): void {
+  if (!ctx || ctx.state !== "running") return;
+  const l = ctx.listener;
+  l.positionX.value = x;
+  l.positionY.value = 1.4;
+  l.positionZ.value = z;
+  l.forwardX.value = forwardX;
+  l.forwardY.value = 0;
+  l.forwardZ.value = forwardZ;
+}
+
+interface Typist {
+  on: boolean;
+  out: PannerNode | null;
+  x: number;
+  z: number;
+  /** When (audio clock) the next key lands, keys left in this burst and in this word. */
+  next: number;
+  left: number;
+  word: number;
+}
+
+const typists = new Map<string, Typist>();
+
+/** Crew member `id` at (x, z) types while `on`. */
+export function setTyping(id: string, x: number, z: number, on: boolean): void {
+  let t = typists.get(id);
+  if (!t) typists.set(id, (t = { on: false, out: null, x, z, next: 0, left: 0, word: 0 }));
+  if (on && !t.on) t.next = 0;
+  t.on = on;
+  t.x = x;
+  t.z = z;
+}
+
+export function removeTypist(id: string): void {
+  typists.get(id)?.out?.disconnect();
+  typists.delete(id);
+}
+
+/** Schedule the next keys a little ahead on the audio clock, so the rhythm doesn't wobble with frames. */
+export function scheduleTyping(): void {
+  if (!ctx || ctx.state !== "running") return;
+  const now = ctx.currentTime;
+  const horizon = now + 0.12;
+  for (const t of typists.values()) {
+    if (!t.on) continue;
+    t.out ??= panner(t.x, t.z);
+    // Just started, or fell behind while the tab was hidden: begin again shortly.
+    if (t.next < now - 0.25) {
+      t.next = now + rand(0.05, 0.8);
+      t.left = 0;
+    }
+    while (t.next < horizon) {
+      const when = t.next;
+      if (t.left === 0) {
+        t.left = randInt(6, 36);
+        t.word = randInt(2, 8);
+        // Now and then it clicks around before typing again.
+        if (Math.random() < 0.3) {
+          play("mouse", when, t.out);
+          if (Math.random() < 0.5) play("mouse", when + rand(0.1, 0.16), t.out);
+          t.next = when + rand(0.4, 1.2);
+          continue;
+        }
+      }
+      t.left--;
+      if (t.left === 0) {
+        // End of a burst: often Enter, then a pause to read or think.
+        play(Math.random() < 0.4 ? "enter" : "key", when, t.out);
+        t.next = when + (Math.random() < 0.15 ? rand(4, 9) : rand(0.6, 3));
+      } else if (--t.word <= 0) {
+        play("space", when, t.out);
+        t.word = randInt(2, 8);
+        t.next = when + rand(0.1, 0.22);
+      } else {
+        play("key", when, t.out);
+        t.next = when + rand(0.065, 0.16);
+      }
+    }
+  }
+}
+
+let stride = 0;
+
+/** The Captain's feet: a soft step every stride while walking, quicker running. */
+export function footsteps(dt: number, moving: boolean, running: boolean): void {
+  if (!moving) {
+    stride = 0.15;
+    return;
+  }
+  stride -= dt;
+  if (stride > 0 || !ctx || ctx.state !== "running") return;
+  stride = running ? 0.27 : 0.38;
+  play("step", ctx.currentTime, ctx.destination);
+}
