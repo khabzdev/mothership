@@ -8,6 +8,7 @@ import { removeTypist, setTyping } from "../sound";
 import { consoleSeat, type ConsoleDef } from "../layout";
 import { ActProps, type ActPropsHandle } from "./ActProps";
 import { Beacon } from "./Beacon";
+import { CHAIR_Z } from "./Console";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { PoseLayer, poseDebug, poseFor } from "./pose";
 import { STATUS_COLORS, chipFor } from "./status";
@@ -27,6 +28,15 @@ export function stanceFor(crew: Pick<CrewInfo, "status" | "action">): {
   }
 }
 
+/**
+ * Where a seated crew member's origin goes, from the console's middle. Sit_Chair_Idle puts the
+ * hips 0.28 m behind the origin, so this lands them on the cushion just in front of the backrest
+ * of the chair at CHAIR_Z.
+ */
+const SEATED = CHAIR_Z - 0.19;
+/** And how far up: thighs on the cushion rather than in it. */
+const SEAT_LIFT = 0.03;
+
 /** A crew member at its console, acting out what its agent is doing. */
 export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   const { scene, animations } = useCharacter(crew.character);
@@ -35,7 +45,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   const { actions } = useAnimations(animations, body);
   const { clip, seated } = stanceFor(crew);
   // Seated in the console's chair, or standing just behind it.
-  const seat = consoleSeat(def, seated ? 0.85 : 1.45);
+  const seat = consoleSeat(def, seated ? SEATED : 1.45);
 
   useEffect(() => {
     const action = actions[clip] ?? actions.Idle;
@@ -74,7 +84,10 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   return (
     <>
       {crew.status === "needs_input" && <Beacon x={seat.x} z={seat.z} top={2.6} />}
-      <group position={[seat.x, 0, seat.z]} rotation={[0, def.rotY + Math.PI, 0]}>
+      <group
+        position={[seat.x, seated ? SEAT_LIFT : 0, seat.z]}
+        rotation={[0, def.rotY + Math.PI, 0]}
+      >
         <group ref={body} scale={KAYKIT_SCALE}>
           <primitive object={scene} />
         </group>

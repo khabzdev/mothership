@@ -42,6 +42,9 @@ export function jumpTo(consoleId: number): void {
   captain.snap = true;
 }
 
+/** Where the camera orbits the Captain from (dev tools can set it to frame a shot). */
+export const cameraView = { yaw: 0.6, pitch: CAMERA.pitch, distance: CAMERA.distance };
+
 /** Step out of the lift onto this deck, facing into the room. */
 export function stepOutOfLift(): void {
   captain.x = LIFT_STOP.x;
@@ -52,7 +55,7 @@ export function stepOutOfLift(): void {
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
-  Object.assign(window, { __mothership: { captain, jumpTo, poseDebug } });
+  Object.assign(window, { __mothership: { captain, cameraView, jumpTo, poseDebug } });
 }
 
 const MOVE_KEYS: Record<string, [number, number]> = {
@@ -73,7 +76,7 @@ export function Captain() {
   const { actions } = useAnimations(animations, body);
   const { camera, gl } = useThree();
   const held = useRef(new Set<string>());
-  const view = useRef({ yaw: 0.6, pitch: CAMERA.pitch, distance: CAMERA.distance });
+  const view = useRef(cameraView);
   const clip = useRef("Idle");
   const setConsole = useWorld((s) => s.setConsole);
   const setAtLift = useWorld((s) => s.setAtLift);
