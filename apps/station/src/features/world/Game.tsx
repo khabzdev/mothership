@@ -27,13 +27,14 @@ import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { Departures } from "./scene/Departures";
 import { Board } from "./scene/Board";
+import { LaunchShow } from "./scene/LaunchShow";
 import { LiftDoors } from "./scene/LiftDoors";
 import { Sign } from "./scene/Sign";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
-import { NeedsYouBanner, useCloneNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
+import { NeedsYouBanner, useCloneNews, useLaunchNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
@@ -122,6 +123,7 @@ export function Game({ deck }: { deck: Deck }) {
   useSoundUnlock();
   useOtherDecksHeadsUp(deck.id);
   useCloneNews();
+  useLaunchNews(deck.id);
 
   return (
     <Toasty toastManager={toasts}>
@@ -171,6 +173,7 @@ export function Game({ deck }: { deck: Deck }) {
               return <Sign key={label.consoleId} def={def} label={label} twoSided={twoSided} />;
             })}
             <Departures deckId={deck.id} crew={crew} />
+            <LaunchShow crew={crew} />
             <Captain />
             <Ready onReady={ready} />
           </Suspense>

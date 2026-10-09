@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { rosterQuery } from "../../crew/queries";
 import { clonesQuery, decksQuery } from "../../decks/queries";
-import { playDone, playHeadsUp, playNeedsYou } from "../sound";
+import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
+import { playDone, playHeadsUp, playLaunch, playNeedsYou } from "../sound";
 import { useWorld } from "../store";
 import { Fresh, bannerText, needingYou } from "../waiting";
 
@@ -128,4 +129,23 @@ export function useCloneNews(): void {
       playDone();
     }
   }, [clones]);
+}
+
+/** A pull request merged on this deck: the klaxon, the launch and a toast, for everyone on it. */
+export function useLaunchNews(deckId: string): void {
+  const { client } = useRealtime();
+  useEffect(() => {
+    if (!client) return;
+    return client.onMessage((msg) => {
+      if (msg.type !== "pr.merged" || msg.deckId !== deckId) return;
+      const { celebrate, say } = useWorld.getState();
+      celebrate({
+        number: msg.number,
+        title: msg.title,
+        ...(msg.crewId && { crewId: msg.crewId }),
+      });
+      playLaunch();
+      say(`🚀 #${msg.number} launched: ${msg.title}`);
+    });
+  }, [client, deckId]);
 }

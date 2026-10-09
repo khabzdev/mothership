@@ -207,3 +207,52 @@ export function footsteps(dt: number, moving: boolean, running: boolean): void {
   stride = running ? 0.27 : 0.38;
   play("step", ctx.currentTime, ctx.destination);
 }
+
+/**
+ * The launch klaxon (agent-office's merge gong, on a starship): two rising wails, then the rumble
+ * of a rocket lifting off.
+ */
+export function playLaunch(): void {
+  unlockSound();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  const out = ctx.createGain();
+  out.gain.value = 0.18;
+  out.connect(ctx.destination);
+  for (let i = 0; i < 2; i++) {
+    const at = t0 + i * 0.9;
+    const o = ctx.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(420, at);
+    o.frequency.linearRampToValueAtTime(880, at + 0.7);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(1, at + 0.05);
+    g.gain.setValueAtTime(1, at + 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.85);
+    const tone = ctx.createBiquadFilter();
+    tone.type = "lowpass";
+    tone.frequency.value = 2200;
+    o.connect(tone).connect(g).connect(out);
+    o.start(at);
+    o.stop(at + 0.9);
+  }
+  // The rumble: low noise swelling as it lifts off, then fading as it climbs away.
+  const length = ctx.sampleRate * 4;
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const low = ctx.createBiquadFilter();
+  low.type = "lowpass";
+  low.frequency.value = 160;
+  const g = ctx.createGain();
+  const at = t0 + 1.7;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(2.4, at + 0.8);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 4);
+  noise.connect(low).connect(g).connect(out);
+  noise.start(at);
+  noise.stop(at + 4);
+}

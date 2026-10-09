@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import type { Group, Mesh } from "three";
 import { ActHold, actFor } from "../acting";
+import { useWorld } from "../store";
 import { removeTypist, setTyping } from "../sound";
 import { consoleSeat, type ConsoleDef } from "../layout";
 import { ActProps, type ActPropsHandle } from "./ActProps";
@@ -43,7 +44,10 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   const body = useRef<Group>(null);
   const light = useRef<Mesh>(null);
   const { actions } = useAnimations(animations, body);
-  const { clip, seated } = stanceFor(crew);
+  const cheering = useWorld((s) => s.cheering);
+  // A launch gets everyone awake on their feet, cheering (agent-office's desk dance).
+  const { clip, seated } =
+    cheering && crew.status !== "asleep" ? { clip: "Cheer", seated: false } : stanceFor(crew);
   // Seated in the console's chair, or standing just behind it.
   const seat = consoleSeat(def, seated ? SEATED : 1.45);
 

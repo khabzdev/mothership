@@ -18,26 +18,42 @@ interface WorldState {
   consoleId: number | null;
   /** Standing at the lift doors. */
   atLift: boolean;
+  /** The last pull request launched on this deck, for the klaxon, rocket and confetti. */
+  launch: { number: number; title: string; crewId?: string; at: number } | null;
+  /** Everyone's on their feet cheering a launch. */
+  cheering: boolean;
   /** Standing at a board. */
   atBoard: BoardId | null;
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
   setAtLift: (atLift: boolean) => void;
   setAtBoard: (atBoard: BoardId | null) => void;
+  celebrate: (launch: { number: number; title: string; crewId?: string }) => void;
   open: (overlay: Overlay) => void;
   close: () => void;
   say: (text: string) => void;
 }
+
+/** How long the crew cheer a launch (ms). */
+export const CHEER_MS = 6000;
 
 /** Game-wide UI state shared by the 3D scene and the DOM overlays. */
 export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
   atLift: false,
   atBoard: null,
+  launch: null,
+  cheering: false,
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
   setAtBoard: (atBoard) => set((s) => (s.atBoard === atBoard ? s : { atBoard })),
+  celebrate: (launch) => {
+    const at = Date.now();
+    set({ launch: { ...launch, at }, cheering: true });
+    // Back in their seats once the rocket's gone.
+    setTimeout(() => set((s) => (s.launch?.at === at ? { cheering: false } : s)), CHEER_MS);
+  },
   open: (overlay) => set({ overlay }),
   close: () => set({ overlay: null }),
   // A short message (agent-office's toasts), as a Kumo toast.
