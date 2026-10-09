@@ -1,3 +1,11 @@
+import { Badge, Banner, Surface } from "@cloudflare/kumo";
+import {
+  Alert02Icon,
+  ArrowUpDownIcon,
+  CheckmarkCircle02Icon,
+  Notification03Icon,
+} from "@hugeicons/core-free-icons";
+import { Icon } from "../../../shared/ui/Icon";
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { crewBlocker } from "../../../app/diagnostics";
@@ -22,7 +30,9 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
   if (atLift && consoleId === null) {
     return (
       <div className="hint" data-active>
-        <span className="hint__what">🛗 Lift</span>
+        <span className="hint__what with-icon">
+          <Icon icon={ArrowUpDownIcon} /> Lift
+        </span>
         <Key k="E" label="Ride to another deck" />
       </div>
     );
@@ -37,7 +47,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
     );
   }
   const sign = labels.find((l) => l.consoleId === consoleId)?.text;
-  const label = `${CONSOLES[consoleId]!.label}${sign ? ` · 🪧 ${sign}` : ""}`;
+  const label = `${CONSOLES[consoleId]!.label}${sign ? ` · ${sign}` : ""}`;
   const member = crew.find((c) => c.consoleId === consoleId);
   return (
     <div className="hint" data-active>
@@ -69,7 +79,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
   );
 }
 
-/** Deck name (opens the lift), comms and a crew-offline warning. */
+/** Deck name (opens the lift), who's waiting, comms, and a crew-offline warning. */
 export function TopBar({ deck, crew }: { deck: Deck; crew: CrewInfo[] }) {
   const open = useWorld((s) => s.open);
   const { state } = useRealtime();
@@ -86,30 +96,37 @@ export function TopBar({ deck, crew }: { deck: Deck; crew: CrewInfo[] }) {
           onClick={() => open({ kind: "lift" })}
           title="Ride the lift"
         >
-          <span className="eyebrow">Deck</span>
+          <span className="eyebrow with-icon">
+            <Icon icon={ArrowUpDownIcon} size={12} /> Deck
+          </span>
           <span className="topbar__name">{deck.name}</span>
         </button>
-        <div className="topbar__right">
-          {(waiting > 0 || done > 0) && (
-            <span className="readout topbar__count">
-              {waiting > 0 && `🙋 ${waiting} need you`}
-              {waiting > 0 && done > 0 && " · "}
-              {done > 0 && `✅ ${done} done`}
-            </span>
+        <Surface className="topbar__right">
+          {waiting > 0 && (
+            <Badge variant="error" icon={<Icon icon={Notification03Icon} size={12} />}>
+              {waiting} need{waiting === 1 ? "s" : ""} you
+            </Badge>
           )}
-          <span className="readout">
-            <span
-              className="lamp"
-              data-tone={state === "open" ? "go" : state === "connecting" ? "check" : "alert"}
-            />
+          {done > 0 && (
+            <Badge variant="success" icon={<Icon icon={CheckmarkCircle02Icon} size={12} />}>
+              {done} done
+            </Badge>
+          )}
+          <Badge
+            appearance="dot"
+            variant={state === "open" ? "success" : state === "connecting" ? "warning" : "error"}
+          >
             Comms {state}
-          </span>
-        </div>
+          </Badge>
+        </Surface>
       </div>
       {blocker && (
-        <p role="alert" className="banner banner--alert">
-          {blocker}
-        </p>
+        <Banner
+          variant="error"
+          className="topbar__blocker"
+          icon={<Icon icon={Alert02Icon} />}
+          description={blocker}
+        />
       )}
     </>
   );

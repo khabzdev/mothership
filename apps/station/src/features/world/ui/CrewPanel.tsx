@@ -1,6 +1,15 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect, useState } from "react";
-import { chipFor } from "../scene/status";
+import {
+  ArrowDown01Icon,
+  ArrowRight01Icon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  Notification03Icon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
+import { Icon } from "../../../shared/ui/Icon";
+import { StatusBadge } from "./StatusBadge";
 import { needyFirst, waited } from "../waiting";
 
 const COLLAPSED_KEY = "mothership.crewPanel.collapsed";
@@ -37,17 +46,17 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
         onClick={toggle}
         aria-expanded={!collapsed}
       >
-        <span className="eyebrow">Crew</span>
+        <span className="eyebrow with-icon">
+          <Icon icon={UserGroupIcon} size={12} /> Crew
+        </span>
         <span className="crew-panel__count">{crew.length || ""}</span>
-        <span aria-hidden>{collapsed ? "▸" : "▾"}</span>
+        <Icon icon={collapsed ? ArrowRight01Icon : ArrowDown01Icon} size={14} />
       </button>
       {!collapsed && (
         <ul className="crew-panel__list">
           {list.map((c) => {
             const needs = c.status === "needs_input";
-            const sub = [c.branch && `🌿 ${c.branch}`, c.prUrl && "🔀 PR", c.task.split("\n")[0]]
-              .filter(Boolean)
-              .join(" · ");
+            const sub = c.task.split("\n")[0];
             const since = waited(c.statusSince, now);
             return (
               <li key={c.id}>
@@ -64,12 +73,22 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                   <span className="crew-panel__dot" style={{ background: c.color }} />
                   <span className="crew-panel__name">
                     {c.name}
+                    {(c.branch || c.prUrl) && (
+                      <span className="crew-panel__sub with-icon">
+                        {c.branch && <Icon icon={GitBranchIcon} size={12} />}
+                        {c.branch}
+                        {c.prUrl && <Icon icon={GitPullRequestIcon} size={12} />}
+                      </span>
+                    )}
                     {sub && <span className="crew-panel__sub">{sub}</span>}
                   </span>
-                  <span className="crew-panel__pill">{chipFor(c)}</span>
+                  <span className="crew-panel__pill">
+                    <StatusBadge crew={c} />
+                  </span>
                   {needs && (
                     <span className="crew-panel__ask">
-                      🙋 {c.detail ?? "Waiting on an answer"}
+                      <Icon icon={Notification03Icon} size={12} />{" "}
+                      {c.detail ?? "Waiting on an answer"}
                       {since && ` · ${since}`}
                     </span>
                   )}

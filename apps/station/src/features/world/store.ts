@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { notify } from "../../shared/ui/toasts";
 
 export type Overlay =
   | { kind: "hire"; consoleId: number; withTask: boolean }
@@ -16,8 +17,6 @@ interface WorldState {
   /** Standing at the lift doors. */
   atLift: boolean;
   overlay: Overlay | null;
-  /** A short message over the hint bar (agent-office's toasts). */
-  toast: { text: string; at: number } | null;
   setConsole: (id: number | null) => void;
   setAtLift: (atLift: boolean) => void;
   open: (overlay: Overlay) => void;
@@ -30,12 +29,12 @@ export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
   atLift: false,
   overlay: null,
-  toast: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
   open: (overlay) => set({ overlay }),
   close: () => set({ overlay: null }),
-  say: (text) => set({ toast: { text, at: Date.now() } }),
+  // A short message (agent-office's toasts), as a Kumo toast.
+  say: (text) => notify(text),
 }));
 
 /** Game keys are ignored while typing or while a window is open (agent-office's guard). */

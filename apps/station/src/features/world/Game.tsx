@@ -14,6 +14,8 @@ import {
 import { rosterQuery } from "../crew/queries";
 import { labelsQuery } from "../labels/queries";
 import type { Deck } from "../decks/model";
+import { Toasty } from "@cloudflare/kumo";
+import { toasts } from "../../shared/ui/toasts";
 import { useConsoleKeys } from "./console-keys";
 import { CONSOLES, partnerOf } from "./layout";
 import { paintFor } from "./paint";
@@ -28,7 +30,7 @@ import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
-import { NeedsYouBanner, Toast, useCloneNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
+import { NeedsYouBanner, useCloneNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
@@ -107,7 +109,6 @@ export function Game({ deck }: { deck: Deck }) {
   const { data: labels } = useSuspenseQuery(labelsQuery(deck.id));
   const paint = useMemo(() => paintFor(deck.repoPath), [deck.repoPath]);
   const consoleId = useWorld((s) => s.consoleId);
-  const toast = useWorld((s) => s.toast);
   const [loaded, setLoaded] = useState(false);
   const ready = useCallback(() => setLoaded(true), []);
   useConsoleKeys(deck.id, crew);
@@ -117,73 +118,74 @@ export function Game({ deck }: { deck: Deck }) {
   useCloneNews();
 
   return (
-    <div className="game" style={{ "--deck-trim": paint.trim } as CSSProperties}>
-      <Canvas
-        shadows
-        camera={{ fov: 55, near: 0.1, far: 400, position: [12, 8, 14] }}
-        className="game__canvas"
-      >
-        <color attach="background" args={["#05060c"]} />
-        <hemisphereLight args={["#fff5e6", "#2a3550", 1.4]} />
-        <ambientLight intensity={0.35} />
-        <directionalLight
-          position={[-8, 18, 10]}
-          intensity={2.2}
-          color="#fff1d6"
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-camera-left={-24}
-          shadow-camera-right={24}
-          shadow-camera-top={20}
-          shadow-camera-bottom={-20}
-          shadow-bias={-0.0008}
+    <Toasty toastManager={toasts}>
+      <div className="game" style={{ "--deck-trim": paint.trim } as CSSProperties}>
+        <Canvas
+          shadows
+          camera={{ fov: 55, near: 0.1, far: 400, position: [12, 8, 14] }}
+          className="game__canvas"
+        >
+          <color attach="background" args={["#05060c"]} />
+          <hemisphereLight args={["#fff5e6", "#2a3550", 1.4]} />
+          <ambientLight intensity={0.35} />
+          <directionalLight
+            position={[-8, 18, 10]}
+            intensity={2.2}
+            color="#fff1d6"
+            castShadow
+            shadow-mapSize={[2048, 2048]}
+            shadow-camera-left={-24}
+            shadow-camera-right={24}
+            shadow-camera-top={20}
+            shadow-camera-bottom={-20}
+            shadow-bias={-0.0008}
+          />
+          <Suspense fallback={null}>
+            <DeckScene paint={paint} />
+            <LiftDoors deckName={deck.name} paint={paint} />
+            {CONSOLES.map((def) => (
+              <Console
+                key={def.id}
+                def={def}
+                crew={crew.find((c) => c.consoleId === def.id)}
+                active={def.id === consoleId}
+              />
+            ))}
+            {crew.map((member) => {
+              const def = CONSOLES[member.consoleId];
+              return def ? <CrewMember key={member.id} crew={member} def={def} /> : null;
+            })}
+            {labels.map((label) => {
+              const def = CONSOLES[label.consoleId];
+              if (!def) return null;
+              const partner = partnerOf(def);
+              const twoSided = !partner || !labels.some((l) => l.consoleId === partner.id);
+              return <Sign key={label.consoleId} def={def} label={label} twoSided={twoSided} />;
+            })}
+            <Departures deckId={deck.id} crew={crew} />
+            <Captain />
+            <Ready onReady={ready} />
+          </Suspense>
+        </Canvas>
+        <DeckLoader deck={deck.name} loaded={loaded} />
+        <TopBar deck={deck} crew={crew} />
+        <NeedsYouBanner
+          crew={crew}
+          go={(id) => {
+            const member = crew.find((c) => c.id === id);
+            if (member) goToCrew(member);
+          }}
         />
-        <Suspense fallback={null}>
-          <DeckScene paint={paint} />
-          <LiftDoors deckName={deck.name} paint={paint} />
-          {CONSOLES.map((def) => (
-            <Console
-              key={def.id}
-              def={def}
-              crew={crew.find((c) => c.consoleId === def.id)}
-              active={def.id === consoleId}
-            />
-          ))}
-          {crew.map((member) => {
-            const def = CONSOLES[member.consoleId];
-            return def ? <CrewMember key={member.id} crew={member} def={def} /> : null;
-          })}
-          {labels.map((label) => {
-            const def = CONSOLES[label.consoleId];
-            if (!def) return null;
-            const partner = partnerOf(def);
-            const twoSided = !partner || !labels.some((l) => l.consoleId === partner.id);
-            return <Sign key={label.consoleId} def={def} label={label} twoSided={twoSided} />;
-          })}
-          <Departures deckId={deck.id} crew={crew} />
-          <Captain />
-          <Ready onReady={ready} />
-        </Suspense>
-      </Canvas>
-      <DeckLoader deck={deck.name} loaded={loaded} />
-      <TopBar deck={deck} crew={crew} />
-      <NeedsYouBanner
-        crew={crew}
-        go={(id) => {
-          const member = crew.find((c) => c.id === id);
-          if (member) goToCrew(member);
-        }}
-      />
-      <Toast toast={toast} />
-      <CrewPanel
-        crew={crew}
-        open={(member) => {
-          goToCrew(member);
-          useWorld.getState().open({ kind: "terminal", crewId: member.id });
-        }}
-      />
-      <HintBar crew={crew} labels={labels} />
-      <Overlays deckId={deck.id} crew={crew} labels={labels} />
-    </div>
+        <CrewPanel
+          crew={crew}
+          open={(member) => {
+            goToCrew(member);
+            useWorld.getState().open({ kind: "terminal", crewId: member.id });
+          }}
+        />
+        <HintBar crew={crew} labels={labels} />
+        <Overlays deckId={deck.id} crew={crew} labels={labels} />
+      </div>
+    </Toasty>
   );
 }

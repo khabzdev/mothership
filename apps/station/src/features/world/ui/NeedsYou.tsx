@@ -77,16 +77,6 @@ export function NeedsYouBanner({ crew, go }: { crew: CrewInfo[]; go: (id: string
   );
 }
 
-/** agent-office's toast: a line over the hint bar that fades after a few seconds. */
-export function Toast({ toast }: { toast: { text: string; at: number } | null }) {
-  if (!toast) return null;
-  return (
-    <div key={toast.at} className="toast" role="status">
-      {toast.text}
-    </div>
-  );
-}
-
 /**
  * A heads-up when a crew member on another deck starts waiting on you (agent-office: "you get a
  * heads-up when a worker on another floor starts waiting"): a toast naming the deck, and a chime.

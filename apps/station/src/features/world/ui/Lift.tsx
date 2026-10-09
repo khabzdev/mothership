@@ -5,6 +5,8 @@ import {
   Cancel01Icon,
   CheckmarkCircle02Icon,
   Download04Icon,
+  KeyboardIcon,
+  Notification03Icon,
   Rocket01Icon,
   StopCircleIcon,
 } from "@hugeicons/core-free-icons";
@@ -92,8 +94,16 @@ export function Lift({
                   <span className="lift__level">{i + 1}</span>
                   <span className="lift__name">{deck.name}</span>
                   <span className="lift__counts">
-                    {busy > 0 && <span title={`${busy} at work`}>⌨️ {busy}</span>}
-                    {waiting > 0 && <span title={`${waiting} waiting on you`}>🙋 {waiting}</span>}
+                    {busy > 0 && (
+                      <span className="with-icon" title={`${busy} at work`}>
+                        <Icon icon={KeyboardIcon} size={14} /> {busy}
+                      </span>
+                    )}
+                    {waiting > 0 && (
+                      <span className="with-icon" title={`${waiting} waiting on you`}>
+                        <Icon icon={Notification03Icon} size={14} /> {waiting}
+                      </span>
+                    )}
                     {!crew.length && <span className="muted">empty</span>}
                   </span>
                   <span className="readout">{deck.repoPath}</span>
