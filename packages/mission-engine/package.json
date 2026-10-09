@@ -1,0 +1,25 @@
+{
+  "name": "@mothership/mission-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure mission state machine for Mothership: brief → build → pre-flight → launch.",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "vite-plus": "catalog:"
+  }
+}
