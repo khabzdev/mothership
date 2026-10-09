@@ -4,7 +4,7 @@ import { crewBlocker } from "../diagnostics";
 import { getDiagnostics } from "../diagnostics.functions";
 import { diagnosticsQuery } from "../queries";
 
-const ICON = { ok: "✓", missing: "✗", unauthenticated: "!", error: "✗" } as const;
+const TONE = { ok: "go", missing: "alert", unauthenticated: "check", error: "alert" } as const;
 
 /** Bridge panel: are claude, gh, git and the PTY host ready? */
 export function StationChecks() {
@@ -26,28 +26,33 @@ export function StationChecks() {
   };
 
   return (
-    <section aria-label="Station checks">
-      <h2>Station checks</h2>
+    <section className="panel" aria-label="Station checks">
+      <h2 className="stencil">Station checks</h2>
       {blocker ? (
-        <p role="alert">{blocker}</p>
+        <p role="alert" className="error">
+          {blocker}
+        </p>
       ) : (
-        <p>Crew ready{data.airlockReady ? " · airlock ready" : ""}</p>
+        <p className="readout">
+          Crew ready{data.airlockReady ? " · airlock ready" : " · airlock offline"}
+        </p>
       )}
-      <ul>
+      <ul className="checks">
         {data.checks.map((check) => (
           <li key={check.id} data-status={check.status}>
-            {ICON[check.status]} <strong>{check.label}</strong>
-            {check.detail && <> · {check.detail}</>}
-            {check.fix && check.status !== "ok" && (
-              <>
-                {" "}
-                · <code>{check.fix}</code>
-              </>
-            )}
+            <span className="lamp" data-tone={TONE[check.status]} />
+            <span className="checks__label">{check.label}</span>
+            <span className="checks__detail">{check.detail}</span>
+            {check.fix && check.status !== "ok" && <code className="checks__fix">{check.fix}</code>}
           </li>
         ))}
       </ul>
-      <button type="button" onClick={refresh} disabled={refreshing}>
+      <button
+        type="button"
+        className="button button--ghost"
+        onClick={refresh}
+        disabled={refreshing}
+      >
         {refreshing ? "Checking…" : "Re-check"}
       </button>
     </section>

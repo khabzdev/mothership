@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import TanStackQueryDevtools from "../app/query-devtools";
+import { Shell } from "../app/ui/Shell";
 import { RealtimeProvider } from "../shared/realtime/RealtimeProvider";
 
 import appCss from "../styles.css?url";
@@ -28,6 +29,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,
@@ -44,7 +51,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <RealtimeProvider>{children}</RealtimeProvider>
+        <RealtimeProvider>
+          <Shell>{children}</Shell>
+        </RealtimeProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",

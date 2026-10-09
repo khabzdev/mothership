@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHooksRouteImport } from './routes/api/hooks'
+import { Route as DecksDeckIdRouteImport } from './routes/decks.$deckId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ApiHooksRoute = ApiHooksRouteImport.update({
   path: '/api/hooks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DecksDeckIdRoute = DecksDeckIdRouteImport.update({
+  id: '/decks/$deckId',
+  path: '/decks/$deckId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/hooks': typeof ApiHooksRoute
+  '/decks/$deckId': typeof DecksDeckIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/hooks': typeof ApiHooksRoute
+  '/decks/$deckId': typeof DecksDeckIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/hooks': typeof ApiHooksRoute
+  '/decks/$deckId': typeof DecksDeckIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/hooks'
+  fullPaths: '/' | '/api/hooks' | '/decks/$deckId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/hooks'
-  id: '__root__' | '/' | '/api/hooks'
+  to: '/' | '/api/hooks' | '/decks/$deckId'
+  id: '__root__' | '/' | '/api/hooks' | '/decks/$deckId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHooksRoute: typeof ApiHooksRoute
+  DecksDeckIdRoute: typeof DecksDeckIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/decks/$deckId': {
+      id: '/decks/$deckId'
+      path: '/decks/$deckId'
+      fullPath: '/decks/$deckId'
+      preLoaderRoute: typeof DecksDeckIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHooksRoute: ApiHooksRoute,
+  DecksDeckIdRoute: DecksDeckIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

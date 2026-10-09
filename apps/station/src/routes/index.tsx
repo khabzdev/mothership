@@ -5,7 +5,6 @@ import { diagnosticsQuery } from "../app/queries";
 import { StationChecks } from "../app/ui/StationChecks";
 import { decksQuery } from "../features/decks/queries";
 import { DeckPanel } from "../features/decks/ui/DeckPanel";
-import { useRealtime } from "../shared/realtime/RealtimeProvider";
 
 export const Route = createFileRoute("/")({
   loader: ({ context }) =>
@@ -19,17 +18,17 @@ export const Route = createFileRoute("/")({
 
 function Bridge() {
   const { data } = useSuspenseQuery(healthQuery);
-  const realtime = useRealtime();
   return (
-    <main>
-      <h1>Mothership</h1>
-      <p>Command Bridge</p>
-      <p data-testid="station-status">
-        Station {data.status} · node {data.node} · db {data.db}
-      </p>
-      <p data-testid="realtime-status">Comms {realtime.state}</p>
-      <StationChecks />
+    <main className="bridge">
+      <section className="bridge__title">
+        <p className="eyebrow">Command bridge</p>
+        <h1>Every repo is a deck. Every feature is a mission.</h1>
+        <p className="readout" data-testid="station-status">
+          Station {data.status} · node {data.node} · db {data.db}
+        </p>
+      </section>
       <DeckPanel />
+      <StationChecks />
     </main>
   );
 }
