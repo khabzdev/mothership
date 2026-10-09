@@ -1,3 +1,37 @@
+/* Kumo (Cloudflare's component library) on Tailwind v4: its tokens first, then Tailwind. */
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import "@cloudflare/kumo/styles/tailwind";
+@import "tailwindcss";
+
+/* Kumo re-themed as the flight console: warm black instrument panels, bone-white text and
+   international orange as the one accent. The deck is always dark (data-mode="dark"). */
+:root[data-mode="dark"] {
+  --color-kumo-canvas: #0d0c0a;
+  --color-kumo-elevated: #14130f;
+  --color-kumo-recessed: #0b0a08;
+  --color-kumo-base: #14130f;
+  --color-kumo-control: #1d1b16;
+  --color-kumo-fill: #26231d;
+  --color-kumo-fill-hover: #34312a;
+  --color-kumo-line: #34312a;
+  --color-kumo-hairline: #2a2721;
+  --color-kumo-interact: #4a463c;
+  --color-kumo-tint: #1d1b16;
+  --color-kumo-overlay: #1d1b16;
+  --color-kumo-contrast: #ece6d6;
+  --color-kumo-focus: #ff5f1f;
+  --color-kumo-brand: #ff5f1f;
+  --color-kumo-brand-hover: #ff7a3d;
+  --text-color-kumo-default: #ece6d6;
+  --text-color-kumo-strong: #f8f3e6;
+  --text-color-kumo-subtle: #9a9382;
+  --text-color-kumo-inactive: #5e584b;
+  --text-color-kumo-placeholder: #6f685a;
+  --text-color-kumo-brand: #ff5f1f;
+  --font-sans: "Instrument Sans", ui-sans-serif, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, monospace, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
 /* Mothership HUD — "flight console": dark instrument panels over the 3D deck, bone-white crew
    tags, international orange as the single accent, status lamps. */
 

@@ -16,9 +16,13 @@
     "assets": "node scripts/fetch-assets.mjs"
   },
   "dependencies": {
+    "@cloudflare/kumo": "catalog:",
+    "@hugeicons/core-free-icons": "catalog:",
+    "@hugeicons/react": "catalog:",
     "@mothership/protocol": "workspace:*",
     "@mothership/providers": "workspace:*",
     "@mothership/ptyhost": "workspace:*",
+    "@phosphor-icons/react": "catalog:",
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
     "@tanstack/react-devtools": "0.10.13",
@@ -39,6 +43,7 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
     "@tanstack/devtools-vite": "0.8.5",
     "@tanstack/router-cli": "^1.132.0",
     "@types/better-sqlite3": "catalog:",
@@ -48,6 +53,7 @@
     "@types/three": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",
     "drizzle-kit": "catalog:",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:"

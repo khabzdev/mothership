@@ -45,7 +45,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-mode="dark" style={{ colorScheme: "dark" }}>
       <head>
         <HeadContent />
       </head>
