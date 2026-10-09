@@ -5,6 +5,7 @@ import { PtyCrewLauncher } from "../features/crew/launcher.server";
 import { crewRegistry } from "../features/crew/registry.server";
 import { CloneManager } from "../features/decks/clone.server";
 import { dockRepo } from "../features/decks/decks.server";
+import { GitHubBoards } from "../features/github/github.server";
 import { LabelService } from "../features/labels/labels.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
@@ -24,6 +25,7 @@ interface Station {
   launcher: PtyCrewLauncher;
   labels: LabelService;
   clones: CloneManager;
+  boards: GitHubBoards;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -95,7 +97,21 @@ export function getStation(): Station {
       const list = clones.list();
       if (list.length) hub.send(peer, { type: "deck.clones", clones: list });
     });
-    return { crew, launcher, labels, clones, diagnostics };
+    // A pull request that merged: the launch klaxon, over the console it came from if we know it.
+    const boards = new GitHubBoards();
+    boards.onLaunch(({ deckId, pull }) => {
+      const from = crew
+        .roster(deckId)
+        .find((c) => c.prUrl === pull.url || (!!c.branch && c.branch === pull.headRefName));
+      hub.broadcast({
+        type: "pr.merged",
+        deckId,
+        number: pull.number,
+        title: pull.title,
+        ...(from && { crewId: from.id }),
+      });
+    });
+    return { crew, launcher, labels, clones, boards, diagnostics };
   })();
   return shared.__mothershipStation;
 }

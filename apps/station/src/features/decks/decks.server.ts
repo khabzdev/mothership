@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { readdir, realpath, stat } from "node:fs/promises";
 import { basename } from "node:path";
@@ -19,6 +19,13 @@ export async function dockRepo(db: Db, path: string): Promise<Deck> {
     .onConflictDoUpdate({ target: decks.repoPath, set: { name: basename(root), modules } })
     .returning()
     .get();
+}
+
+/** A deck by id, or an error naming it. */
+export function getDeck(db: Db, id: string): Deck {
+  const deck = db.select().from(decks).where(eq(decks.id, id)).get();
+  if (!deck) throw new Error(`No such deck: ${id}`);
+  return deck;
 }
 
 export async function listDecks(db: Db): Promise<Deck[]> {

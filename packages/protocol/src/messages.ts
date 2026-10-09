@@ -105,6 +105,8 @@ export type ServerMsg =
   | { type: "crew.screen"; crewId: CrewId; frame: ScreenFrame }
   | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
   | { type: "deck.clones"; clones: CloneInfo[] }
+  /** A pull request merged: the launch klaxon. `crewId` is the crew member it came from, if known. */
+  | { type: "pr.merged"; deckId: DeckId; number: number; title: string; crewId?: CrewId }
   | { type: "error"; message: string };
 
 export type MsgOf<U extends { type: string }, T extends U["type"]> = Extract<U, { type: T }>;

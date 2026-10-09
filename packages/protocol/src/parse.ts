@@ -76,6 +76,16 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return Array.isArray(o.clones) && o.clones.every(isCloneInfo)
         ? { type: o.type, clones: o.clones }
         : null;
+    case "pr.merged":
+      return isId(o.deckId) && Number.isInteger(o.number) && typeof o.title === "string"
+        ? {
+            type: o.type,
+            deckId: o.deckId,
+            number: o.number as number,
+            title: o.title,
+            ...(isId(o.crewId) && { crewId: o.crewId }),
+          }
+        : null;
     case "error":
       return typeof o.message === "string" ? { type: o.type, message: o.message } : null;
     default:

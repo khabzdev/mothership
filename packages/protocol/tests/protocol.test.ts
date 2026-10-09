@@ -40,6 +40,7 @@ describe("types", () => {
       | "crew.screen"
       | "deck.labels"
       | "deck.clones"
+      | "pr.merged"
       | "error"
     >();
   });
@@ -134,6 +135,7 @@ describe("parseServerMsg", () => {
       type: "deck.clones",
       clones: [{ id: "k1", spec: "o/r", name: "r", state: "cloning", progress: "Downloading 5%" }],
     },
+    { type: "pr.merged", deckId: "d1", number: 7, title: "Add toggle", crewId: "c1" },
     { type: "error", message: "boom" },
   ];
 
