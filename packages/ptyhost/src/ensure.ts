@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PtyHostClient } from "./client.ts";
-import { stateFile, type HostState } from "./server.ts";
+import { readHostState, type HostState } from "./state.ts";
 
 export interface EnsureOptions {
   home: string;
@@ -10,14 +10,6 @@ export interface EnsureOptions {
   entry?: string;
   /** How long to wait for a freshly launched host. */
   timeoutMs?: number;
-}
-
-export function readHostState(home: string): HostState | null {
-  try {
-    return JSON.parse(readFileSync(stateFile(home), "utf8")) as HostState;
-  } catch {
-    return null;
-  }
 }
 
 /** Reuse the running PTY host, or launch a detached one that outlives the caller. */

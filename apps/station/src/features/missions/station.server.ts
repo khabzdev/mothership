@@ -1,4 +1,7 @@
 import { PROVIDERS } from "@mothership/providers";
+import type { Diagnostics } from "../../app/diagnostics";
+import { runDiagnostics } from "../../app/diagnostics.server";
+import { exec } from "../../app/exec.server";
 import { getDb, mothershipHome } from "../../shared/db/client.server";
 import { hub } from "../../shared/realtime/hub.server";
 import { onCrewSignal } from "../crew/hooks.server";
@@ -15,7 +18,10 @@ interface Station {
   runtime: MissionRuntime;
   launcher: PtyCrewLauncher;
   ready: Promise<void>;
+  diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
+
+const DIAGNOSTICS_TTL_MS = 30_000;
 
 const shared = globalThis as typeof globalThis & { __mothershipStation?: Station };
 
@@ -41,7 +47,23 @@ export function getStation(): Station {
       .sessions()
       .then((sessions) => runtime.reconcile(sessions))
       .catch((error: unknown) => console.error("Station startup reconcile failed", error));
-    return { runtime, launcher, ready };
+    let cached: Promise<Diagnostics> | undefined;
+    let cachedAt = 0;
+    const diagnostics = ({ refresh = false } = {}) => {
+      if (refresh || !cached || Date.now() - cachedAt > DIAGNOSTICS_TTL_MS) {
+        cachedAt = Date.now();
+        cached = runDiagnostics({ exec, ptyhost: async () => void (await launcher.sessions()) });
+      }
+      return cached;
+    };
+    void diagnostics().then((d) => {
+      for (const check of d.checks.filter((c) => c.status !== "ok")) {
+        console.warn(
+          `[station] ${check.label}: ${check.detail ?? check.status}${check.fix ? ` (${check.fix})` : ""}`,
+        );
+      }
+    });
+    return { runtime, launcher, ready, diagnostics };
   })();
   return shared.__mothershipStation;
 }

@@ -1,6 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { healthQuery } from "../app/health";
+import { diagnosticsQuery } from "../app/queries";
+import { StationChecks } from "../app/ui/StationChecks";
 import { decksQuery } from "../features/decks/queries";
 import { DeckPanel } from "../features/decks/ui/DeckPanel";
 import { useRealtime } from "../shared/realtime/RealtimeProvider";
@@ -10,6 +12,7 @@ export const Route = createFileRoute("/")({
     Promise.all([
       context.queryClient.ensureQueryData(healthQuery),
       context.queryClient.ensureQueryData(decksQuery),
+      context.queryClient.ensureQueryData(diagnosticsQuery),
     ]),
   component: Bridge,
 });
@@ -25,6 +28,7 @@ function Bridge() {
         Station {data.status} · node {data.node} · db {data.db}
       </p>
       <p data-testid="realtime-status">Comms {realtime.state}</p>
+      <StationChecks />
       <DeckPanel />
     </main>
   );

@@ -3,13 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
-import {
-  PtyHostClient,
-  ensurePtyHost,
-  readHostState,
-  startPtyHost,
-  type PtyHost,
-} from "../src/index.ts";
+import { PtyHostClient, ensurePtyHost, readHostState } from "../src/index.ts";
+import { startPtyHost, type PtyHost } from "../src/server.ts";
 
 let home: string;
 let host: PtyHost;
