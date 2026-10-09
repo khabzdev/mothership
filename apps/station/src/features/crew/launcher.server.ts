@@ -5,9 +5,11 @@ import {
   type AttachResult,
   type HostState,
 } from "@mothership/ptyhost";
+import type { ScreenFrame } from "@mothership/protocol";
 import type { ProviderAdapter } from "@mothership/providers";
 import { createRequire } from "node:module";
 import type { CrewRegistry } from "./registry.server";
+import type { ScreenSource } from "./screens.server";
 import type { TerminalSource } from "./terminals.server";
 
 export interface LaunchRequest {
@@ -42,7 +44,7 @@ type ExitListener = (event: { crewId: string; exitCode: number }) => void;
 type OutputListener = (event: { crewId: string; data: string; seq: number }) => void;
 
 /** Runs crew in the standalone PTY host so they survive station restarts. */
-export class PtyCrewLauncher implements CrewLauncher, TerminalSource {
+export class PtyCrewLauncher implements CrewLauncher, TerminalSource, ScreenSource {
   readonly #options: PtyCrewLauncherOptions;
   readonly #tails = new Map<string, string>();
   readonly #exitListeners = new Set<ExitListener>();
@@ -102,6 +104,10 @@ export class PtyCrewLauncher implements CrewLauncher, TerminalSource {
 
   async snapshot(crewId: string): Promise<AttachResult> {
     return (await this.#connect()).snapshot(crewId);
+  }
+
+  async screen(crewId: string): Promise<ScreenFrame> {
+    return (await this.#connect()).screen(crewId);
   }
 
   async resize(crewId: string, cols: number, rows: number): Promise<void> {

@@ -45,6 +45,21 @@ export interface CrewInfo {
   prUrl?: string;
 }
 
+/** A styled run of text on a terminal row: [text, fg, bg, flags]. */
+export type Run = [string, number, number, number];
+/** Colour encoding: -1 default, 0..255 palette, >= RGB_FLAG means RGB_FLAG | rgb. */
+export const RGB_FLAG = 0x1000000;
+export const FLAG_BOLD = 1;
+export const FLAG_INVERSE = 2;
+export const FLAG_DIM = 4;
+
+/** A crew terminal's visible rows, for the console's holo screen. */
+export interface ScreenFrame {
+  cols: number;
+  rows: number;
+  lines: Run[][];
+}
+
 /** Browser → station server. */
 export type ClientMsg =
   | { type: "terminal.attach"; crewId: CrewId }
@@ -59,6 +74,7 @@ export type ServerMsg =
   | { type: "terminal.output"; crewId: CrewId; data: string }
   | { type: "terminal.exit"; crewId: CrewId; code: number | null }
   | { type: "crew.roster"; deckId: DeckId; crew: CrewInfo[] }
+  | { type: "crew.screen"; crewId: CrewId; frame: ScreenFrame }
   | { type: "error"; message: string };
 
 export type MsgOf<U extends { type: string }, T extends U["type"]> = Extract<U, { type: T }>;

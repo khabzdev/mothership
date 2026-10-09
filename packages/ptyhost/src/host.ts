@@ -102,6 +102,8 @@ async function handle(frame: RequestFrame, sessions: SessionManager, subscriber:
       return sessions.attach(frame.id, subscriber);
     case "snapshot":
       return sessions.snapshot(frame.id);
+    case "screen":
+      return sessions.screen(frame.id);
     case "attachAll":
       return (sessions.attachAll(subscriber), null);
     case "detach":

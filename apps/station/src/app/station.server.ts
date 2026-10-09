@@ -3,6 +3,7 @@ import { CrewService } from "../features/crew/service.server";
 import { onCrewSignal } from "../features/crew/hooks.server";
 import { PtyCrewLauncher } from "../features/crew/launcher.server";
 import { crewRegistry } from "../features/crew/registry.server";
+import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
 import { getDb, mothershipHome } from "../shared/db/client.server";
 import { hub, type Peer } from "../shared/realtime/hub.server";
@@ -43,10 +44,18 @@ export function getStation(): Station {
 
     onCrewSignal((event) => crew.handleSignal(event));
     launcher.onExit(({ crewId }) => crew.handleExit(crewId));
+    const screens = new ScreenRelay(launcher, (msg) => hub.broadcast(msg));
+    screens.start();
+    hub.onPeerOpen((peer) => {
+      for (const msg of screens.current()) hub.send(peer, msg);
+    });
     const reconcile = () =>
       launcher
         .sessions()
-        .then((sessions) => crew.reconcile(sessions))
+        .then((sessions) => {
+          screens.touch(sessions.map((s) => s.id));
+          return crew.reconcile(sessions);
+        })
         .catch((error: unknown) => console.error("[station] reconcile failed", error));
     launcher.onHostLost(() => {
       console.warn("[station] PTY host connection lost; reconnecting");

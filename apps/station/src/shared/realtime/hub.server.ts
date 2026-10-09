@@ -20,10 +20,12 @@ export class RealtimeHub {
   readonly #peers = new Map<string, Peer>();
   readonly #handlers = new Map<ClientMsg["type"], Set<AnyHandler>>();
   readonly #closeListeners = new Set<(peer: Peer) => void>();
+  readonly #openListeners = new Set<(peer: Peer) => void>();
 
   open(peer: Peer): void {
     this.#peers.set(peer.id, peer);
     this.send(peer, { type: "hello", protocolVersion: PROTOCOL_VERSION });
+    for (const listener of this.#openListeners) listener(peer);
   }
 
   close(peer: Peer): void {
@@ -51,6 +53,11 @@ export class RealtimeHub {
     set.add(wrapped);
     this.#handlers.set(type, set);
     return () => set.delete(wrapped);
+  }
+
+  onPeerOpen(listener: (peer: Peer) => void): () => void {
+    this.#openListeners.add(listener);
+    return () => this.#openListeners.delete(listener);
   }
 
   onPeerClose(listener: (peer: Peer) => void): () => void {

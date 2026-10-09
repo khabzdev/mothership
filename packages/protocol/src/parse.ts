@@ -1,4 +1,11 @@
-import { CREW_STATUSES, type ClientMsg, type CrewInfo, type ServerMsg } from "./messages.ts";
+import {
+  CREW_STATUSES,
+  type ClientMsg,
+  type CrewInfo,
+  type Run,
+  type ScreenFrame,
+  type ServerMsg,
+} from "./messages.ts";
 
 const MAX_TERMINAL_SIZE = 1000;
 
@@ -54,11 +61,35 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return isId(o.deckId) && Array.isArray(o.crew) && o.crew.every(isCrewInfo)
         ? { type: o.type, deckId: o.deckId, crew: o.crew }
         : null;
+    case "crew.screen":
+      return isId(o.crewId) && isScreenFrame(o.frame)
+        ? { type: o.type, crewId: o.crewId, frame: o.frame }
+        : null;
     case "error":
       return typeof o.message === "string" ? { type: o.type, message: o.message } : null;
     default:
       return null;
   }
+}
+
+function isRun(value: unknown): value is Run {
+  return (
+    Array.isArray(value) &&
+    value.length === 4 &&
+    typeof value[0] === "string" &&
+    value.slice(1).every(Number.isInteger)
+  );
+}
+
+function isScreenFrame(value: unknown): value is ScreenFrame {
+  if (typeof value !== "object" || value === null) return false;
+  const f = value as Record<string, unknown>;
+  return (
+    isTerminalSize(f.cols) &&
+    isTerminalSize(f.rows) &&
+    Array.isArray(f.lines) &&
+    f.lines.every((line) => Array.isArray(line) && line.every(isRun))
+  );
 }
 
 function parseObject(raw: string): Record<string, unknown> | null {

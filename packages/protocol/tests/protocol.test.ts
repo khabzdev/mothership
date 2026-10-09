@@ -31,7 +31,13 @@ describe("types", () => {
       "terminal.attach" | "terminal.detach" | "terminal.input" | "terminal.resize"
     >();
     expectTypeOf<ServerMsg["type"]>().toEqualTypeOf<
-      "hello" | "terminal.snapshot" | "terminal.output" | "terminal.exit" | "crew.roster" | "error"
+      | "hello"
+      | "terminal.snapshot"
+      | "terminal.output"
+      | "terminal.exit"
+      | "crew.roster"
+      | "crew.screen"
+      | "error"
     >();
   });
 
@@ -111,6 +117,11 @@ describe("parseServerMsg", () => {
     { type: "terminal.exit", crewId: "c1", code: null },
     { type: "crew.roster", deckId: "d1", crew: [nova] },
     { type: "crew.roster", deckId: "d1", crew: [] },
+    {
+      type: "crew.screen",
+      crewId: "c1",
+      frame: { cols: 80, rows: 2, lines: [[["hi", -1, -1, 0]], []] },
+    },
     { type: "error", message: "boom" },
   ];
 
@@ -125,6 +136,15 @@ describe("parseServerMsg", () => {
       type: "crew.roster",
       deckId: "d1",
       crew: [{ ...nova, status: "asleep-ish" }],
+    });
+    expect(parseServerMsg(raw)).toBeNull();
+  });
+
+  test("rejects a screen with a malformed run", () => {
+    const raw = JSON.stringify({
+      type: "crew.screen",
+      crewId: "c1",
+      frame: { cols: 80, rows: 1, lines: [[["hi", "red", -1, 0]]] },
     });
     expect(parseServerMsg(raw)).toBeNull();
   });

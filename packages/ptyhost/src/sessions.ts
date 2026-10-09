@@ -3,7 +3,8 @@ import { SerializeAddon } from "@xterm/addon-serialize";
 import headless from "@xterm/headless";
 import { accessSync, constants } from "node:fs";
 import { delimiter, join } from "node:path";
-import type { AttachResult, HostEvent, SessionInfo, SpawnSpec } from "./protocol.ts";
+import type { AttachResult, HostEvent, ScreenFrame, SessionInfo, SpawnSpec } from "./protocol.ts";
+import { readScreen } from "./screen.ts";
 
 const SCROLLBACK = 5000;
 
@@ -138,6 +139,14 @@ export class SessionManager {
         });
       });
     });
+  }
+
+  /** The session's visible screen as styled runs, once queued output has reached the mirror. */
+  screen(id: string): Promise<ScreenFrame> {
+    const session = this.#get(id);
+    return new Promise((resolve) =>
+      session.mirror.write("", () => resolve(readScreen(session.mirror))),
+    );
   }
 
   /** Receive events from every session, current and future (no snapshots). */

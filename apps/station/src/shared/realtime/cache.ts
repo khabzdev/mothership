@@ -1,5 +1,6 @@
 import type { ServerMsg } from "@mothership/protocol";
 import type { QueryClient } from "@tanstack/react-query";
+import { setScreen } from "./screens";
 
 export const realtimeKeys = {
   roster: (deckId: string) => ["decks", deckId, "crew"] as const,
@@ -9,5 +10,6 @@ export const realtimeKeys = {
 export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
   if (msg.type === "crew.roster")
     queryClient.setQueryData(realtimeKeys.roster(msg.deckId), msg.crew);
+  else if (msg.type === "crew.screen") setScreen(msg.crewId, msg.frame);
   // Terminal traffic is streamed to subscribers, not cached.
 }

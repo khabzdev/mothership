@@ -217,6 +217,24 @@ describe("sequenced output and snapshots", () => {
   });
 });
 
+describe("screens", () => {
+  test("screen returns the visible rows as styled runs", async () => {
+    const client = await connect();
+    await client.attachAll();
+    await client.spawn(
+      spawnSpec("scr", "/bin/sh", ["-c", "printf 'plain \\033[1;31mred\\033[0m'; cat"]),
+    );
+    await waitForOutput(client, "scr", (all) => all.includes("red"));
+    const frame = await client.screen("scr");
+    expect(frame.rows).toBe(frame.lines.length);
+    expect(frame.lines[0]).toEqual([
+      ["plain ", -1, -1, 0],
+      ["red", 1, -1, 1],
+    ]);
+    expect(frame.lines.at(-1)).toEqual([]);
+  });
+});
+
 describe("host version", () => {
   test("ping reports the protocol version and the state file records it", async () => {
     const client = await connect();

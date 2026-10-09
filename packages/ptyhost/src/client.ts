@@ -57,6 +57,8 @@ export class PtyHostClient {
   attach = (id: string) => this.#request({ type: "attach", id });
   /** A session's screen and the output sequence it covers, without subscribing. */
   snapshot = (id: string) => this.#request({ type: "snapshot", id });
+  /** A session's visible screen as styled runs (for the console's holo screen). */
+  screen = (id: string) => this.#request({ type: "screen", id });
   /** Stream events from every session (used by the station to track status). */
   attachAll = () => this.#request({ type: "attachAll" });
   detach = (id: string) => this.#request({ type: "detach", id });
