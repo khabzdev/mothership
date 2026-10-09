@@ -1,4 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 export interface CrewEntry {
   missionId: string;
@@ -9,13 +12,30 @@ interface Registered extends CrewEntry {
   token: string;
 }
 
-/** Crew currently on duty and the per-crew secret their hooks must present. */
+/**
+ * Crew currently on duty and the per-crew secret their hooks must present. With a file, entries
+ * survive station restarts, so crew still running in the PTY host keep reporting in.
+ */
 export class CrewRegistry {
   readonly #crew = new Map<string, Registered>();
+  readonly #file: string | undefined;
+
+  constructor(file?: string) {
+    this.#file = file;
+    if (file) {
+      try {
+        const saved = JSON.parse(readFileSync(file, "utf8")) as Record<string, Registered>;
+        for (const [id, entry] of Object.entries(saved)) this.#crew.set(id, entry);
+      } catch {
+        // Missing or unreadable: start empty.
+      }
+    }
+  }
 
   register(crewId: string, entry: CrewEntry): { token: string } {
     const token = randomBytes(32).toString("hex");
     this.#crew.set(crewId, { ...entry, token });
+    this.#save();
     return { token };
   }
 
@@ -29,11 +49,19 @@ export class CrewRegistry {
   }
 
   unregister(crewId: string): void {
-    this.#crew.delete(crewId);
+    if (this.#crew.delete(crewId)) this.#save();
+  }
+
+  #save(): void {
+    if (!this.#file) return;
+    mkdirSync(dirname(this.#file), { recursive: true });
+    writeFileSync(this.#file, JSON.stringify(Object.fromEntries(this.#crew)), { mode: 0o600 });
   }
 }
 
 const shared = globalThis as typeof globalThis & { __mothershipCrew?: CrewRegistry };
 
-/** The station's crew registry, shared across module reloads in dev. */
-export const crewRegistry: CrewRegistry = (shared.__mothershipCrew ??= new CrewRegistry());
+/** The station's crew registry (persisted in $MOTHERSHIP_HOME), shared across reloads in dev. */
+export const crewRegistry: CrewRegistry = (shared.__mothershipCrew ??= new CrewRegistry(
+  join(process.env.MOTHERSHIP_HOME ?? join(homedir(), ".mothership"), "crew.json"),
+));

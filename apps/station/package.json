@@ -18,6 +18,7 @@
     "@mothership/mission-engine": "workspace:*",
     "@mothership/protocol": "workspace:*",
     "@mothership/providers": "workspace:*",
+    "@mothership/ptyhost": "workspace:*",
     "@tanstack/react-devtools": "0.10.13",
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-query-devtools": "5.104.1",

@@ -1,4 +1,7 @@
 import { claudeCode, type CrewSignal } from "@mothership/providers";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test, vi } from "vite-plus/test";
 import {
   handleHookRequest,
@@ -55,6 +58,36 @@ describe("CrewRegistry", () => {
     const { token } = registry.register("a", { missionId: "m1", provider: "claude-code" });
     registry.unregister("a");
     expect(registry.verify("a", token)).toBeNull();
+  });
+});
+
+describe("CrewRegistry persistence", () => {
+  test("survives a restart when backed by a file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "mothership-crew-"));
+    try {
+      const file = join(dir, "crew.json");
+      const first = new CrewRegistry(file);
+      const { token } = first.register("a", { missionId: "m1", provider: "claude-code" });
+      expect(statSync(file).mode & 0o777).toBe(0o600);
+
+      const restarted = new CrewRegistry(file);
+      expect(restarted.verify("a", token)).toEqual({ missionId: "m1", provider: "claude-code" });
+      restarted.unregister("a");
+      expect(new CrewRegistry(file).verify("a", token)).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a corrupt file starts empty instead of crashing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mothership-crew-"));
+    try {
+      const file = join(dir, "crew.json");
+      (await import("node:fs")).writeFileSync(file, "{nope");
+      expect(new CrewRegistry(file).verify("a", "x")).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
