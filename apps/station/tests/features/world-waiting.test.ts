@@ -4,6 +4,7 @@ import {
   Fresh,
   NextUp,
   bannerText,
+  byUrgency,
   needingYou,
   needyFirst,
   waited,
@@ -45,6 +46,17 @@ describe("waiting on you", () => {
       crew("c", { consoleId: 9, status: "needs_input" }),
     ];
     expect(needyFirst(all).map((c) => c.id)).toEqual(["c", "b", "a"]);
+  });
+
+  test("the 2D view: waiting first, then at work, then the rest, asleep last", () => {
+    const all = [
+      crew("asleep", { consoleId: 0, status: "asleep" }),
+      crew("ready", { consoleId: 1, status: "idle" }),
+      crew("busy", { consoleId: 2, status: "working" }),
+      crew("done", { consoleId: 3, status: "done" }),
+      crew("asks", { consoleId: 4, status: "needs_input" }),
+    ];
+    expect(byUrgency(all).map((c) => c.id)).toEqual(["asks", "done", "busy", "ready", "asleep"]);
   });
 
   test("waited reads nothing for a minute, then minutes, then hours", () => {

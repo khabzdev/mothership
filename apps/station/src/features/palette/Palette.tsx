@@ -6,6 +6,7 @@ import {
   Notification03Icon,
   Rocket01Icon,
   Search01Icon,
+  SmartPhone01Icon,
   Target02Icon,
   TaskDaily01Icon,
   UserAdd01Icon,
@@ -137,6 +138,13 @@ export function Palette({
         subtitle: "Every crew terminal on this deck (/)",
         icon: Search01Icon,
         run: () => openOverlay({ kind: "search" }),
+      },
+      {
+        id: "a:lite",
+        title: "Open the 2D view",
+        subtitle: "/lite: the deck as a plain list, for a phone or a slow machine",
+        icon: SmartPhone01Icon,
+        run: () => window.location.assign("/lite"),
       },
       {
         id: "a:lift",

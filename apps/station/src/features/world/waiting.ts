@@ -108,3 +108,17 @@ export class NextUp {
     return pick;
   }
 }
+
+/**
+ * Every crew member as the 2D view lists them (agent-office's byUrgency): the ones waiting on you
+ * first, then the ones at work, then the rest, asleep last; by console within each.
+ */
+export function byUrgency(crew: Iterable<CrewInfo>): CrewInfo[] {
+  const all = [...crew];
+  const rank = (c: CrewInfo) =>
+    c.status === "working" || c.status === "starting" ? 0 : c.status === "asleep" ? 2 : 1;
+  const rest = all
+    .filter((c) => !waitingOnYou(c))
+    .sort((a, b) => rank(a) - rank(b) || a.consoleId - b.consoleId);
+  return [...waitingInOrder(all), ...rest];
+}
