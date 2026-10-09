@@ -24,12 +24,15 @@ interface WorldState {
   cheering: boolean;
   /** An issue's card in your hands (agent-office's carried note), on its way to a console. */
   carrying: { number: number; title: string } | null;
+  /** The command palette is up (Ctrl+K). */
+  paletteOpen: boolean;
   /** Standing at a board. */
   atBoard: BoardId | null;
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
   setAtLift: (atLift: boolean) => void;
   setAtBoard: (atBoard: BoardId | null) => void;
+  setPalette: (open: boolean) => void;
   carry: (card: { number: number; title: string } | null) => void;
   celebrate: (launch: { number: number; title: string; crewId?: string }) => void;
   open: (overlay: Overlay) => void;
@@ -48,11 +51,13 @@ export const useWorld = create<WorldState>((set) => ({
   launch: null,
   cheering: false,
   carrying: null,
+  paletteOpen: false,
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
   setAtBoard: (atBoard) => set((s) => (s.atBoard === atBoard ? s : { atBoard })),
   carry: (carrying) => set({ carrying }),
+  setPalette: (paletteOpen) => set({ paletteOpen }),
   celebrate: (launch) => {
     const at = Date.now();
     set({ launch: { ...launch, at }, cheering: true });
@@ -67,7 +72,8 @@ export const useWorld = create<WorldState>((set) => ({
 
 /** Game keys are ignored while typing or while a window is open (agent-office's guard). */
 export function gameKeysEnabled(event: KeyboardEvent): boolean {
-  if (useWorld.getState().overlay) return false;
+  const { overlay, paletteOpen } = useWorld.getState();
+  if (overlay || paletteOpen) return false;
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
   const target = event.target as HTMLElement | null;
   return !(

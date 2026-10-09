@@ -15,6 +15,7 @@ import { rosterQuery } from "../crew/queries";
 import { launchCards, missionCards } from "../github/cards";
 import { boardQuery } from "../github/queries";
 import { labelsQuery } from "../labels/queries";
+import { Palette } from "../palette/Palette";
 import { queueCards } from "../queue/cards";
 import { queueQuery } from "../queue/queries";
 import type { Deck } from "../decks/model";
@@ -202,6 +203,7 @@ export function Game({ deck }: { deck: Deck }) {
         />
         <HintBar crew={crew} labels={labels} />
         <Overlays deckId={deck.id} crew={crew} labels={labels} />
+        <Palette deckId={deck.id} crew={crew} labels={labels} />
       </div>
     </Toasty>
   );

@@ -80,6 +80,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
         <Key k="WASD" label="Walk" />
         <Key k="Shift" label="Run" />
         <Key k="Drag" label="Look" />
+        <Key k="⌘K" label="Find" />
       </div>
     );
   }

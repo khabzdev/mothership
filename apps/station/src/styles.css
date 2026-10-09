@@ -1612,3 +1612,46 @@ a:focus-visible {
     height: auto;
   }
 }
+
+/* The command palette's rows. */
+.palette-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.palette-item svg {
+  color: var(--color-kumo-subtle, var(--ink-dim));
+}
+
+.palette-item__title {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-item__sub {
+  overflow: hidden;
+  font: 400 0.72rem var(--font-mono);
+  color: var(--color-kumo-subtle, var(--ink-dim));
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-keys {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-kumo-subtle, var(--ink-dim));
+}
+
+.palette-keys kbd {
+  padding: 0 0.3rem;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: 4px;
+  font: 600 0.68rem var(--font-mono);
+}
