@@ -15,6 +15,8 @@ import { rosterQuery } from "../crew/queries";
 import { launchCards, missionCards } from "../github/cards";
 import { boardQuery } from "../github/queries";
 import { labelsQuery } from "../labels/queries";
+import { queueCards } from "../queue/cards";
+import { queueQuery } from "../queue/queries";
 import type { Deck } from "../decks/model";
 import { Toasty } from "@cloudflare/kumo";
 import { toasts } from "../../shared/ui/toasts";
@@ -116,6 +118,8 @@ export function Game({ deck }: { deck: Deck }) {
   const carried = useWorld((s) => s.carrying?.number);
   const mission = useMemo(() => missionCards(github, carried), [github, carried]);
   const launch = useMemo(() => launchCards(github), [github]);
+  const { data: queue } = useQuery(queueQuery(deck.id));
+  const queued = useMemo(() => queueCards(queue?.tasks, queue?.limit ?? 3), [queue]);
   const consoleId = useWorld((s) => s.consoleId);
   const [loaded, setLoaded] = useState(false);
   const ready = useCallback(() => setLoaded(true), []);
@@ -154,6 +158,7 @@ export function Game({ deck }: { deck: Deck }) {
             <LiftDoors deckName={deck.name} paint={paint} />
             <Board board="mission" trim={paint.trim} {...mission} />
             <Board board="launch" trim={paint.trim} {...launch} />
+            <Board board="queue" trim={paint.trim} {...queued} />
             {CONSOLES.map((def) => (
               <Console
                 key={def.id}

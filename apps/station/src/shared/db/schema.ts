@@ -13,6 +13,8 @@ export const decks = sqliteTable("decks", {
   name: text("name").notNull(),
   repoPath: text("repo_path").notNull().unique(),
   modules: text("modules", { mode: "json" }).$type<string[]>().notNull(),
+  /** How many queued tasks may run at once on this deck (0 pauses the queue). */
+  queueLimit: integer("queue_limit").notNull().default(3),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
 });
 
@@ -60,4 +62,26 @@ export const consoleLabels = sqliteTable(
     color: text("color").notNull(),
   },
   (t) => [primaryKey({ columns: [t.deckId, t.consoleId] })],
+);
+
+export const QUEUE_STATES = ["queued", "running", "done"] as const;
+
+/** A task waiting for crew (agent-office's task queue): free text, or a GitHub issue. */
+export const queueTasks = sqliteTable(
+  "queue_tasks",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    prompt: text("prompt").notNull(),
+    issueNumber: integer("issue_number"),
+    state: text("state", { enum: QUEUE_STATES }).notNull().default("queued"),
+    /** The crew member seated for it, while it runs and after. */
+    crewId: text("crew_id"),
+    crewName: text("crew_name"),
+    createdAt: integer("created_at").notNull().default(now),
+  },
+  () => [check("queue_tasks_state_check", oneOf("state", QUEUE_STATES))],
 );

@@ -6,6 +6,8 @@ import { crewRegistry } from "../features/crew/registry.server";
 import { CloneManager } from "../features/decks/clone.server";
 import { dockRepo } from "../features/decks/decks.server";
 import { GitHubBoards } from "../features/github/github.server";
+import { QueueService } from "../features/queue/queue.server";
+import { getDeck } from "../features/decks/decks.server";
 import { LabelService } from "../features/labels/labels.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
@@ -26,6 +28,7 @@ interface Station {
   labels: LabelService;
   clones: CloneManager;
   boards: GitHubBoards;
+  queue: QueueService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -111,7 +114,14 @@ export function getStation(): Station {
         ...(from && { crewId: from.id }),
       });
     });
-    return { crew, launcher, labels, clones, boards, diagnostics };
+    // The task queue: crew seated for queued tasks as consoles free up (checked every few seconds).
+    const queue = new QueueService({
+      db: getDb(),
+      crew,
+      claim: (deckId, n) => boards.claimIssue(getDeck(getDb(), deckId).repoPath, n),
+    });
+    setInterval(() => void queue.tickAll(), 4000);
+    return { crew, launcher, labels, clones, boards, queue, diagnostics };
   })();
   return shared.__mothershipStation;
 }

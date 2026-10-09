@@ -6,6 +6,7 @@ import {
   Message01Icon,
   Rocket01Icon,
   Target02Icon,
+  TaskDaily01Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
@@ -13,6 +14,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
+import { QueueWindow } from "../../queue/ui/QueueWindow";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
@@ -209,6 +211,18 @@ export function Overlays({
         />
       );
     case "board":
+      if (overlay.board === "queue") {
+        return (
+          <Modal
+            wide
+            icon={TaskDaily01Icon}
+            title="Task queue"
+            subtitle="Add tasks and walk away: the next free crew member takes each one in its own worktree."
+          >
+            <QueueWindow deckId={deckId} />
+          </Modal>
+        );
+      }
       return (
         <Modal
           wide

@@ -1563,3 +1563,52 @@ a:focus-visible {
 .board-item__reply > :first-child {
   flex: 1;
 }
+
+/* The task queue window. */
+.queue {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.queue__add {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.queue__controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.queue__groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  height: min(46vh, 26rem);
+}
+
+.queue__task {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: 7px;
+  background: var(--color-kumo-control);
+}
+
+.queue__none {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 48rem) {
+  .queue__groups {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+}

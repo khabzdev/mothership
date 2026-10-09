@@ -3,6 +3,7 @@ import {
   ArrowLeft01Icon,
   Comment01Icon,
   HandGrabIcon,
+  TaskAdd01Icon,
   LinkSquare02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
@@ -10,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";
+import { queueIssueMutation } from "../../queue/queries";
 import { useWorld } from "../../world/store";
 import { issueColumn } from "../model";
 import {
@@ -34,6 +36,7 @@ export function IssueView({
   const issue = useQuery(issueQuery(deckId, number));
   const hand = useMutation(handIssueMutation(queryClient, deckId));
   const comment = useMutation(commentIssueMutation(queryClient, deckId, number));
+  const enqueue = useMutation(queueIssueMutation(queryClient, deckId));
   const closeIt = useMutation(closeIssueMutation(queryClient, deckId));
   const [text, setText] = useState("");
   const [reason, setReason] = useState<"completed" | "not planned">("completed");
@@ -113,6 +116,19 @@ export function IssueView({
               <span className="board-item__close">
                 <Button
                   variant="outline"
+                  loading={enqueue.isPending}
+                  icon={<Icon icon={TaskAdd01Icon} />}
+                  title="The next free crew member takes it, in its own worktree"
+                  onClick={() =>
+                    enqueue.mutate(number, {
+                      onSuccess: () => say(`📋 #${number} is on the task queue`),
+                    })
+                  }
+                >
+                  Add to queue
+                </Button>
+                <Button
+                  variant="outline"
                   icon={<Icon icon={HandGrabIcon} />}
                   title="Carry its card to a console: E there hires for it, or hands it to the crew member there"
                   onClick={() => {
@@ -189,7 +205,7 @@ export function IssueView({
               Comment
             </Button>
           </form>
-          <ErrorNote error={hand.error ?? comment.error ?? closeIt.error} />
+          <ErrorNote error={hand.error ?? comment.error ?? closeIt.error ?? enqueue.error} />
         </>
       )}
     </div>

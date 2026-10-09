@@ -7,6 +7,7 @@ import {
   Notification03Icon,
   Rocket01Icon,
   Target02Icon,
+  TaskDaily01Icon,
 } from "@hugeicons/core-free-icons";
 import { Icon } from "../../../shared/ui/Icon";
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
@@ -25,6 +26,12 @@ function Key({ k, label }: { k: string; label: string }) {
     </span>
   );
 }
+
+const BOARD_HINTS = {
+  mission: [Target02Icon, "Mission board · issues"],
+  launch: [Rocket01Icon, "Launch board · pull requests"],
+  queue: [TaskDaily01Icon, "Task queue"],
+} as const;
 
 /** What you're facing and what you can do there (agent-office's hint bar). */
 export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
@@ -50,8 +57,8 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
     return (
       <div className="hint" data-active>
         <span className="hint__what with-icon">
-          <Icon icon={atBoard === "mission" ? Target02Icon : Rocket01Icon} />
-          {atBoard === "mission" ? "Mission board · issues" : "Launch board · pull requests"}
+          <Icon icon={BOARD_HINTS[atBoard][0]} />
+          {BOARD_HINTS[atBoard][1]}
         </span>
         <Key k="E" label="Read the board" />
       </div>

@@ -14,7 +14,11 @@ export interface BoardCard {
 
 const PX = 512;
 const NOTE = { cols: 4, rows: 2, gap: 26 };
-const TITLES: Record<BoardId, string> = { mission: "MISSION BOARD", launch: "LAUNCH BOARD" };
+const TITLES: Record<BoardId, string> = {
+  mission: "MISSION BOARD",
+  launch: "LAUNCH BOARD",
+  queue: "TASK QUEUE",
+};
 
 /** Wrap `text` into at most `lines` lines that fit `width`. */
 function wrap(c: CanvasRenderingContext2D, text: string, width: number, lines: number): string[] {
@@ -61,11 +65,12 @@ function paint(
   c.fillText(note, w - 32, 58);
   c.textAlign = "left";
 
-  const cw = (w - 48 - NOTE.gap * (NOTE.cols + 1)) / NOTE.cols;
+  const cols = board === "queue" ? 2 : NOTE.cols;
+  const cw = (w - 48 - NOTE.gap * (cols + 1)) / cols;
   const ch = (h - 120 - NOTE.gap * (NOTE.rows + 1)) / NOTE.rows;
-  cards.slice(0, NOTE.cols * NOTE.rows).forEach((card, i) => {
-    const x = 24 + NOTE.gap + (i % NOTE.cols) * (cw + NOTE.gap);
-    const y = 96 + NOTE.gap + Math.floor(i / NOTE.cols) * (ch + NOTE.gap);
+  cards.slice(0, cols * NOTE.rows).forEach((card, i) => {
+    const x = 24 + NOTE.gap + (i % cols) * (cw + NOTE.gap);
+    const y = 96 + NOTE.gap + Math.floor(i / cols) * (ch + NOTE.gap);
     const tilt = ((i * 37) % 7) / 7 - 0.5;
     c.save();
     c.translate(x + cw / 2, y + ch / 2);

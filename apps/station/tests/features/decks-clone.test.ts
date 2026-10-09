@@ -87,6 +87,7 @@ describe("CloneManager", () => {
           name: "shop",
           repoPath: path,
           modules: [],
+          queueLimit: 3,
           createdAt: new Date(),
         } as Deck;
       },
