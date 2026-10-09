@@ -1,3 +1,12 @@
+import { Button, Checkbox, ClipboardText } from "@cloudflare/kumo";
+import {
+  ComputerTerminal01Icon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  LinkSquare02Icon,
+  Message01Icon,
+  UserAdd01Icon,
+} from "@hugeicons/core-free-icons";
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -5,12 +14,14 @@ import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { TerminalPanel } from "../../crew/ui/TerminalPanel";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
-import { chipFor } from "../scene/status";
+import { ErrorNote } from "../../../shared/ui/ErrorNote";
+import { Icon } from "../../../shared/ui/Icon";
 import { useWorld } from "../store";
 import { LabelWindow } from "./LabelWindow";
 import { Lift } from "./Lift";
 import { Modal } from "./Modal";
 import { SendHomeWindow } from "./SendHome";
+import { StatusBadge } from "./StatusBadge";
 import { TaskBox } from "./TaskBox";
 
 const WORKTREE_PREF = "mothership.worktree";
@@ -40,7 +51,8 @@ function HireWindow({
 
   return (
     <Modal
-      title={withTask ? `✨ New task at ${label}` : `✨ Hire crew at ${label}`}
+      icon={UserAdd01Icon}
+      title={withTask ? `New task at ${label}` : `Hire crew at ${label}`}
       subtitle={
         withTask
           ? "Claude Code will start on it right away."
@@ -56,26 +68,24 @@ function HireWindow({
           hire.mutate({ deckId, consoleId, task, worktree }, { onSuccess: close })
         }
       >
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={worktree}
-            onChange={(e) => {
-              setWorktree(e.target.checked);
-              try {
-                localStorage.setItem(WORKTREE_PREF, e.target.checked ? "1" : "0");
-              } catch {
-                // preference only
-              }
-            }}
-          />
-          🌿 Work in its own git worktree &amp; branch
-        </label>
-        {hire.error && (
-          <p role="alert" className="error">
-            {hire.error.message}
-          </p>
-        )}
+        <Checkbox
+          className="game-form__check"
+          label={
+            <span className="with-icon">
+              <Icon icon={GitBranchIcon} /> Work in its own git worktree &amp; branch
+            </span>
+          }
+          checked={worktree}
+          onCheckedChange={(checked) => {
+            setWorktree(checked);
+            try {
+              localStorage.setItem(WORKTREE_PREF, checked ? "1" : "0");
+            } catch {
+              // preference only
+            }
+          }}
+        />
+        <ErrorNote error={hire.error} />
       </TaskBox>
     </Modal>
   );
@@ -85,7 +95,11 @@ function PromptWindow({ member }: { member: CrewInfo }) {
   const close = useWorld((s) => s.close);
   const prompt = useMutation(promptMutation());
   return (
-    <Modal title={`💬 Prompt ${member.name}`} subtitle={chipFor(member)}>
+    <Modal
+      icon={Message01Icon}
+      title={`Prompt ${member.name}`}
+      subtitle={<StatusBadge crew={member} />}
+    >
       <TaskBox
         placeholder={`Tell ${member.name} what to do next`}
         required
@@ -93,11 +107,7 @@ function PromptWindow({ member }: { member: CrewInfo }) {
         submitLabel="Send"
         onSubmit={(text) => prompt.mutate({ crewId: member.id, text }, { onSuccess: close })}
       >
-        {prompt.error && (
-          <p role="alert" className="error">
-            {prompt.error.message}
-          </p>
-        )}
+        <ErrorNote error={prompt.error} />
       </TaskBox>
     </Modal>
   );
@@ -107,8 +117,9 @@ function TerminalWindow({ member }: { member: CrewInfo }) {
   return (
     <Modal
       wide
+      icon={ComputerTerminal01Icon}
       title={`${member.name} · ${member.kind === "shell" ? "Shell" : "Claude Code"}`}
-      subtitle={`${chipFor(member)}${member.task ? ` · ${member.task.split("\n")[0]}` : ""}`}
+      subtitle={<StatusBadge crew={member} />}
     >
       <TerminalPanel crewId={member.id} />
     </Modal>
@@ -118,7 +129,12 @@ function TerminalWindow({ member }: { member: CrewInfo }) {
 function ChangesWindow({ member }: { member: CrewInfo }) {
   const open = useWorld((s) => s.open);
   return (
-    <Modal wide title={`${member.name} · changes`} subtitle={chipFor(member)}>
+    <Modal
+      wide
+      icon={GitBranchIcon}
+      title={`${member.name} · changes`}
+      subtitle={<StatusBadge crew={member} />}
+    >
       <ChangesPanel
         crewId={member.id}
         task={member.task}
@@ -133,25 +149,24 @@ function PrWindow({ member }: { member: CrewInfo }) {
   const number = /\/pull\/(\d+)/.exec(url)?.[1];
   return (
     <Modal
-      title={`🔀 ${member.name}'s pull request${number ? ` #${number}` : ""}`}
-      subtitle={`🌿 ${member.branch ?? ""}`}
+      icon={GitPullRequestIcon}
+      title={`${member.name}'s pull request${number ? ` #${number}` : ""}`}
+      subtitle={
+        <span className="with-icon">
+          <Icon icon={GitBranchIcon} /> {member.branch}
+        </span>
+      }
     >
-      <p className="pr-link">
-        <a href={url} target="_blank" rel="noreferrer noopener">
-          {url}
-        </a>
-      </p>
+      <ClipboardText text={url} />
       <footer className="modal__foot">
-        <button
-          type="button"
-          className="button button--ghost"
-          onClick={() => void navigator.clipboard?.writeText(url)}
+        <span />
+        <Button
+          variant="primary"
+          icon={<Icon icon={LinkSquare02Icon} />}
+          onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
         >
-          Copy link
-        </button>
-        <a className="button" href={url} target="_blank" rel="noreferrer noopener">
-          Open on GitHub ↗
-        </a>
+          Open on GitHub
+        </Button>
       </footer>
     </Modal>
   );

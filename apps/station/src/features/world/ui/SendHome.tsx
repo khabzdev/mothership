@@ -1,3 +1,7 @@
+import { Button, Loader, Radio } from "@cloudflare/kumo";
+import { Alert02Icon, CheckmarkCircle02Icon, Logout03Icon } from "@hugeicons/core-free-icons";
+import { ErrorNote } from "../../../shared/ui/ErrorNote";
+import { Icon } from "../../../shared/ui/Icon";
 import type { CrewInfo } from "@mothership/protocol";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -47,8 +51,9 @@ export function SendHomeWindow({ member }: { member: CrewInfo }) {
 
   return (
     <Modal
+      icon={Logout03Icon}
       title={`Send ${member.name} home?`}
-      subtitle={`This stops the session at ${where} and frees the console. ${member.name} worked in its own worktree on 🌿 ${branch}:`}
+      subtitle={`This stops the session at ${where} and frees the console. ${member.name} worked in its own worktree on ${branch}.`}
     >
       <form
         onSubmit={(e) => {
@@ -64,49 +69,61 @@ export function SendHomeWindow({ member }: { member: CrewInfo }) {
           );
         }}
       >
-        <div className="choices" role="radiogroup">
+        <Radio.Group
+          legend="What becomes of its worktree"
+          appearance="card"
+          value={choice}
+          onValueChange={(value) => {
+            setTouched(true);
+            setChoice(value as WorktreeChoice);
+          }}
+        >
           {choices.map(([value, title, sub]) => (
-            <label key={value} className="choice">
-              <input
-                type="radio"
-                name="worktree"
-                value={value}
-                checked={choice === value}
-                onChange={() => {
-                  setTouched(true);
-                  setChoice(value);
-                }}
-              />
-              <span>
-                {title}
-                <small>{sub}</small>
-              </span>
-            </label>
+            <Radio.Item key={value} value={value} label={title} description={sub} />
           ))}
-        </div>
+        </Radio.Group>
         <p className="wt-status" data-risk={atRisk || undefined}>
-          {state.isPending
-            ? `Checking what ${branch} holds…`
-            : state.error
-              ? `⚠️ Couldn't check the worktree: ${state.error.message}`
-              : !s || s.missing
-                ? "🌿 Its worktree is already gone."
-                : atRisk
-                  ? `⚠️ ${[s.dirty && `${plural(s.dirty, "file")} with uncommitted changes`, s.unpushed && `${plural(s.unpushed, "commit")} on no remote`].filter(Boolean).join(" and ")}: deleting loses them.`
-                  : "✅ Nothing would be lost: everything is committed and pushed."}
+          {state.isPending ? (
+            <>
+              <Loader size="sm" /> Checking what {branch} holds…
+            </>
+          ) : state.error ? (
+            <>
+              <Icon icon={Alert02Icon} /> Couldn't check the worktree: {state.error.message}
+            </>
+          ) : !s || s.missing ? (
+            "Its worktree is already gone."
+          ) : atRisk ? (
+            <>
+              <Icon icon={Alert02Icon} />
+              {[
+                s.dirty && `${plural(s.dirty, "file")} with uncommitted changes`,
+                s.unpushed && `${plural(s.unpushed, "commit")} on no remote`,
+              ]
+                .filter(Boolean)
+                .join(" and ")}
+              : deleting loses them.
+            </>
+          ) : (
+            <>
+              <Icon icon={CheckmarkCircle02Icon} /> Nothing would be lost: everything is committed
+              and pushed.
+            </>
+          )}
         </p>
-        {sendHome.error && (
-          <p role="alert" className="error">
-            {sendHome.error.message}
-          </p>
-        )}
+        <ErrorNote error={sendHome.error} />
         <footer className="modal__foot">
-          <button type="button" className="button button--ghost" onClick={close}>
+          <Button variant="ghost" onClick={close}>
             Never mind
-          </button>
-          <button type="submit" className="button button--danger" disabled={sendHome.isPending}>
-            {sendHome.isPending ? "Sending home…" : LABELS[choice]}
-          </button>
+          </Button>
+          <Button
+            type="submit"
+            variant="destructive"
+            loading={sendHome.isPending}
+            icon={<Icon icon={Logout03Icon} />}
+          >
+            {LABELS[choice]}
+          </Button>
         </footer>
       </form>
     </Modal>

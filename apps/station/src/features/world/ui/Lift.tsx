@@ -1,3 +1,15 @@
+import { Button, Input, Loader } from "@cloudflare/kumo";
+import {
+  Alert02Icon,
+  ArrowUpDownIcon,
+  Cancel01Icon,
+  CheckmarkCircle02Icon,
+  Download04Icon,
+  Rocket01Icon,
+  StopCircleIcon,
+} from "@hugeicons/core-free-icons";
+import { ErrorNote } from "../../../shared/ui/ErrorNote";
+import { Icon } from "../../../shared/ui/Icon";
 import {
   useMutation,
   useQueries,
@@ -95,59 +107,61 @@ export function Lift({
         <ul className="lift__clones">
           {clones.map((c) => (
             <li key={c.id} data-state={c.state}>
-              <span className="lift__clone-name">
-                {c.state === "cloning" ? "⏬" : c.state === "done" ? "✅" : "⚠️"} {c.name}
+              <span className="lift__clone-name with-icon">
+                {c.state === "cloning" ? (
+                  <Loader size="sm" />
+                ) : (
+                  <Icon icon={c.state === "done" ? CheckmarkCircle02Icon : Alert02Icon} />
+                )}
+                {c.name}
               </span>
               <span className="readout">{c.state === "failed" ? c.error : c.progress}</span>
               {c.state === "done" && c.deckId ? (
-                <button type="button" className="button" onClick={() => ride(c.deckId!)}>
+                <Button size="sm" variant="primary" onClick={() => ride(c.deckId!)}>
                   Go
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  className="icon-button"
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  shape="square"
                   title={c.state === "cloning" ? "Stop cloning" : "Dismiss"}
                   aria-label={c.state === "cloning" ? "Stop cloning" : "Dismiss"}
+                  icon={<Icon icon={c.state === "cloning" ? StopCircleIcon : Cancel01Icon} />}
                   onClick={() => cancel.mutate(c.id)}
-                >
-                  {c.state === "cloning" ? "⏹️" : "✕"}
-                </button>
+                />
               )}
             </li>
           ))}
         </ul>
       )}
       <form onSubmit={onSubmit} className="inline-form">
-        <label className="field">
-          <span className="field__label">Add a deck: clone a repo, or dock a folder</span>
-          <input
-            autoFocus={decks.length === 0}
-            value={repo}
-            onChange={(e) => setRepo(e.target.value)}
-            placeholder="owner/name, a git URL, or /path/to/repo"
-            spellCheck={false}
-            list="gh-repos"
-          />
-          <datalist id="gh-repos">
-            {suggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
-        </label>
-        <button
+        <Input
+          className="lift__input"
+          label="Add a deck: clone a repo, or dock a folder"
+          autoFocus={decks.length === 0}
+          value={repo}
+          onChange={(e) => setRepo(e.target.value)}
+          placeholder="owner/name, a git URL, or /path/to/repo"
+          spellCheck={false}
+          list="gh-repos"
+        />
+        <datalist id="gh-repos">
+          {suggestions.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+        <Button
           type="submit"
-          className="button"
-          disabled={dock.isPending || clone.isPending || !repo.trim()}
+          variant="primary"
+          loading={dock.isPending || clone.isPending}
+          disabled={!repo.trim()}
+          icon={<Icon icon={local ? Rocket01Icon : Download04Icon} />}
         >
-          {local ? (dock.isPending ? "Docking…" : "Dock") : clone.isPending ? "Starting…" : "Clone"}
-        </button>
+          {local ? "Dock" : "Clone"}
+        </Button>
       </form>
-      {error && (
-        <p role="alert" className="error">
-          {error.message}
-        </p>
-      )}
+      <ErrorNote error={error} />
     </>
   );
 
@@ -162,7 +176,11 @@ export function Lift({
     );
   }
   return (
-    <Modal title="🛗 Lift" subtitle="Ride to a deck, or add one: clone a repo or dock a folder">
+    <Modal
+      icon={ArrowUpDownIcon}
+      title="Lift"
+      subtitle="Ride to a deck, or add one: clone a repo or dock a folder"
+    >
       {body}
     </Modal>
   );

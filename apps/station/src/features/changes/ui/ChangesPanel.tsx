@@ -1,3 +1,13 @@
+import { Button, Input } from "@cloudflare/kumo";
+import {
+  ComputerTerminal01Icon,
+  Delete02Icon,
+  GitBranchIcon,
+  GitCommitIcon,
+  Undo02Icon,
+} from "@hugeicons/core-free-icons";
+import { ErrorNote } from "../../../shared/ui/ErrorNote";
+import { Icon } from "../../../shared/ui/Icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { STATUS_WORD, type ChangedFile } from "../model";
@@ -110,7 +120,7 @@ export function ChangesPanel({
     <div className="changes">
       <div className="changes__bar">
         <span className="changes__branch">
-          🌿 {state?.branch ?? "…"}
+          <Icon icon={GitBranchIcon} /> {state?.branch ?? "…"}
           {state && state.base !== "HEAD" && (
             <span className="muted">
               {" "}
@@ -121,9 +131,14 @@ export function ChangesPanel({
             </span>
           )}
         </span>
-        <button type="button" className="button button--ghost" onClick={onTerminal}>
-          ⌨️ Terminal
-        </button>
+        <Button
+          size="sm"
+          variant="outline"
+          icon={<Icon icon={ComputerTerminal01Icon} />}
+          onClick={onTerminal}
+        >
+          Terminal
+        </Button>
       </div>
 
       <div className="changes__body">
@@ -176,32 +191,30 @@ export function ChangesPanel({
                   (confirming === "file" ? (
                     <span className="changes__confirm">
                       Put it back to the last commit?
-                      <button
-                        type="button"
-                        className="button button--danger"
+                      <Button
+                        size="xs"
+                        variant="destructive"
+                        loading={discard.isPending}
                         onClick={() =>
                           discard.mutate(file.path, { onSuccess: () => setConfirming(null) })
                         }
                       >
                         Discard
-                      </button>
-                      <button
-                        type="button"
-                        className="button button--ghost"
-                        onClick={() => setConfirming(null)}
-                      >
+                      </Button>
+                      <Button size="xs" variant="ghost" onClick={() => setConfirming(null)}>
                         Keep
-                      </button>
+                      </Button>
                     </span>
                   ) : (
-                    <button
-                      type="button"
-                      className="button button--ghost"
+                    <Button
+                      size="xs"
+                      variant="secondary-destructive"
                       title="Throw away the uncommitted changes to this file"
+                      icon={<Icon icon={Undo02Icon} />}
                       onClick={() => setConfirming("file")}
                     >
-                      ↩︎ Discard
-                    </button>
+                      Discard
+                    </Button>
                   ))}
               </header>
               <Diff crewId={crewId} file={file} />
@@ -214,41 +227,34 @@ export function ChangesPanel({
         </section>
       </div>
 
-      {error && (
-        <p role="alert" className="error">
-          {error.message}
-        </p>
-      )}
+      <ErrorNote error={error} />
 
       <footer className="modal__foot">
         {confirming === "all" ? (
           <span className="changes__confirm">
             Put {plural(uncommitted, "file")} back to the last commit and delete new files? Commits
             stay.
-            <button
-              type="button"
-              className="button button--danger"
+            <Button
+              size="sm"
+              variant="destructive"
+              loading={discard.isPending}
               onClick={() => discard.mutate(undefined, { onSuccess: () => setConfirming(null) })}
             >
               Discard everything
-            </button>
-            <button
-              type="button"
-              className="button button--ghost"
-              onClick={() => setConfirming(null)}
-            >
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirming(null)}>
               Keep
-            </button>
+            </Button>
           </span>
         ) : (
-          <button
-            type="button"
-            className="button button--ghost"
+          <Button
+            variant="secondary-destructive"
             disabled={!uncommitted || discard.isPending}
+            icon={<Icon icon={Delete02Icon} />}
             onClick={() => setConfirming("all")}
           >
-            🗑️ Discard all
-          </button>
+            Discard all
+          </Button>
         )}
         {committing ? (
           <form
@@ -259,26 +265,33 @@ export function ChangesPanel({
                 commit.mutate(message.trim(), { onSuccess: () => setCommitting(false) });
             }}
           >
-            <input
+            <Input
               autoFocus
+              aria-label="Commit message"
               value={message}
               placeholder="Commit message"
               onChange={(e) => setMessage(e.target.value)}
             />
-            <button type="submit" className="button" disabled={!message.trim() || commit.isPending}>
-              {commit.isPending ? "Committing…" : "Commit"}
-            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={commit.isPending}
+              disabled={!message.trim()}
+              icon={<Icon icon={GitCommitIcon} />}
+            >
+              Commit
+            </Button>
           </form>
         ) : (
-          <button
-            type="button"
-            className="button"
+          <Button
+            variant="primary"
             disabled={!uncommitted}
             title="git add -A && git commit"
+            icon={<Icon icon={GitCommitIcon} />}
             onClick={() => setCommitting(true)}
           >
-            ✅ {uncommitted ? `Commit ${plural(uncommitted, "file")}…` : "Commit…"}
-          </button>
+            {uncommitted ? `Commit ${plural(uncommitted, "file")}…` : "Commit…"}
+          </Button>
         )}
       </footer>
     </div>

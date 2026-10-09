@@ -1,3 +1,7 @@
+import { Button, Input } from "@cloudflare/kumo";
+import { Delete02Icon, Tag01Icon } from "@hugeicons/core-free-icons";
+import { ErrorNote } from "../../../shared/ui/ErrorNote";
+import { Icon } from "../../../shared/ui/Icon";
 import type { ConsoleLabel } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -28,27 +32,31 @@ export function LabelWindow({
 
   return (
     <Modal
-      title={label ? `🪧 The sign over ${where}` : `🪧 Hang a sign over ${where}`}
+      icon={Tag01Icon}
+      title={label ? `The sign over ${where}` : `Hang a sign over ${where}`}
       subtitle="Everyone on the deck sees it, and it stays up."
     >
       <form
+        className="game-form"
         onSubmit={(e) => {
           e.preventDefault();
           if (text.trim()) hang(text);
         }}
       >
-        <input
+        <Input
           autoFocus
+          aria-label="Sign text"
           maxLength={MAX_LABEL}
           value={text}
           placeholder="What's this console for?"
           onChange={(e) => setText(e.target.value)}
+          description={`${text.length}/${MAX_LABEL} characters`}
         />
         <div className="label-ideas">
           {LABEL_IDEAS.map((idea) => (
-            <button key={idea} type="button" className="chip" onClick={() => setText(idea)}>
+            <Button key={idea} size="xs" variant="outline" onClick={() => setText(idea)}>
               {idea}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="label-colors" role="radiogroup" aria-label="Colour">
@@ -66,24 +74,28 @@ export function LabelWindow({
             />
           ))}
         </div>
-        {save.error && (
-          <p role="alert" className="error">
-            {save.error.message}
-          </p>
-        )}
+        <ErrorNote error={save.error} />
         <footer className="modal__foot">
           {label ? (
-            <button type="button" className="button button--ghost" onClick={() => hang("")}>
+            <Button
+              variant="secondary-destructive"
+              icon={<Icon icon={Delete02Icon} />}
+              onClick={() => hang("")}
+            >
               Take it down
-            </button>
+            </Button>
           ) : (
-            <span className="muted">
-              {text.length}/{MAX_LABEL}
-            </span>
+            <span />
           )}
-          <button type="submit" className="button" disabled={!text.trim() || save.isPending}>
+          <Button
+            type="submit"
+            variant="primary"
+            loading={save.isPending}
+            disabled={!text.trim()}
+            icon={<Icon icon={Tag01Icon} />}
+          >
             {label ? "Change it" : "Hang it"}
-          </button>
+          </Button>
         </footer>
       </form>
     </Modal>

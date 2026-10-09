@@ -1,4 +1,7 @@
+import { Button, InputArea } from "@cloudflare/kumo";
+import { SentIcon } from "@hugeicons/core-free-icons";
 import { useState, type ReactNode } from "react";
+import { Icon } from "../../../shared/ui/Icon";
 
 /** agent-office's prompt box: Enter sends, Shift+Enter adds a line. */
 export function TaskBox({
@@ -21,17 +24,21 @@ export function TaskBox({
   const send = () => ready && onSubmit(text.trim());
   return (
     <form
+      className="game-form"
       onSubmit={(e) => {
         e.preventDefault();
         send();
       }}
     >
-      <textarea
+      <InputArea
         autoFocus
-        rows={4}
+        aria-label={placeholder}
+        autoResize
+        minRows={4}
+        maxRows={12}
         value={text}
         placeholder={placeholder}
-        onChange={(e) => setText(e.target.value)}
+        onValueChange={setText}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -41,10 +48,18 @@ export function TaskBox({
       />
       {children}
       <footer className="modal__foot">
-        <span className="muted">Enter to send · Shift+Enter for a new line</span>
-        <button type="submit" className="button" disabled={!ready}>
-          {busy ? "Working…" : submitLabel}
-        </button>
+        <span className="muted">
+          <kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line
+        </span>
+        <Button
+          type="submit"
+          variant="primary"
+          loading={busy}
+          disabled={!ready}
+          icon={<Icon icon={SentIcon} />}
+        >
+          {submitLabel}
+        </Button>
       </footer>
     </form>
   );
