@@ -113,7 +113,8 @@ export function Game({ deck }: { deck: Deck }) {
   const { data: labels } = useSuspenseQuery(labelsQuery(deck.id));
   const paint = useMemo(() => paintFor(deck.repoPath), [deck.repoPath]);
   const { data: github } = useQuery(boardQuery(deck.id));
-  const mission = useMemo(() => missionCards(github), [github]);
+  const carried = useWorld((s) => s.carrying?.number);
+  const mission = useMemo(() => missionCards(github, carried), [github, carried]);
   const launch = useMemo(() => launchCards(github), [github]);
   const consoleId = useWorld((s) => s.consoleId);
   const [loaded, setLoaded] = useState(false);

@@ -22,12 +22,15 @@ interface WorldState {
   launch: { number: number; title: string; crewId?: string; at: number } | null;
   /** Everyone's on their feet cheering a launch. */
   cheering: boolean;
+  /** An issue's card in your hands (agent-office's carried note), on its way to a console. */
+  carrying: { number: number; title: string } | null;
   /** Standing at a board. */
   atBoard: BoardId | null;
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
   setAtLift: (atLift: boolean) => void;
   setAtBoard: (atBoard: BoardId | null) => void;
+  carry: (card: { number: number; title: string } | null) => void;
   celebrate: (launch: { number: number; title: string; crewId?: string }) => void;
   open: (overlay: Overlay) => void;
   close: () => void;
@@ -44,10 +47,12 @@ export const useWorld = create<WorldState>((set) => ({
   atBoard: null,
   launch: null,
   cheering: false,
+  carrying: null,
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
   setAtBoard: (atBoard) => set((s) => (s.atBoard === atBoard ? s : { atBoard })),
+  carry: (carrying) => set({ carrying }),
   celebrate: (launch) => {
     const at = Date.now();
     set({ launch: { ...launch, at }, cheering: true });

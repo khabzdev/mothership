@@ -1,6 +1,7 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect } from "react";
 import { openShell, resumeCrew, sendHomeCrew } from "../crew/crew.functions";
+import { giveIssue, handIssue } from "../github/github.functions";
 import { openCrewPr } from "../pr/pr.functions";
 import { gameKeysEnabled, useWorld } from "./store";
 
@@ -46,12 +47,49 @@ function pullRequest(member: CrewInfo): void {
   );
 }
 
+/**
+ * E at a console with an issue's card in your hands (agent-office): an empty console hires crew
+ * for it, a crew member already there is handed it.
+ */
+function deliver(deckId: string, consoleId: number, member: CrewInfo | undefined): void {
+  const { carrying, carry, say } = useWorld.getState();
+  if (!carrying) return;
+  const { number } = carrying;
+  carry(null);
+  const done = (claimed: boolean, who: string) =>
+    say(`🚀 ${who} took #${number}${claimed ? "" : " (couldn't assign it on GitHub)"}`);
+  const failed = (error: Error) => {
+    carry(carrying);
+    say(`⚠️ ${error.message}`);
+  };
+  if (!member) {
+    handIssue({ data: { deckId, number, consoleId } }).then(
+      ({ member: hired, claimed }) => done(claimed, hired.name),
+      failed,
+    );
+  } else if (member.kind === "agent") {
+    giveIssue({ data: { deckId, number, crewId: member.id } }).then(
+      ({ claimed }) => done(claimed, member.name),
+      failed,
+    );
+  } else {
+    carry(carrying);
+    say(`${member.name} is a shell: take #${number} to a crew member or an empty console`);
+  }
+}
+
 /** The keys at a console: agent-office's desk keys. */
 export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!gameKeysEnabled(e)) return;
-      const { consoleId, atLift, atBoard, open } = useWorld.getState();
+      const { consoleId, atLift, atBoard, open, carrying, carry, say } = useWorld.getState();
+      // Q puts the card you're carrying back on the board.
+      if (carrying && e.code === "KeyQ") {
+        e.preventDefault();
+        carry(null);
+        return say(`📌 #${carrying.number} is back on the Mission board`);
+      }
       if (atBoard && consoleId === null && e.code === "KeyE") {
         e.preventDefault();
         return open({ kind: "board", board: atBoard });
@@ -62,6 +100,10 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
       }
       if (consoleId === null) return;
       const member = crew.find((c) => c.consoleId === consoleId);
+      if (carrying && e.code === "KeyE") {
+        e.preventDefault();
+        return deliver(deckId, consoleId, member);
+      }
       switch (e.code) {
         case "KeyE":
           e.preventDefault();

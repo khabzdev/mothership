@@ -105,3 +105,23 @@ export const closePull = createServerFn({ method: "POST" })
     await gh(() => boards.closePull(repo(data.deckId), data.number));
     boards.invalidate(data.deckId);
   });
+
+/** Hand an issue to a crew member already at a console: it's prompted with it, and it's assigned. */
+export const giveIssue = createServerFn({ method: "POST" })
+  .validator((input: unknown) => {
+    const crewId = (input as { crewId?: unknown })?.crewId;
+    if (typeof crewId !== "string" || !crewId) throw new Error("crewId is required");
+    return { ...parseItemInput(input), crewId };
+  })
+  .handler(async ({ data }) => {
+    const station = getStation();
+    const cwd = repo(data.deckId);
+    const issue = await gh(() => station.boards.issue(cwd, data.number));
+    await station.crew.prompt(data.crewId, issuePrompt(issue));
+    const claimed = await station.boards.claimIssue(cwd, data.number).then(
+      () => true,
+      () => false,
+    );
+    station.boards.invalidate(data.deckId);
+    return { claimed };
+  });

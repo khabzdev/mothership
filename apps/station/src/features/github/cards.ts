@@ -18,9 +18,13 @@ const PULL_COLORS = {
 };
 
 /** The Mission board's notes: the open issues nobody has taken yet (agent-office: they come off the wall once taken). */
-export function missionCards(data: BoardData | undefined): { cards: BoardCard[]; note: string } {
+export function missionCards(
+  data: BoardData | undefined,
+  carried?: number,
+): { cards: BoardCard[]; note: string } {
   const issues = data?.issues ?? [];
-  const open = issues.filter((i) => issueColumn(i) === "open");
+  // The one in your hands is off the board.
+  const open = issues.filter((i) => issueColumn(i) === "open" && i.number !== carried);
   const taken = issues.filter((i) => issueColumn(i) === "progress").length;
   return {
     cards: open.map((i) => ({

@@ -3,6 +3,7 @@ import {
   Alert02Icon,
   ArrowUpDownIcon,
   CheckmarkCircle02Icon,
+  HandGrabIcon,
   Notification03Icon,
   Rocket01Icon,
   Target02Icon,
@@ -30,6 +31,21 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
   const consoleId = useWorld((s) => s.consoleId);
   const atLift = useWorld((s) => s.atLift);
   const atBoard = useWorld((s) => s.atBoard);
+  const carrying = useWorld((s) => s.carrying);
+  if (carrying) {
+    const member = crew.find((c) => c.consoleId === consoleId);
+    return (
+      <div className="hint" data-active>
+        <span className="hint__what with-icon">
+          <Icon icon={HandGrabIcon} /> Carrying #{carrying.number}
+        </span>
+        {consoleId !== null && member?.kind !== "shell" && (
+          <Key k="E" label={member ? `Hand it to ${member.name}` : "Hire crew for it"} />
+        )}
+        <Key k="Q" label="Put it back" />
+      </div>
+    );
+  }
   if (atBoard && consoleId === null) {
     return (
       <div className="hint" data-active>

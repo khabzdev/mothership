@@ -1,7 +1,7 @@
 import { useAnimations } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
-import { MathUtils, Vector3, type Group } from "three";
+import { useEffect, useMemo, useRef } from "react";
+import { CanvasTexture, DoubleSide, MathUtils, SRGBColorSpace, Vector3, type Group } from "three";
 import {
   CONSOLES,
   LIFT_STOP,
@@ -70,6 +70,37 @@ const MOVE_KEYS: Record<string, [number, number]> = {
   ArrowRight: [1, 0],
 };
 
+/** An issue's card held up in front of you (in the body's own scale), with its number on it. */
+function CarriedCard({ number }: { number: number }) {
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 320;
+    const c = canvas.getContext("2d")!;
+    c.fillStyle = "#fff1b8";
+    c.fillRect(0, 0, 256, 320);
+    c.fillStyle = "#ef476f";
+    c.beginPath();
+    c.arc(128, 24, 12, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#2b2d42";
+    c.font = '800 96px "Big Shoulders Display", sans-serif';
+    c.textAlign = "center";
+    c.fillText(`#${number}`, 128, 170);
+    for (let i = 0; i < 3; i++) c.fillRect(48, 210 + i * 26, i === 2 ? 100 : 160, 8);
+    const t = new CanvasTexture(canvas);
+    t.colorSpace = SRGBColorSpace;
+    return t;
+  }, [number]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <mesh position={[0, 1.15, 0.55]} rotation={[-0.25, 0, 0]}>
+      <planeGeometry args={[0.45, 0.56]} />
+      <meshBasicMaterial map={texture} side={DoubleSide} toneMapped={false} />
+    </mesh>
+  );
+}
+
 /** You: the Knight in a flight suit. WASD walks relative to the camera; drag orbits, wheel zooms. */
 export function Captain() {
   const { scene, animations } = useCharacter("Knight");
@@ -82,6 +113,7 @@ export function Captain() {
   const setConsole = useWorld((s) => s.setConsole);
   const setAtLift = useWorld((s) => s.setAtLift);
   const setAtBoard = useWorld((s) => s.setAtBoard);
+  const carrying = useWorld((s) => s.carrying);
 
   useEffect(() => {
     actions.Idle?.reset().play();
@@ -202,6 +234,7 @@ export function Captain() {
   return (
     <group ref={body} scale={KAYKIT_SCALE}>
       <primitive object={scene} />
+      {carrying && <CarriedCard number={carrying.number} />}
     </group>
   );
 }

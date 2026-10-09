@@ -2,6 +2,7 @@ import { Badge, Button, InputArea, Loader, Select } from "@cloudflare/kumo";
 import {
   ArrowLeft01Icon,
   Comment01Icon,
+  HandGrabIcon,
   LinkSquare02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
@@ -29,7 +30,7 @@ export function IssueView({
   onBack: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { close, say } = useWorld.getState();
+  const { close, say, carry } = useWorld.getState();
   const issue = useQuery(issueQuery(deckId, number));
   const hand = useMutation(handIssueMutation(queryClient, deckId));
   const comment = useMutation(commentIssueMutation(queryClient, deckId, number));
@@ -109,26 +110,42 @@ export function IssueView({
           </div>
           {i.state === "OPEN" && (
             <div className="board-item__actions">
-              <Button
-                variant="primary"
-                loading={hand.isPending}
-                icon={<Icon icon={UserAdd01Icon} />}
-                onClick={() =>
-                  hand.mutate(
-                    { number },
-                    {
-                      onSuccess: ({ member, claimed }) => {
-                        close();
-                        say(
-                          `🚀 ${member.name} took #${number} at Console ${member.consoleId + 1}${claimed ? "" : " (couldn't assign it on GitHub)"}`,
-                        );
+              <span className="board-item__close">
+                <Button
+                  variant="outline"
+                  icon={<Icon icon={HandGrabIcon} />}
+                  title="Carry its card to a console: E there hires for it, or hands it to the crew member there"
+                  onClick={() => {
+                    carry({ number, title: i.title });
+                    close();
+                    say(
+                      `📌 You've got #${number}: E at a console to hand it over, Q to put it back`,
+                    );
+                  }}
+                >
+                  Pick it up
+                </Button>
+                <Button
+                  variant="primary"
+                  loading={hand.isPending}
+                  icon={<Icon icon={UserAdd01Icon} />}
+                  onClick={() =>
+                    hand.mutate(
+                      { number },
+                      {
+                        onSuccess: ({ member, claimed }) => {
+                          close();
+                          say(
+                            `🚀 ${member.name} took #${number} at Console ${member.consoleId + 1}${claimed ? "" : " (couldn't assign it on GitHub)"}`,
+                          );
+                        },
                       },
-                    },
-                  )
-                }
-              >
-                Hand to crew
-              </Button>
+                    )
+                  }
+                >
+                  Hand to crew
+                </Button>
+              </span>
               <span className="board-item__close">
                 <Select
                   aria-label="Why it's closed"
