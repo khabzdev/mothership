@@ -100,5 +100,6 @@ describe("task queue", () => {
     await queue.tick("d");
     expect(queue.list("d").at(-1)!.state).toBe("running");
     expect(crew.roster("d").some((c) => c.id === first.crewId)).toBe(false);
-  });
+    // Hiring 17 crew is slow when the whole workspace's tests run at once.
+  }, 20_000);
 });
