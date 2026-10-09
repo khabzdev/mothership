@@ -362,6 +362,7 @@ a:focus-visible {
 
 .topbar__deck {
   appearance: none;
+  border-left: 4px solid var(--deck-trim, var(--accent)) !important;
   display: grid;
   gap: 0.1rem;
   padding: 0.55rem 0.9rem;

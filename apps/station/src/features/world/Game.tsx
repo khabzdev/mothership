@@ -2,12 +2,21 @@ import type { CrewInfo } from "@mothership/protocol";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { rosterQuery } from "../crew/queries";
 import { labelsQuery } from "../labels/queries";
 import type { Deck } from "../decks/model";
 import { useConsoleKeys } from "./console-keys";
 import { CONSOLES, partnerOf } from "./layout";
+import { paintFor } from "./paint";
 import { Captain, jumpTo } from "./scene/Captain";
 import { Console } from "./scene/Console";
 import { CrewMember } from "./scene/CrewMember";
@@ -95,6 +104,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 export function Game({ deck }: { deck: Deck }) {
   const { data: crew } = useSuspenseQuery(rosterQuery(deck.id));
   const { data: labels } = useSuspenseQuery(labelsQuery(deck.id));
+  const paint = useMemo(() => paintFor(deck.repoPath), [deck.repoPath]);
   const consoleId = useWorld((s) => s.consoleId);
   const toast = useWorld((s) => s.toast);
   const [loaded, setLoaded] = useState(false);
@@ -104,7 +114,7 @@ export function Game({ deck }: { deck: Deck }) {
   useSoundUnlock();
 
   return (
-    <div className="game">
+    <div className="game" style={{ "--deck-trim": paint.trim } as CSSProperties}>
       <Canvas
         shadows
         camera={{ fov: 55, near: 0.1, far: 400, position: [12, 8, 14] }}
@@ -126,7 +136,7 @@ export function Game({ deck }: { deck: Deck }) {
           shadow-bias={-0.0008}
         />
         <Suspense fallback={null}>
-          <DeckScene />
+          <DeckScene paint={paint} />
           {CONSOLES.map((def) => (
             <Console
               key={def.id}
