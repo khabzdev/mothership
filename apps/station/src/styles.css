@@ -834,3 +834,117 @@ a:focus-visible {
     animation: none;
   }
 }
+
+/* The Crew panel (agent-office's Workers panel), down the right under the top bar. */
+.crew-panel {
+  position: absolute;
+  top: 4.4rem;
+  right: 1rem;
+  z-index: 1;
+  width: min(19rem, calc(100% - 2rem));
+  max-height: calc(100% - 10rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius);
+  background: #0d0c0add;
+}
+
+.crew-panel[data-asking] {
+  border-color: var(--alert);
+}
+
+.crew-panel button {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.crew-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.crew-panel__head .eyebrow {
+  margin: 0;
+}
+
+.crew-panel__count {
+  flex: 1;
+  font: 600 0.75rem var(--font-mono);
+  color: var(--ink-dim);
+}
+
+.crew-panel__list {
+  margin: 0;
+  padding: 0 0.35rem 0.35rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.crew-panel__list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.55rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+.crew-panel__list button:hover {
+  background: #ffffff12;
+}
+
+.crew-panel__list button[data-status="needs_input"] {
+  background: #ff3b3b26;
+}
+
+.crew-panel__dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.crew-panel__name {
+  display: grid;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.crew-panel__sub {
+  overflow: hidden;
+  font: 400 0.7rem var(--font-mono);
+  color: var(--ink-dim);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.crew-panel__pill {
+  font: 600 0.62rem var(--font-mono);
+  white-space: nowrap;
+}
+
+.crew-panel__ask {
+  grid-column: 2 / -1;
+  font: 600 0.7rem var(--font-mono);
+  color: #ff8a8a;
+}
+
+.crew-panel__empty {
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+@media (max-width: 40rem) {
+  .crew-panel {
+    display: none;
+  }
+}

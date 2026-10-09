@@ -25,6 +25,15 @@ export function needingYou(crew: Iterable<CrewInfo>): Waiting[] {
   return waitingInOrder(crew).filter((c) => c.status === "needs_input");
 }
 
+/** The Crew panel's order: the ones that need you on top (longest first), then by console. */
+export function needyFirst(crew: Iterable<CrewInfo>): CrewInfo[] {
+  const all = [...crew];
+  return [
+    ...needingYou(all),
+    ...all.filter((c) => c.status !== "needs_input").sort((a, b) => a.consoleId - b.consoleId),
+  ];
+}
+
 /** How long it has waited, for the banner: nothing for the first minute, then "4 min", "1 h 05 min". */
 export function waited(since: number, now: number): string {
   const min = Math.floor((now - since) / 60_000);

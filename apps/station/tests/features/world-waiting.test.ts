@@ -5,6 +5,7 @@ import {
   NextUp,
   bannerText,
   needingYou,
+  needyFirst,
   waited,
   waitingInOrder,
 } from "../../src/features/world/waiting.ts";
@@ -34,6 +35,15 @@ describe("waiting on you", () => {
     ];
     expect(waitingInOrder(all).map((c) => c.id)).toEqual(["d", "b", "a"]);
     expect(needingYou(all).map((c) => c.id)).toEqual(["d", "b"]);
+  });
+
+  test("the Crew panel lists the ones that need you first, then by console", () => {
+    const all = [
+      crew("a", { consoleId: 3 }),
+      crew("b", { consoleId: 1, status: "done" }),
+      crew("c", { consoleId: 9, status: "needs_input" }),
+    ];
+    expect(needyFirst(all).map((c) => c.id)).toEqual(["c", "b", "a"]);
   });
 
   test("waited reads nothing for a minute, then minutes, then hours", () => {

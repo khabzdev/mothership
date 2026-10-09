@@ -11,6 +11,7 @@ import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
+import { CrewPanel } from "./ui/CrewPanel";
 import { NeedsYouBanner, Toast } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
@@ -148,6 +149,13 @@ export function Game({ deck }: { deck: Deck }) {
         }}
       />
       <Toast toast={toast} />
+      <CrewPanel
+        crew={crew}
+        open={(member) => {
+          goToCrew(member);
+          useWorld.getState().open({ kind: "terminal", crewId: member.id });
+        }}
+      />
       <HintBar crew={crew} />
       <Overlays deckId={deck.id} crew={crew} />
     </div>
