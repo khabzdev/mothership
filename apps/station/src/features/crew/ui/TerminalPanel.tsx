@@ -10,7 +10,14 @@ const THEME = {
 };
 
 /** Live crew terminal: snapshot on attach, then streamed output; typing goes to the agent. */
-export function TerminalPanel({ crewId }: { crewId: string }) {
+export function TerminalPanel({
+  crewId,
+  onStatus,
+}: {
+  crewId: string;
+  /** "live", "exited", "reconnecting…" or what went wrong, for the window around it. */
+  onStatus?: (status: string) => void;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const { client, state } = useRealtime();
   const [exited, setExited] = useState(false);
@@ -96,14 +103,16 @@ export function TerminalPanel({ crewId }: { crewId: string }) {
     };
   }, [client, state, crewId]);
 
+  const status = error ?? (state === "open" ? (exited ? "exited" : "live") : "reconnecting…");
+  useEffect(() => onStatus?.(status), [onStatus, status]);
+
   return (
     <div className="terminal" data-exited={exited}>
-      <div className="terminal__bar">
-        <span className="readout">{crewId.slice(0, 13)}</span>
-        <span className="readout" role={error ? "alert" : undefined}>
-          {error ?? (state === "open" ? (exited ? "exited" : "live") : "reconnecting…")}
-        </span>
-      </div>
+      {error && (
+        <p role="alert" className="terminal__error">
+          {error}
+        </p>
+      )}
       <div ref={host} className="terminal__screen" aria-label="Crew terminal" />
     </div>
   );

@@ -1,6 +1,5 @@
 import { Button, Checkbox, ClipboardText } from "@cloudflare/kumo";
 import {
-  ComputerTerminal01Icon,
   GitBranchIcon,
   GitPullRequestIcon,
   LinkSquare02Icon,
@@ -11,7 +10,6 @@ import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
-import { TerminalPanel } from "../../crew/ui/TerminalPanel";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
@@ -22,6 +20,7 @@ import { Lift } from "./Lift";
 import { Modal } from "./Modal";
 import { SendHomeWindow } from "./SendHome";
 import { StatusBadge } from "./StatusBadge";
+import { TerminalDrawer } from "./TerminalDrawer";
 import { TaskBox } from "./TaskBox";
 
 const WORKTREE_PREF = "mothership.worktree";
@@ -113,19 +112,6 @@ function PromptWindow({ member }: { member: CrewInfo }) {
   );
 }
 
-function TerminalWindow({ member }: { member: CrewInfo }) {
-  return (
-    <Modal
-      wide
-      icon={ComputerTerminal01Icon}
-      title={`${member.name} · ${member.kind === "shell" ? "Shell" : "Claude Code"}`}
-      subtitle={<StatusBadge crew={member} />}
-    >
-      <TerminalPanel crewId={member.id} />
-    </Modal>
-  );
-}
-
 function ChangesWindow({ member }: { member: CrewInfo }) {
   const open = useWorld((s) => s.open);
   return (
@@ -196,7 +182,7 @@ export function Overlays({
       return overlay.kind === "prompt" ? (
         <PromptWindow member={member} />
       ) : (
-        <TerminalWindow member={member} />
+        <TerminalDrawer member={member} />
       );
     }
     case "changes": {
