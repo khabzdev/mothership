@@ -68,8 +68,11 @@ describe("PtyCrewLauncher", () => {
     await launcher.write("crew-1", "still alive\r");
     expect(await launcher.waitForOutput("crew-1", /still alive/)).toContain("still alive");
 
+    // Stopped on purpose (sent home): the session is gone and its exit isn't reported.
     await launcher.stop("crew-1");
-    await expect.poll(() => exits).toEqual([{ crewId: "crew-1", exitCode: expect.any(Number) }]);
+    expect((await launcher.sessions()).map((s) => s.id)).not.toContain("crew-1");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(exits).toEqual([]);
     expect(registry.verify("crew-1", "anything")).toBeNull();
   });
 
