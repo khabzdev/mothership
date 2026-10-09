@@ -6,6 +6,7 @@ import {
   COLLIDERS,
   addCollider,
   airlockPath,
+  partnerOf,
   consoleInReach,
   consoleSeat,
   moveWithCollisions,
@@ -56,6 +57,14 @@ describe("deck layout", () => {
           expect(inside, `console ${c.id} leg ${i} at ${x},${z}`).toBe(false);
         }
       }
+    }
+  });
+
+  test("every console has one partner back to back across the desk", () => {
+    for (const c of CONSOLES) {
+      const p = partnerOf(c)!;
+      expect(partnerOf(p)?.id).toBe(c.id);
+      expect(p.rotY).not.toBe(c.rotY);
     }
   });
 });

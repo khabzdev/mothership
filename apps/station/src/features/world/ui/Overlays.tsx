@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
@@ -7,6 +7,7 @@ import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
 import { chipFor } from "../scene/status";
 import { useWorld } from "../store";
+import { LabelWindow } from "./LabelWindow";
 import { Lift } from "./Lift";
 import { Modal } from "./Modal";
 import { SendHomeWindow } from "./SendHome";
@@ -157,7 +158,15 @@ function PrWindow({ member }: { member: CrewInfo }) {
 }
 
 /** Whichever game window is open. */
-export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
+export function Overlays({
+  deckId,
+  crew,
+  labels,
+}: {
+  deckId: string;
+  crew: CrewInfo[];
+  labels: ConsoleLabel[];
+}) {
   const overlay = useWorld((s) => s.overlay);
   if (!overlay) return null;
   switch (overlay.kind) {
@@ -187,6 +196,14 @@ export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] })
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <SendHomeWindow member={member} /> : null;
     }
+    case "label":
+      return (
+        <LabelWindow
+          deckId={deckId}
+          consoleId={overlay.consoleId}
+          label={labels.find((l) => l.consoleId === overlay.consoleId)}
+        />
+      );
     case "lift":
       return <Lift />;
   }

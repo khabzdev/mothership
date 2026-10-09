@@ -50,6 +50,14 @@ export interface CrewInfo {
   prUrl?: string;
 }
 
+/** A sign over a console (agent-office's desk label). */
+export interface ConsoleLabel {
+  consoleId: number;
+  text: string;
+  /** Board colour, one of the label colours. */
+  color: string;
+}
+
 /** A styled run of text on a terminal row: [text, fg, bg, flags]. */
 export type Run = [string, number, number, number];
 /** Colour encoding: -1 default, 0..255 palette, >= RGB_FLAG means RGB_FLAG | rgb. */
@@ -80,6 +88,7 @@ export type ServerMsg =
   | { type: "terminal.exit"; crewId: CrewId; code: number | null }
   | { type: "crew.roster"; deckId: DeckId; crew: CrewInfo[] }
   | { type: "crew.screen"; crewId: CrewId; frame: ScreenFrame }
+  | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
   | { type: "error"; message: string };
 
 export type MsgOf<U extends { type: string }, T extends U["type"]> = Extract<U, { type: T }>;

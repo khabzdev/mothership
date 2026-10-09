@@ -88,6 +88,10 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           e.preventDefault();
           pullRequest(member);
           return;
+        case "KeyL":
+          e.preventDefault();
+          open({ kind: "label", consoleId });
+          return;
         case "KeyR":
           if (!member) return;
           e.preventDefault();

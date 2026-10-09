@@ -3,6 +3,7 @@ import { CrewService } from "../features/crew/service.server";
 import { onCrewSignal } from "../features/crew/hooks.server";
 import { PtyCrewLauncher } from "../features/crew/launcher.server";
 import { crewRegistry } from "../features/crew/registry.server";
+import { LabelService } from "../features/labels/labels.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
 import { getDb, mothershipHome } from "../shared/db/client.server";
@@ -19,6 +20,7 @@ export function stationUrl(): string {
 interface Station {
   crew: CrewService;
   launcher: PtyCrewLauncher;
+  labels: LabelService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -81,7 +83,8 @@ export function getStation(): Station {
         );
       }
     });
-    return { crew, launcher, diagnostics };
+    const labels = new LabelService(getDb(), (msg) => hub.broadcast(msg));
+    return { crew, launcher, labels, diagnostics };
   })();
   return shared.__mothershipStation;
 }

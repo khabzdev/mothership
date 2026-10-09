@@ -2,6 +2,7 @@ import {
   CREW_KINDS,
   CREW_STATUSES,
   type ClientMsg,
+  type ConsoleLabel,
   type CrewInfo,
   type Run,
   type ScreenFrame,
@@ -66,11 +67,21 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return isId(o.crewId) && isScreenFrame(o.frame)
         ? { type: o.type, crewId: o.crewId, frame: o.frame }
         : null;
+    case "deck.labels":
+      return isId(o.deckId) && Array.isArray(o.labels) && o.labels.every(isConsoleLabel)
+        ? { type: o.type, deckId: o.deckId, labels: o.labels }
+        : null;
     case "error":
       return typeof o.message === "string" ? { type: o.type, message: o.message } : null;
     default:
       return null;
   }
+}
+
+function isConsoleLabel(value: unknown): value is ConsoleLabel {
+  if (typeof value !== "object" || value === null) return false;
+  const l = value as Record<string, unknown>;
+  return Number.isInteger(l.consoleId) && typeof l.text === "string" && typeof l.color === "string";
 }
 
 function isRun(value: unknown): value is Run {

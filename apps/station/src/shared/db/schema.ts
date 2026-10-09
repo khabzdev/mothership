@@ -1,6 +1,6 @@
 import { CREW_ACTIONS, CREW_STATUSES } from "@mothership/protocol";
 import { sql } from "drizzle-orm";
-import { check, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { check, integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 const now = sql`(unixepoch('subsec') * 1000)`;
 
@@ -46,4 +46,18 @@ export const crew = sqliteTable(
     check("crew_status_check", oneOf("status", CREW_STATUSES)),
     check("crew_action_check", sql`action is null or ${oneOf("action", CREW_ACTIONS)}`),
   ],
+);
+
+/** A sign hung over a console, naming what it's for (agent-office's desk labels). */
+export const consoleLabels = sqliteTable(
+  "console_labels",
+  {
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    consoleId: integer("console_id").notNull(),
+    text: text("text").notNull(),
+    color: text("color").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.deckId, t.consoleId] })],
 );

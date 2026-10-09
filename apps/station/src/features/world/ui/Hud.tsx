@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { crewBlocker } from "../../../app/diagnostics";
 import { diagnosticsQuery } from "../../../app/queries";
@@ -16,7 +16,7 @@ function Key({ k, label }: { k: string; label: string }) {
 }
 
 /** What you're facing and what you can do there (agent-office's hint bar). */
-export function HintBar({ crew }: { crew: CrewInfo[] }) {
+export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
   const consoleId = useWorld((s) => s.consoleId);
   if (consoleId === null) {
     return (
@@ -27,7 +27,8 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
       </div>
     );
   }
-  const label = CONSOLES[consoleId]!.label;
+  const sign = labels.find((l) => l.consoleId === consoleId)?.text;
+  const label = `${CONSOLES[consoleId]!.label}${sign ? ` · 🪧 ${sign}` : ""}`;
   const member = crew.find((c) => c.consoleId === consoleId);
   return (
     <div className="hint" data-active>
@@ -44,6 +45,7 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
             <Key k="R" label={member.kind === "shell" ? "Restart" : "Resume"} />
           )}
           <Key k="X" label="Send home" />
+          <Key k="L" label="Sign" />
         </>
       ) : (
         <>
@@ -51,6 +53,7 @@ export function HintBar({ crew }: { crew: CrewInfo[] }) {
           <Key k="E" label="Hire crew" />
           <Key k="P" label="Hire with a task" />
           <Key k="B" label="Shell" />
+          <Key k="L" label="Sign" />
         </>
       )}
     </div>

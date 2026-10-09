@@ -134,3 +134,13 @@ export function airlockPath(c: ConsoleDef): { x: number; z: number }[] {
     { x: AIRLOCK.x - 0.7, z: AIRLOCK.z },
   ];
 }
+
+/** The console back to back with `c` (its pod partner across the desk), if any. */
+export function partnerOf(c: ConsoleDef): ConsoleDef | undefined {
+  return CONSOLES.find(
+    (o) =>
+      o.id !== c.id &&
+      Math.abs(o.x - c.x) < 0.01 &&
+      Math.abs(Math.abs(o.z - c.z) - CONSOLE_SIZE.depth) < 0.01,
+  );
+}

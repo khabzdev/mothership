@@ -38,6 +38,7 @@ describe("types", () => {
       | "terminal.exit"
       | "crew.roster"
       | "crew.screen"
+      | "deck.labels"
       | "error"
     >();
   });
@@ -122,6 +123,11 @@ describe("parseServerMsg", () => {
       type: "crew.screen",
       crewId: "c1",
       frame: { cols: 80, rows: 2, lines: [[["hi", -1, -1, 0]], []] },
+    },
+    {
+      type: "deck.labels",
+      deckId: "d1",
+      labels: [{ consoleId: 2, text: "Ops", color: "#118ab2" }],
     },
     { type: "error", message: "boom" },
   ];

@@ -1327,3 +1327,41 @@ a.button {
 .pr-link a {
   color: var(--check);
 }
+
+/* The sign window. */
+.label-ideas,
+.label-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.chip {
+  appearance: none;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: 500 0.72rem var(--font-mono);
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.swatch {
+  appearance: none;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 2px solid #0d0c0a;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.swatch[aria-checked="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}

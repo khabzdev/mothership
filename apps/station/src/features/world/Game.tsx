@@ -4,14 +4,16 @@ import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { rosterQuery } from "../crew/queries";
+import { labelsQuery } from "../labels/queries";
 import type { Deck } from "../decks/model";
 import { useConsoleKeys } from "./console-keys";
-import { CONSOLES } from "./layout";
+import { CONSOLES, partnerOf } from "./layout";
 import { Captain, jumpTo } from "./scene/Captain";
 import { Console } from "./scene/Console";
 import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { Departures } from "./scene/Departures";
+import { Sign } from "./scene/Sign";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
@@ -92,6 +94,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 /** One deck of the Mothership: walk it, hire crew at consoles, watch them work. */
 export function Game({ deck }: { deck: Deck }) {
   const { data: crew } = useSuspenseQuery(rosterQuery(deck.id));
+  const { data: labels } = useSuspenseQuery(labelsQuery(deck.id));
   const consoleId = useWorld((s) => s.consoleId);
   const toast = useWorld((s) => s.toast);
   const [loaded, setLoaded] = useState(false);
@@ -136,6 +139,13 @@ export function Game({ deck }: { deck: Deck }) {
             const def = CONSOLES[member.consoleId];
             return def ? <CrewMember key={member.id} crew={member} def={def} /> : null;
           })}
+          {labels.map((label) => {
+            const def = CONSOLES[label.consoleId];
+            if (!def) return null;
+            const partner = partnerOf(def);
+            const twoSided = !partner || !labels.some((l) => l.consoleId === partner.id);
+            return <Sign key={label.consoleId} def={def} label={label} twoSided={twoSided} />;
+          })}
           <Departures deckId={deck.id} crew={crew} />
           <Captain />
           <Ready onReady={ready} />
@@ -158,8 +168,8 @@ export function Game({ deck }: { deck: Deck }) {
           useWorld.getState().open({ kind: "terminal", crewId: member.id });
         }}
       />
-      <HintBar crew={crew} />
-      <Overlays deckId={deck.id} crew={crew} />
+      <HintBar crew={crew} labels={labels} />
+      <Overlays deckId={deck.id} crew={crew} labels={labels} />
     </div>
   );
 }
