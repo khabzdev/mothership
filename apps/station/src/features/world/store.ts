@@ -5,6 +5,7 @@ export type Overlay =
   | { kind: "prompt"; crewId: string }
   | { kind: "terminal"; crewId: string }
   | { kind: "sendHome"; crewId: string }
+  | { kind: "changes"; crewId: string }
   | { kind: "lift" };
 
 interface WorldState {

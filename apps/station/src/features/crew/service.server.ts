@@ -87,6 +87,14 @@ export class CrewService {
     return toInfo(row);
   }
 
+  /** Where a crew member works, and whether that's a worktree of its own or the deck's checkout. */
+  workdir(crewId: string): { cwd: string; repoPath: string; ownWorktree: boolean } {
+    const row = this.#row(crewId);
+    if (!row) throw new Error(`No such crew member: ${crewId}`);
+    const { repoPath } = this.#deck(row.deckId);
+    return { cwd: row.cwd, repoPath, ownWorktree: !!row.branch && row.cwd !== repoPath };
+  }
+
   async hire(input: HireInput): Promise<CrewInfo> {
     return this.#seat(input, "claude-code");
   }

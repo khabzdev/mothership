@@ -61,6 +61,11 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           if (member.branch) open({ kind: "sendHome", crewId: member.id });
           else sendHomeNow(member);
           return;
+        case "KeyC":
+          if (!member) return;
+          e.preventDefault();
+          open({ kind: "changes", crewId: member.id });
+          return;
         case "KeyR":
           if (!member) return;
           e.preventDefault();

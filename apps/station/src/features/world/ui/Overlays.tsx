@@ -1,6 +1,7 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { TerminalPanel } from "../../crew/ui/TerminalPanel";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
@@ -113,6 +114,19 @@ function TerminalWindow({ member }: { member: CrewInfo }) {
   );
 }
 
+function ChangesWindow({ member }: { member: CrewInfo }) {
+  const open = useWorld((s) => s.open);
+  return (
+    <Modal wide title={`${member.name} · changes`} subtitle={chipFor(member)}>
+      <ChangesPanel
+        crewId={member.id}
+        task={member.task}
+        onTerminal={() => open({ kind: "terminal", crewId: member.id })}
+      />
+    </Modal>
+  );
+}
+
 /** Whichever game window is open. */
 export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
   const overlay = useWorld((s) => s.overlay);
@@ -131,6 +145,10 @@ export function Overlays({ deckId, crew }: { deckId: string; crew: CrewInfo[] })
       ) : (
         <TerminalWindow member={member} />
       );
+    }
+    case "changes": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <ChangesWindow member={member} /> : null;
     }
     case "sendHome": {
       const member = crew.find((c) => c.id === overlay.crewId);
