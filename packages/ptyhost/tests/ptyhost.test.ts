@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
-import { PtyHostClient, ensurePtyHost, readHostState } from "../src/index.ts";
+import { spawn as spawnProcess } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { WebSocketServer } from "ws";
+import { decodeFrame } from "../src/frames.ts";
+import { HOST_VERSION, PtyHostClient, ensurePtyHost, readHostState } from "../src/index.ts";
 import { startPtyHost, type PtyHost } from "../src/server.ts";
 
 let home: string;
@@ -173,7 +177,105 @@ describe("reattaching", () => {
   });
 });
 
+describe("sequenced output and snapshots", () => {
+  test("output events carry an increasing per-session sequence number", async () => {
+    const client = await connect();
+    await client.attachAll();
+    const seqs: number[] = [];
+    client.onOutput((event) => event.id === "seq" && seqs.push(event.seq));
+    await client.spawn(spawnSpec("seq", "/bin/cat"));
+    const echoedA = waitForOutput(client, "seq", (all) => all.includes("a"));
+    await client.write("seq", "a\r");
+    await echoedA;
+    const echoedB = waitForOutput(client, "seq", (all) => all.includes("b"));
+    await client.write("seq", "b\r");
+    await echoedB;
+    expect(seqs.length).toBeGreaterThanOrEqual(2);
+    expect(seqs).toEqual([...seqs].sort((x, y) => x - y));
+    expect(seqs[0]).toBe(1);
+  });
+
+  test("a snapshot reports the sequence it covers and doesn't subscribe", async () => {
+    const watcher = await connect();
+    await watcher.attachAll();
+    let lastSeq = 0;
+    watcher.onOutput((event) => event.id === "snap" && (lastSeq = event.seq));
+    await watcher.spawn(spawnSpec("snap", "/bin/sh", ["-c", "printf ready; cat"]));
+    await waitForOutput(watcher, "snap", (all) => all.includes("ready"));
+
+    const viewer = await connect();
+    const snapshot = await viewer.snapshot("snap");
+    expect(snapshot.snapshot).toContain("ready");
+    expect(snapshot.seq).toBe(lastSeq);
+
+    let viewerOutput = "";
+    viewer.onOutput((event) => (viewerOutput += event.data));
+    const echoed = waitForOutput(watcher, "snap", (all) => all.includes("more"));
+    await watcher.write("snap", "more\r");
+    await echoed;
+    expect(viewerOutput).toBe("");
+  });
+});
+
+describe("host version", () => {
+  test("ping reports the protocol version and the state file records it", async () => {
+    const client = await connect();
+    expect(await client.ping()).toEqual({ version: HOST_VERSION });
+    expect(readHostState(home)?.version).toBe(HOST_VERSION);
+  });
+});
+
+/** An old (v1) host: answers ping with "pong" and lists the given sessions. */
+async function startOldHost(dir: string, sessions: { id: string; exited: boolean }[]) {
+  const token = "t".repeat(64);
+  const wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+  await new Promise((resolve) => wss.once("listening", resolve));
+  wss.on("connection", (socket) =>
+    socket.on("message", (raw) => {
+      const frame = decodeFrame<{ reqId: number; type: string }>(raw);
+      const result = frame.type === "ping" ? "pong" : frame.type === "list" ? sessions : null;
+      socket.send(JSON.stringify({ type: "response", reqId: frame.reqId, ok: true, result }));
+    }),
+  );
+  const dummy = spawnProcess("/bin/sleep", ["60"], { stdio: "ignore" });
+  const port = (wss.address() as { port: number }).port;
+  writeFileSync(join(dir, "ptyhost.json"), JSON.stringify({ port, token, pid: dummy.pid }));
+  return { wss, dummy };
+}
+
 describe("ensurePtyHost", () => {
+  test("replaces an outdated host that has no live crew", async () => {
+    await host.close();
+    const old = await startOldHost(home, [{ id: "done", exited: true }]);
+    const entry = fileURLToPath(new URL("../src/bin.ts", import.meta.url));
+    try {
+      const state = await ensurePtyHost({ home, entry });
+      expect(state.pid).not.toBe(old.dummy.pid);
+      expect(state.version).toBe(HOST_VERSION);
+      expect(state.outdated).toBeUndefined();
+      await expect
+        .poll(() => old.dummy.exitCode !== null || old.dummy.signalCode !== null)
+        .toBe(true);
+      process.kill(state.pid, "SIGTERM");
+    } finally {
+      old.wss.close();
+      host = await startPtyHost({ home: join(home, "spare") });
+    }
+  });
+
+  test("keeps an outdated host with live crew, flagged as outdated", async () => {
+    await host.close();
+    const old = await startOldHost(home, [{ id: "busy", exited: false }]);
+    try {
+      const state = await ensurePtyHost({ home, entry: "/unused" });
+      expect(state).toMatchObject({ pid: old.dummy.pid, outdated: true, liveSessions: 1 });
+    } finally {
+      old.dummy.kill();
+      old.wss.close();
+      host = await startPtyHost({ home: join(home, "spare") });
+    }
+  });
+
   test("launches a detached host once and reuses it", async () => {
     await host.close();
     const entry = fileURLToPath(new URL("../src/bin.ts", import.meta.url));

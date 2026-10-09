@@ -11,14 +11,14 @@ import { eq } from "drizzle-orm";
 import { join } from "node:path";
 import type { Db } from "../../shared/db/client.server";
 import { decks, missions } from "../../shared/db/schema";
+import { crewIdFor, missionIdForCrew } from "../crew/ids";
 import type { CrewLauncher } from "../crew/launcher.server";
 import type { CrewSignalEvent } from "../crew/hooks.server";
 import { briefPrompt } from "./prompt";
 import { loadMission, saveMission, type MissionRecord } from "./repo.server";
 import { branchName, createWorktree } from "./worktree.server";
 
-export const crewIdFor = (missionId: string) => `crew-${missionId}`;
-const missionIdFor = (crewId: string) => crewId.replace(/^crew-/, "");
+export { crewIdFor };
 
 export interface EffectContext<T extends MissionEffect["type"] = MissionEffect["type"]> {
   missionId: string;
@@ -88,7 +88,7 @@ export class MissionRuntime {
   }
 
   handleCrewExit(crewId: string, exitCode: number): Promise<void> {
-    const missionId = missionIdFor(crewId);
+    const missionId = missionIdForCrew(crewId);
     return this.#enqueue(missionId, async () => {
       if (loadMission(this.#deps.db, missionId).mission.state !== "building") return;
       await this.#apply(missionId, {

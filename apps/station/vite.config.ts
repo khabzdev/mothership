@@ -17,6 +17,7 @@ export default defineConfig({
           nitro({
             features: { websocket: true },
             routes: { "/_ws": "./src/shared/realtime/socket.server.ts" },
+            plugins: ["./src/app/station.plugin.ts"],
           }),
           tanstackStart(),
           viteReact(),

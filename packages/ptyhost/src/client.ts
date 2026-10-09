@@ -21,6 +21,7 @@ export class PtyHostClient {
   >();
   readonly #output = new Set<Listener<OutputEvent>>();
   readonly #exit = new Set<Listener<ExitEvent>>();
+  readonly #close = new Set<() => void>();
   #nextId = 1;
 
   private constructor(socket: WebSocket) {
@@ -29,6 +30,7 @@ export class PtyHostClient {
     socket.on("close", () => {
       for (const { reject } of this.#pending.values()) reject(new Error("PTY host disconnected"));
       this.#pending.clear();
+      for (const listener of this.#close) listener();
     });
   }
 
@@ -53,6 +55,8 @@ export class PtyHostClient {
   dispose = (id: string) => this.#request({ type: "dispose", id });
   /** Stream one session's output, starting with a snapshot of its screen. */
   attach = (id: string) => this.#request({ type: "attach", id });
+  /** A session's screen and the output sequence it covers, without subscribing. */
+  snapshot = (id: string) => this.#request({ type: "snapshot", id });
   /** Stream events from every session (used by the station to track status). */
   attachAll = () => this.#request({ type: "attachAll" });
   detach = (id: string) => this.#request({ type: "detach", id });
@@ -65,6 +69,12 @@ export class PtyHostClient {
   onExit(listener: Listener<ExitEvent>): () => void {
     this.#exit.add(listener);
     return () => this.#exit.delete(listener);
+  }
+
+  /** Called when the connection to the host drops (host exited or was replaced). */
+  onClose(listener: () => void): () => void {
+    this.#close.add(listener);
+    return () => this.#close.delete(listener);
   }
 
   close(): void {

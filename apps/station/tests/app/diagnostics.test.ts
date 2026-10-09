@@ -22,7 +22,10 @@ const healthy: Script = {
   "gh auth status": ok(),
 };
 
-function deps(script: Script, ptyhost: () => Promise<void> = async () => {}): DiagnosticsDeps {
+function deps(
+  script: Script,
+  ptyhost: DiagnosticsDeps["ptyhost"] = async () => ({}),
+): DiagnosticsDeps {
   return {
     exec: async (command, args) => script[[command, ...args].join(" ")] ?? missing,
     ptyhost,
@@ -127,6 +130,18 @@ describe("runDiagnostics", () => {
       status: "error",
       detail: "PTY host did not start within 10000ms",
       fix: "Build the PTY host: vp run -r build",
+    });
+  });
+
+  test("an outdated PTY host still running crew takes crew offline with an upgrade hint", async () => {
+    const { crewReady, check } = await byId(
+      deps(healthy, async () => ({ outdated: true, liveSessions: 2 })),
+    );
+    expect(crewReady).toBe(false);
+    expect(check("ptyhost")).toMatchObject({
+      status: "error",
+      detail: "Outdated PTY host is still running 2 crew",
+      fix: "Let those crew finish (or stop them), then re-check to upgrade the PTY host",
     });
   });
 

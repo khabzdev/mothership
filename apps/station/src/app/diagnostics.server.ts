@@ -3,8 +3,8 @@ import type { Exec, ExecResult } from "./exec.server";
 
 export interface DiagnosticsDeps {
   exec: Exec;
-  /** Resolves once the PTY host is reachable. */
-  ptyhost: () => Promise<void>;
+  /** Resolves once the PTY host is reachable, saying whether it's an outdated one kept for running crew. */
+  ptyhost: () => Promise<{ outdated?: boolean; liveSessions?: number }>;
 }
 
 const FIX = {
@@ -101,7 +101,16 @@ async function checkGh({ exec }: DiagnosticsDeps): Promise<Check> {
 
 async function checkPtyhost({ ptyhost }: DiagnosticsDeps): Promise<Check> {
   try {
-    await ptyhost();
+    const host = await ptyhost();
+    if (host.outdated) {
+      return {
+        id: "ptyhost",
+        label: "PTY host",
+        status: "error",
+        detail: `Outdated PTY host is still running ${host.liveSessions ?? "some"} crew`,
+        fix: "Let those crew finish (or stop them), then re-check to upgrade the PTY host",
+      };
+    }
     return { id: "ptyhost", label: "PTY host", status: "ok", detail: "reachable" };
   } catch (error) {
     return {

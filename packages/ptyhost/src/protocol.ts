@@ -1,5 +1,11 @@
 /** Wire protocol between the station server and the PTY host (local, token-authenticated). */
 
+/**
+ * Bump when the host gains or changes requests. Hosts outlive the station, so a newer station
+ * must detect an older host (v1 hosts answered ping with "pong").
+ */
+export const HOST_VERSION = 2;
+
 export interface SpawnSpec {
   id: string;
   command: string;
@@ -29,6 +35,8 @@ export interface AttachResult {
   cols: number;
   rows: number;
   exited: boolean;
+  /** Sequence number of the last output chunk included in the snapshot. */
+  seq: number;
 }
 
 export type HostRequest =
@@ -40,13 +48,14 @@ export type HostRequest =
   | { type: "kill"; id: string; signal?: string }
   | { type: "dispose"; id: string }
   | { type: "attach"; id: string }
+  | { type: "snapshot"; id: string }
   | { type: "attachAll" }
   | { type: "detach"; id: string };
 
 export type RequestFrame = HostRequest & { reqId: number };
 
 export interface ResultMap {
-  ping: "pong";
+  ping: { version: number };
   list: SessionInfo[];
   spawn: SessionInfo;
   write: null;
@@ -54,6 +63,7 @@ export interface ResultMap {
   kill: null;
   dispose: null;
   attach: AttachResult;
+  snapshot: AttachResult;
   attachAll: null;
   detach: null;
 }
@@ -66,6 +76,8 @@ export interface OutputEvent {
   type: "output";
   id: string;
   data: string;
+  /** Per-session chunk number, starting at 1; lets viewers line output up with a snapshot. */
+  seq: number;
 }
 
 export interface ExitEvent {

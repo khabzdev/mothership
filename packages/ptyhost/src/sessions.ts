@@ -14,6 +14,7 @@ interface Session {
   pty: pty.IPty;
   mirror: headless.Terminal;
   serializer: SerializeAddon;
+  seq: number;
 }
 
 /** Owns the PTYs and their headless mirrors. Knows nothing about sockets. */
@@ -58,12 +59,14 @@ export class SessionManager {
       pty: proc,
       mirror,
       serializer,
+      seq: 0,
     };
     this.#sessions.set(spec.id, session);
 
     proc.onData((data) => {
+      session.seq++;
       mirror.write(data);
-      this.#emit({ type: "output", id: spec.id, data });
+      this.#emit({ type: "output", id: spec.id, data, seq: session.seq });
     });
     proc.onExit(({ exitCode, signal }) => {
       Object.assign(session.info, { exited: true, exitCode, ...(signal ? { signal } : {}) });
@@ -103,25 +106,35 @@ export class SessionManager {
    * is being taken is buffered and delivered after it, so nothing is lost or duplicated.
    */
   attach(id: string, subscriber: Subscriber): Promise<AttachResult> {
-    const session = this.#get(id);
+    this.#get(id); // throws for unknown sessions before subscribing
     const buffered: HostEvent[] = [];
     let live = false;
     const gate: Subscriber = (event) => (live ? subscriber(event) : buffered.push(event));
     this.#subscribers.set(id, (this.#subscribers.get(id) ?? new Set()).add(gate));
     gateOf.set(subscriber, gate);
 
+    return this.snapshot(id).then((result) => {
+      queueMicrotask(() => {
+        live = true;
+        for (const event of buffered.splice(0)) subscriber(event);
+      });
+      return result;
+    });
+  }
+
+  /** The session's screen as of now, and the output sequence it covers. Doesn't subscribe. */
+  snapshot(id: string): Promise<AttachResult> {
+    const session = this.#get(id);
+    const seq = session.seq;
     return new Promise((resolve) => {
-      // Resolves once every write queued before the attach has reached the mirror.
+      // Resolves once every write queued before this call has reached the mirror.
       session.mirror.write("", () => {
         resolve({
           snapshot: session.serializer.serialize(),
           cols: session.info.cols,
           rows: session.info.rows,
           exited: session.info.exited,
-        });
-        queueMicrotask(() => {
-          live = true;
-          for (const event of buffered.splice(0)) subscriber(event);
+          seq,
         });
       });
     });

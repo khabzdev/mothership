@@ -3,7 +3,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
 import { decodeFrame } from "./frames.ts";
-import type { HostEvent, HostFrame, RequestFrame } from "./protocol.ts";
+import { HOST_VERSION, type HostEvent, type HostFrame, type RequestFrame } from "./protocol.ts";
 import { SessionManager, type Subscriber } from "./sessions.ts";
 import { stateFile, type HostState } from "./state.ts";
 
@@ -37,7 +37,12 @@ export async function startPtyHost({ home, port = 0 }: StartOptions): Promise<Pt
 
   wss.on("connection", (socket) => serve(socket, sessions));
 
-  const state: HostState = { port: (wss.address() as AddressInfo).port, token, pid: process.pid };
+  const state: HostState = {
+    port: (wss.address() as AddressInfo).port,
+    token,
+    pid: process.pid,
+    version: HOST_VERSION,
+  };
   mkdirSync(home, { recursive: true });
   writeFileSync(stateFile(home), JSON.stringify(state), { mode: 0o600 });
 
@@ -78,7 +83,7 @@ function serve(socket: WebSocket, sessions: SessionManager): void {
 async function handle(frame: RequestFrame, sessions: SessionManager, subscriber: Subscriber) {
   switch (frame.type) {
     case "ping":
-      return "pong";
+      return { version: HOST_VERSION };
     case "list":
       return sessions.list();
     case "spawn": {
@@ -95,6 +100,8 @@ async function handle(frame: RequestFrame, sessions: SessionManager, subscriber:
       return (sessions.dispose(frame.id), null);
     case "attach":
       return sessions.attach(frame.id, subscriber);
+    case "snapshot":
+      return sessions.snapshot(frame.id);
     case "attachAll":
       return (sessions.attachAll(subscriber), null);
     case "detach":

@@ -1,4 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { crewIdFor } from "../../crew/ids";
+import { TerminalPanel } from "../../crew/ui/TerminalPanel";
 import type { MissionRecord } from "../model";
 import { launchMissionMutation } from "../queries";
 import { fuelGauge, missionLamp } from "./status";
@@ -9,6 +12,8 @@ export function MissionCard({ record }: { record: MissionRecord }) {
   const launch = useMutation(launchMissionMutation(queryClient));
   const { mission } = record;
   const lamp = missionLamp(mission);
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const hasCrew = record.worktreePath !== null;
 
   return (
     <article
@@ -59,6 +64,16 @@ export function MissionCard({ record }: { record: MissionRecord }) {
             Pull request ↗
           </a>
         )}
+        {hasCrew && (
+          <button
+            type="button"
+            className="button button--ghost"
+            aria-expanded={terminalOpen}
+            onClick={() => setTerminalOpen((open) => !open)}
+          >
+            {terminalOpen ? "Hide terminal" : "Terminal"}
+          </button>
+        )}
         {mission.state === "briefing" && (
           <button
             type="button"
@@ -70,6 +85,7 @@ export function MissionCard({ record }: { record: MissionRecord }) {
           </button>
         )}
       </footer>
+      {terminalOpen && <TerminalPanel crewId={crewIdFor(record.id)} />}
       {launch.error && (
         <p role="alert" className="error">
           {launch.error.message}
