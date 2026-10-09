@@ -84,6 +84,11 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
     const onKey = (e: KeyboardEvent) => {
       if (!gameKeysEnabled(e)) return;
       const { consoleId, atLift, atBoard, open, carrying, carry, say } = useWorld.getState();
+      // / searches every terminal on the deck, wherever you are.
+      if (e.key === "/") {
+        e.preventDefault();
+        return open({ kind: "search" });
+      }
       // Q puts the card you're carrying back on the board.
       if (carrying && e.code === "KeyQ") {
         e.preventDefault();

@@ -1655,3 +1655,61 @@ a:focus-visible {
   border-radius: 4px;
   font: 600 0.68rem var(--font-mono);
 }
+
+/* Terminal search. */
+.search {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.search__results {
+  display: grid;
+  gap: 0.8rem;
+  max-height: min(60vh, 34rem);
+  overflow-y: auto;
+}
+
+.search__group {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.search__group h4 {
+  margin: 0 0 0.2rem;
+}
+
+.search__hit {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--ink);
+  font: 400 0.75rem/1.5 var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.search__hit:hover {
+  background: var(--color-kumo-tint);
+}
+
+.search__line {
+  color: var(--color-kumo-subtle, var(--ink-dim));
+  text-align: right;
+}
+
+.search__text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.search__text mark {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--accent) 40%, transparent);
+  color: inherit;
+}

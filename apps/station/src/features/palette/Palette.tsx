@@ -5,6 +5,7 @@ import {
   GitPullRequestIcon,
   Notification03Icon,
   Rocket01Icon,
+  Search01Icon,
   Target02Icon,
   TaskDaily01Icon,
   UserAdd01Icon,
@@ -130,6 +131,13 @@ export function Palette({
             },
           ]
         : []),
+      {
+        id: "a:search",
+        title: "Search the terminals",
+        subtitle: "Every crew terminal on this deck (/)",
+        icon: Search01Icon,
+        run: () => openOverlay({ kind: "search" }),
+      },
       {
         id: "a:lift",
         title: "Ride the lift",

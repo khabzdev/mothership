@@ -11,7 +11,8 @@ export type Overlay =
   | { kind: "pr"; crewId: string }
   | { kind: "label"; consoleId: number }
   | { kind: "board"; board: BoardId; open?: number }
-  | { kind: "lift"; fromLift?: boolean };
+  | { kind: "lift"; fromLift?: boolean }
+  | { kind: "search" };
 
 interface WorldState {
   /** Console the Captain is standing at. */
@@ -75,7 +76,8 @@ export function gameKeysEnabled(event: KeyboardEvent): boolean {
   const { overlay, paletteOpen } = useWorld.getState();
   if (overlay || paletteOpen) return false;
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
-  const target = event.target as HTMLElement | null;
+  // Keys sent to the window or document (not an element) are game keys too.
+  const target = event.target instanceof HTMLElement ? event.target : null;
   return !(
     target &&
     (target.isContentEditable ||

@@ -5,6 +5,7 @@ import {
   LinkSquare02Icon,
   Message01Icon,
   Rocket01Icon,
+  Search01Icon,
   Target02Icon,
   TaskDaily01Icon,
   UserAdd01Icon,
@@ -15,6 +16,7 @@ import { useState } from "react";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
 import { QueueWindow } from "../../queue/ui/QueueWindow";
+import { SearchWindow } from "../../search/ui/SearchWindow";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
@@ -239,5 +241,16 @@ export function Overlays({
       );
     case "lift":
       return <Lift fromLift={overlay.fromLift} />;
+    case "search":
+      return (
+        <Modal
+          wide
+          icon={Search01Icon}
+          title="Search the terminals"
+          subtitle="Every crew terminal on this deck, scrollback and all."
+        >
+          <SearchWindow deckId={deckId} />
+        </Modal>
+      );
   }
 }
