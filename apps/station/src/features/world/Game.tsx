@@ -1,7 +1,8 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { rosterQuery } from "../crew/queries";
 import type { Deck } from "../decks/model";
 import { CONSOLES } from "./layout";
@@ -11,6 +12,7 @@ import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
+import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
 import { NeedsYouBanner, Toast } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
@@ -92,11 +94,35 @@ function useConsoleKeys(crew: CrewInfo[]) {
   }, [crew]);
 }
 
+/** The boarding screen over the deck until its models have loaded, then a fade out. */
+function DeckLoader({ deck, loaded }: { deck: string; loaded: boolean }) {
+  const { progress } = useProgress();
+  const [gone, setGone] = useState(false);
+  if (gone) return null;
+  return (
+    <div
+      className="deck-loader"
+      data-loaded={loaded || undefined}
+      onAnimationEnd={() => loaded && setGone(true)}
+    >
+      <Boarding deck={deck} progress={loaded ? 100 : progress} />
+    </div>
+  );
+}
+
+/** Mounts once everything before it in the scene's Suspense has loaded. */
+function Ready({ onReady }: { onReady: () => void }) {
+  useEffect(onReady, [onReady]);
+  return null;
+}
+
 /** One deck of the Mothership: walk it, hire crew at consoles, watch them work. */
 export function Game({ deck }: { deck: Deck }) {
   const { data: crew } = useSuspenseQuery(rosterQuery(deck.id));
   const consoleId = useWorld((s) => s.consoleId);
   const toast = useWorld((s) => s.toast);
+  const [loaded, setLoaded] = useState(false);
+  const ready = useCallback(() => setLoaded(true), []);
   useConsoleKeys(crew);
   useNextUp(crew);
   useSoundUnlock();
@@ -138,8 +164,10 @@ export function Game({ deck }: { deck: Deck }) {
             return def ? <CrewMember key={member.id} crew={member} def={def} /> : null;
           })}
           <Captain />
+          <Ready onReady={ready} />
         </Suspense>
       </Canvas>
+      <DeckLoader deck={deck.name} loaded={loaded} />
       <TopBar deck={deck} crew={crew} />
       <NeedsYouBanner
         crew={crew}

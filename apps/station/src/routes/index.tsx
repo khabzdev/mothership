@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
+import { Boarding } from "../features/world/ui/Boarding";
 import { diagnosticsQuery } from "../app/queries";
 import { rosterQuery } from "../features/crew/queries";
 import { decksQuery } from "../features/decks/queries";
@@ -25,7 +26,7 @@ function Station() {
   const { deck } = useDeckChoice();
   if (!deck) return <Lift standalone />;
   return (
-    <Suspense fallback={<div className="loading">Boarding {deck.name}…</div>}>
+    <Suspense fallback={<Boarding deck={deck.name} />}>
       <Game deck={deck} />
     </Suspense>
   );

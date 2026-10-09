@@ -948,3 +948,84 @@ a:focus-visible {
     display: none;
   }
 }
+
+/* Boarding: the loading screen while a deck's models come in. */
+.boarding {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.9rem;
+  height: 100%;
+  min-height: 100vh;
+  padding: 1rem;
+  background: radial-gradient(ellipse at 50% 120%, #ff5f1f22, transparent 60%), #05060c;
+  text-align: center;
+}
+
+.boarding .eyebrow {
+  margin: 0;
+}
+
+.boarding__deck {
+  margin: 0;
+  font: 800 clamp(2.6rem, 9vw, 5.5rem) / 0.95 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.boarding__bar {
+  position: relative;
+  width: min(22rem, 70vw);
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--panel-line);
+}
+
+.boarding__bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  transition: width 0.3s ease;
+}
+
+.boarding__bar[data-indeterminate] span {
+  width: 30%;
+  animation: boarding-scan 1.2s ease-in-out infinite alternate;
+}
+
+.boarding__tip {
+  max-width: 28rem;
+  margin: 0.4rem 0 0;
+  font: 500 0.78rem var(--font-mono);
+  color: var(--ink-dim);
+}
+
+.deck-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+}
+
+.deck-loader[data-loaded] {
+  pointer-events: none;
+  animation: deck-loader-out 0.6s ease 0.2s forwards;
+}
+
+@keyframes boarding-scan {
+  from {
+    left: 0;
+  }
+  to {
+    left: 70%;
+  }
+}
+
+@keyframes deck-loader-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
