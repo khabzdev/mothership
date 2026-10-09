@@ -37,6 +37,12 @@ describe("launchPlan", () => {
     expect(plan.args.join(" ")).not.toContain("secret-token");
   });
 
+  test("hiring without a task starts claude with no prompt", () => {
+    const plan = claudeCode.launchPlan({ ...options, prompt: "  " });
+    expect(plan.args).not.toContain("--");
+    expect(plan.args.at(-2)).toBe("--settings");
+  });
+
   test("adds the model when given", () => {
     const plan = claudeCode.launchPlan({ ...options, model: "claude-opus-5-5" });
     expect(plan.args.slice(0, 2)).toEqual(["--model", "claude-opus-5-5"]);

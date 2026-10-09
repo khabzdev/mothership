@@ -3,7 +3,6 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import TanStackQueryDevtools from "../app/query-devtools";
-import { Shell } from "../app/ui/Shell";
 import { RealtimeProvider } from "../shared/realtime/RealtimeProvider";
 
 import appCss from "../styles.css?url";
@@ -51,9 +50,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <RealtimeProvider>
-          <Shell>{children}</Shell>
-        </RealtimeProvider>
+        <RealtimeProvider>{children}</RealtimeProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",

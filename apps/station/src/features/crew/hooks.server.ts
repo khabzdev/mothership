@@ -1,6 +1,4 @@
-import type { CrewStatus } from "@mothership/protocol";
 import { PROVIDERS, type CrewSignal, type ProviderAdapter } from "@mothership/providers";
-import { hub } from "../../shared/realtime/hub.server";
 import { crewRegistry, type CrewRegistry } from "./registry.server";
 
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -15,18 +13,6 @@ export interface HookDeps {
   registry: CrewRegistry;
   providers: Record<string, ProviderAdapter>;
   publish: (event: CrewSignalEvent) => void;
-}
-
-const STATUS_FOR_SIGNAL = {
-  idle: "idle",
-  working: "working",
-  needsInput: "redAlert",
-  stopped: "done",
-  ended: "offline",
-} as const satisfies Record<CrewSignal["type"], CrewStatus>;
-
-export function statusForSignal(signal: CrewSignal): CrewStatus {
-  return STATUS_FOR_SIGNAL[signal.type];
 }
 
 /** POST /api/hooks: a crew member's CLI hook reporting what it's doing. */
@@ -67,16 +53,8 @@ export function onCrewSignal(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Broadcast crew status to browsers and notify server-side listeners. */
+/** Notify server-side listeners (the crew service) of a crew signal. */
 export function publishCrewSignal(event: CrewSignalEvent): void {
-  const { signal } = event;
-  hub.broadcast({
-    type: "crew.status",
-    crewId: event.crewId,
-    missionId: event.missionId,
-    status: statusForSignal(signal),
-    ...(signal.type === "working" && signal.activity && { activity: signal.activity }),
-  });
   for (const listener of listeners) listener(event);
 }
 

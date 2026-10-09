@@ -1,4 +1,3 @@
-import type { MissionState } from "@mothership/mission-engine";
 import type { CrewActivity, CrewStatus } from "@mothership/protocol";
 
 export type Waypoint =
@@ -13,7 +12,6 @@ export type Waypoint =
 export interface CrewSignal {
   status: CrewStatus;
   activity?: CrewActivity;
-  missionState?: MissionState;
 }
 
 export interface DeckRef {
@@ -33,11 +31,7 @@ const TEST_COMMAND =
  * Returns null when the signal doesn't say anything about location (stay put).
  */
 export function resolveWaypoint(signal: CrewSignal, deck: DeckRef): Waypoint | null {
-  if (signal.status === "redAlert") return { kind: "bridgeRail" };
-  if (signal.missionState === "launching" || signal.missionState === "launched") {
-    return { kind: "airlock" };
-  }
-  if (signal.missionState === "preflight") return { kind: "preflightConsole" };
+  if (signal.status === "needs_input") return { kind: "bridgeRail" };
   if (signal.status !== "working") return { kind: "quarters" };
 
   const { activity } = signal;

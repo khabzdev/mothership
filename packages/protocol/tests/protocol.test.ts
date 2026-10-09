@@ -1,4 +1,3 @@
-import type { Mission } from "@mothership/mission-engine";
 import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 import {
   PROTOCOL_VERSION,
@@ -6,17 +5,24 @@ import {
   parseClientMsg,
   parseServerMsg,
   type ClientMsg,
-  type CrewActivity,
+  type CrewAction,
+  type CrewInfo,
   type CrewStatus,
   type MsgOf,
   type ServerMsg,
 } from "../src/index.ts";
 
-const mission: Mission = {
-  state: "building",
-  brief: { goal: "g", criteria: [{ id: "t", kind: "command", command: "vp test" }] },
-  attempts: 1,
-  maxAttempts: 3,
+const nova: CrewInfo = {
+  id: "c1",
+  deckId: "d1",
+  consoleId: 3,
+  name: "Nova",
+  color: "#ff5f1f",
+  character: "Barbarian",
+  task: "Add dark mode",
+  status: "working",
+  action: "edit",
+  statusSince: 1,
 };
 
 describe("types", () => {
@@ -25,13 +31,7 @@ describe("types", () => {
       "terminal.attach" | "terminal.detach" | "terminal.input" | "terminal.resize"
     >();
     expectTypeOf<ServerMsg["type"]>().toEqualTypeOf<
-      | "hello"
-      | "terminal.snapshot"
-      | "terminal.output"
-      | "terminal.exit"
-      | "crew.status"
-      | "mission.updated"
-      | "error"
+      "hello" | "terminal.snapshot" | "terminal.output" | "terminal.exit" | "crew.roster" | "error"
     >();
   });
 
@@ -43,19 +43,11 @@ describe("types", () => {
     }>();
   });
 
-  test("crew status and activity shapes", () => {
+  test("crew statuses and actions follow agent-office", () => {
     expectTypeOf<CrewStatus>().toEqualTypeOf<
-      "offline" | "idle" | "working" | "redAlert" | "done"
+      "starting" | "idle" | "working" | "needs_input" | "done" | "asleep"
     >();
-    expectTypeOf<CrewActivity>().toEqualTypeOf<{
-      tool: string;
-      filePath?: string;
-      command?: string;
-    }>();
-  });
-
-  test("mission.updated carries the engine's Mission", () => {
-    expectTypeOf<MsgOf<ServerMsg, "mission.updated">["mission"]>().toEqualTypeOf<Mission>();
+    expectTypeOf<CrewAction>().toEqualTypeOf<"read" | "edit" | "test" | "web" | "failing">();
   });
 });
 
@@ -117,15 +109,8 @@ describe("parseServerMsg", () => {
     { type: "terminal.output", crewId: "c1", data: "hi" },
     { type: "terminal.exit", crewId: "c1", code: 0 },
     { type: "terminal.exit", crewId: "c1", code: null },
-    {
-      type: "crew.status",
-      crewId: "c1",
-      missionId: "m1",
-      status: "working",
-      activity: { tool: "Edit", filePath: "src/app.ts" },
-    },
-    { type: "crew.status", crewId: "c1", missionId: null, status: "offline" },
-    { type: "mission.updated", missionId: "m1", deckId: "d1", mission },
+    { type: "crew.roster", deckId: "d1", crew: [nova] },
+    { type: "crew.roster", deckId: "d1", crew: [] },
     { type: "error", message: "boom" },
   ];
 
@@ -135,12 +120,11 @@ describe("parseServerMsg", () => {
     });
   }
 
-  test("rejects an unknown crew status", () => {
+  test("rejects a roster with an unknown crew status", () => {
     const raw = JSON.stringify({
-      type: "crew.status",
-      crewId: "c1",
-      missionId: null,
-      status: "asleep",
+      type: "crew.roster",
+      deckId: "d1",
+      crew: [{ ...nova, status: "asleep-ish" }],
     });
     expect(parseServerMsg(raw)).toBeNull();
   });

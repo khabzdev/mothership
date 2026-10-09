@@ -15,3 +15,14 @@ export function parseDockRepoInput(input: unknown): DockRepoInput {
   if (!trimmed.startsWith("/")) throw new Error("repoPath must be an absolute path");
   return { repoPath: trimmed };
 }
+
+export function parseDeckIdInput(input: unknown): { deckId: string } {
+  const deckId =
+    typeof input === "object" &&
+    input !== null &&
+    typeof (input as { deckId?: unknown }).deckId === "string"
+      ? (input as { deckId: string }).deckId.trim()
+      : "";
+  if (!deckId) throw new Error("deckId is required");
+  return { deckId };
+}

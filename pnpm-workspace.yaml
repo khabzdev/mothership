@@ -12,8 +12,11 @@ allowBuilds:
 
 catalog:
   "@lydell/node-pty": 1.2.0-beta.15
+  "@react-three/drei": ^10.7.9
+  "@react-three/fiber": ^9.8.1
   "@types/better-sqlite3": ^9.6.0
   "@types/node": ^24
+  "@types/three": ^0.186.0
   "@types/ws": ^8.18.2
   "@xterm/addon-fit": ^0.11.0
   "@xterm/addon-serialize": ^0.14.0
@@ -22,10 +25,12 @@ catalog:
   better-sqlite3: ^13.0.3
   drizzle-kit: ^0.31.11
   drizzle-orm: ^0.45.4
+  three: ^0.186.1
   typescript: ^7.0.2
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vite-plus: 1.0.0
   ws: ^8.22.0
+  zustand: ^5.0.15
 overrides:
   vite@*: "catalog:"
 peerDependencyRules:

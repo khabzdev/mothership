@@ -11,3 +11,6 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# KayKit models (fetched by `vp run assets`)
+public/models/

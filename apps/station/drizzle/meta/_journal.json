@@ -8,6 +8,20 @@
       "when": 1791566756468,
       "tag": "0000_clean_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791572067866,
+      "tag": "0001_drop_missions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791572068312,
+      "tag": "0002_crew",
+      "breakpoints": true
     }
   ]
 }

@@ -24,34 +24,19 @@ describe("moduleForPath", () => {
 describe("resolveWaypoint: status", () => {
   test("red alert runs to the bridge rail, whatever the activity", () => {
     expect(
-      resolve({ status: "redAlert", activity: { tool: "Edit", filePath: "/work/repo/src/a.ts" } }),
+      resolve({
+        status: "needs_input",
+        activity: { tool: "Edit", filePath: "/work/repo/src/a.ts" },
+      }),
     ).toEqual({ kind: "bridgeRail" });
   });
 
-  test.each(["idle", "done", "offline"] as const)("%s returns to quarters", (status) => {
+  test.each(["starting", "idle", "done", "asleep"] as const)("%s returns to quarters", (status) => {
     expect(resolve({ status })).toEqual({ kind: "quarters" });
   });
 
   test("working with no activity yet stays put", () => {
     expect(resolve({ status: "working" })).toBeNull();
-  });
-});
-
-describe("resolveWaypoint: mission phase", () => {
-  test("pre-flight goes to the Go/No-Go console", () => {
-    expect(resolve({ status: "working", missionState: "preflight" })).toEqual({
-      kind: "preflightConsole",
-    });
-  });
-
-  test.each(["launching", "launched"] as const)("%s goes to the airlock", (missionState) => {
-    expect(resolve({ status: "done", missionState })).toEqual({ kind: "airlock" });
-  });
-
-  test("red alert beats mission phase", () => {
-    expect(resolve({ status: "redAlert", missionState: "launching" })).toEqual({
-      kind: "bridgeRail",
-    });
   });
 });
 

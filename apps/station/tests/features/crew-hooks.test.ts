@@ -1,13 +1,9 @@
-import { claudeCode, type CrewSignal } from "@mothership/providers";
+import { claudeCode } from "@mothership/providers";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test, vi } from "vite-plus/test";
-import {
-  handleHookRequest,
-  statusForSignal,
-  type CrewSignalEvent,
-} from "../../src/features/crew/hooks.server.ts";
+import { handleHookRequest, type CrewSignalEvent } from "../../src/features/crew/hooks.server.ts";
 import { CrewRegistry } from "../../src/features/crew/registry.server.ts";
 
 function setup() {
@@ -88,18 +84,6 @@ describe("CrewRegistry persistence", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
-});
-
-describe("statusForSignal", () => {
-  test.each<[CrewSignal, string]>([
-    [{ type: "idle" }, "idle"],
-    [{ type: "working" }, "working"],
-    [{ type: "needsInput", detail: "?" }, "redAlert"],
-    [{ type: "stopped" }, "done"],
-    [{ type: "ended", reason: "other" }, "offline"],
-  ])("%j → %s", (signal, status) => {
-    expect(statusForSignal(signal)).toBe(status);
   });
 });
 

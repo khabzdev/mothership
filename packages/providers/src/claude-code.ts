@@ -45,9 +45,8 @@ function launchPlan(options: LaunchOptions): LaunchPlan {
       ...(options.model ? ["--model", options.model] : []),
       "--settings",
       JSON.stringify(hookSettings()),
-      // End of options: a brief starting with "-" must not be read as a flag.
-      "--",
-      options.prompt,
+      // End of options: a task starting with "-" must not be read as a flag.
+      ...(options.prompt.trim() ? ["--", options.prompt] : []),
     ],
     cwd: options.cwd,
     env: {

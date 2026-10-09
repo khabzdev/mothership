@@ -1,34 +1,32 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { healthQuery } from "../app/health";
+import { lazy, Suspense } from "react";
 import { diagnosticsQuery } from "../app/queries";
-import { StationChecks } from "../app/ui/StationChecks";
+import { rosterQuery } from "../features/crew/queries";
 import { decksQuery } from "../features/decks/queries";
-import { DeckPanel } from "../features/decks/ui/DeckPanel";
+import { useDeckChoice } from "../features/world/deck-choice";
+import { Lift } from "../features/world/ui/Lift";
+
+// three.js and the scene only load in the browser.
+const Game = lazy(() => import("../features/world/Game").then((m) => ({ default: m.Game })));
 
 export const Route = createFileRoute("/")({
-  loader: ({ context }) =>
-    Promise.all([
-      context.queryClient.ensureQueryData(healthQuery),
+  loader: async ({ context }) => {
+    const [decks] = await Promise.all([
       context.queryClient.ensureQueryData(decksQuery),
       context.queryClient.ensureQueryData(diagnosticsQuery),
-    ]),
-  component: Bridge,
+    ]);
+    await Promise.all(decks.map((d) => context.queryClient.ensureQueryData(rosterQuery(d.id))));
+  },
+  ssr: "data-only",
+  component: Station,
 });
 
-function Bridge() {
-  const { data } = useSuspenseQuery(healthQuery);
+function Station() {
+  const { deck } = useDeckChoice();
+  if (!deck) return <Lift standalone />;
   return (
-    <main className="bridge">
-      <section className="bridge__title">
-        <p className="eyebrow">Command bridge</p>
-        <h1>Every repo is a deck. Every feature is a mission.</h1>
-        <p className="readout" data-testid="station-status">
-          Station {data.status} · node {data.node} · db {data.db}
-        </p>
-      </section>
-      <DeckPanel />
-      <StationChecks />
-    </main>
+    <Suspense fallback={<div className="loading">Boarding {deck.name}…</div>}>
+      <Game deck={deck} />
+    </Suspense>
   );
 }

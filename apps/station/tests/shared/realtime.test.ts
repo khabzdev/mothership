@@ -1,17 +1,9 @@
-import type { Mission } from "@mothership/mission-engine";
 import { encode, PROTOCOL_VERSION, type ClientMsg, type ServerMsg } from "@mothership/protocol";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, test, vi } from "vite-plus/test";
 import { applyServerMsg, realtimeKeys } from "../../src/shared/realtime/cache.ts";
 import { RealtimeClient, type SocketLike } from "../../src/shared/realtime/client.ts";
 import { RealtimeHub, isSameOrigin, type Peer } from "../../src/shared/realtime/hub.server.ts";
-
-const mission: Mission = {
-  state: "building",
-  brief: { goal: "g", criteria: [{ id: "t", kind: "command", command: "vp test" }] },
-  attempts: 1,
-  maxAttempts: 3,
-};
 
 describe("isSameOrigin", () => {
   const req = (headers: Record<string, string>) =>
@@ -112,26 +104,23 @@ describe("RealtimeHub", () => {
 });
 
 describe("applyServerMsg", () => {
-  test("stores crew status under the crew's key", () => {
+  test("stores a deck's crew roster under its key", () => {
     const qc = new QueryClient();
-    applyServerMsg(qc, {
-      type: "crew.status",
-      crewId: "c1",
-      missionId: "m1",
-      status: "working",
-      activity: { tool: "Edit", filePath: "src/a.ts" },
-    });
-    expect(qc.getQueryData(realtimeKeys.crewStatus("c1"))).toEqual({
-      missionId: "m1",
-      status: "working",
-      activity: { tool: "Edit", filePath: "src/a.ts" },
-    });
-  });
-
-  test("stores mission updates under the mission's key", () => {
-    const qc = new QueryClient();
-    applyServerMsg(qc, { type: "mission.updated", missionId: "m1", deckId: "d1", mission });
-    expect(qc.getQueryData(realtimeKeys.mission("m1"))).toEqual({ deckId: "d1", mission });
+    const crew = [
+      {
+        id: "c1",
+        deckId: "d1",
+        consoleId: 0,
+        name: "Nova",
+        color: "#fff",
+        character: "Mage",
+        task: "",
+        status: "idle" as const,
+        statusSince: 1,
+      },
+    ];
+    applyServerMsg(qc, { type: "crew.roster", deckId: "d1", crew });
+    expect(qc.getQueryData(realtimeKeys.roster("d1"))).toEqual(crew);
   });
 
   test("ignores messages that don't belong in the cache", () => {

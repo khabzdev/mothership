@@ -12,13 +12,15 @@
     "start": "HOST=127.0.0.1 PORT=3000 node .output/server/index.mjs",
     "preview": "vp preview --host 127.0.0.1",
     "test": "vp test",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "assets": "node scripts/fetch-assets.mjs"
   },
   "dependencies": {
-    "@mothership/mission-engine": "workspace:*",
     "@mothership/protocol": "workspace:*",
     "@mothership/providers": "workspace:*",
     "@mothership/ptyhost": "workspace:*",
+    "@react-three/drei": "catalog:",
+    "@react-three/fiber": "catalog:",
     "@tanstack/react-devtools": "0.10.13",
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-query-devtools": "5.104.1",
@@ -32,7 +34,9 @@
     "drizzle-orm": "catalog:",
     "nitro": "3.0.260610-beta",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "three": "catalog:",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "0.8.5",
@@ -41,6 +45,7 @@
     "@types/node": "catalog:",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/three": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",
     "drizzle-kit": "catalog:",
     "typescript": "catalog:",

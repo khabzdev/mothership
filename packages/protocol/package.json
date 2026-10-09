@@ -17,9 +17,6 @@
     "test": "vp test",
     "check": "vp check"
   },
-  "dependencies": {
-    "@mothership/mission-engine": "workspace:*"
-  },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "typescript": "^7.0.2",

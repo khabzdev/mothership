@@ -18,7 +18,6 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@mothership/mission-engine": "workspace:*",
     "@mothership/protocol": "workspace:*"
   },
   "devDependencies": {

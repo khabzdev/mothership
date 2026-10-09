@@ -13,7 +13,8 @@ export default defineConfig({
     process.env.VITEST
       ? []
       : [
-          devtools(),
+          // Source injection adds data-* props to every JSX element, which R3F objects reject.
+          devtools({ injectSource: { enabled: false } }),
           nitro({
             features: { websocket: true },
             routes: { "/_ws": "./src/shared/realtime/socket.server.ts" },

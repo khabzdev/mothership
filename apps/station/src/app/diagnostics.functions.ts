@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getStation } from "../features/missions/station.server";
+import { getStation } from "./station.server";
 
 export const getDiagnostics = createServerFn()
   .validator((input: unknown) => ({
