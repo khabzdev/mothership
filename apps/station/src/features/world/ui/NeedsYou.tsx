@@ -1,6 +1,10 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect, useRef, useState } from "react";
-import { playDone, playNeedsYou } from "../sound";
+import { useQueries, useSuspenseQuery } from "@tanstack/react-query";
+import { rosterQuery } from "../../crew/queries";
+import { decksQuery } from "../../decks/queries";
+import { playDone, playHeadsUp, playNeedsYou } from "../sound";
+import { useWorld } from "../store";
 import { Fresh, bannerText, needingYou } from "../waiting";
 
 /**
@@ -81,4 +85,36 @@ export function Toast({ toast }: { toast: { text: string; at: number } | null })
       {toast.text}
     </div>
   );
+}
+
+/**
+ * A heads-up when a crew member on another deck starts waiting on you (agent-office: "you get a
+ * heads-up when a worker on another floor starts waiting"): a toast naming the deck, and a chime.
+ */
+export function useOtherDecksHeadsUp(deckId: string): void {
+  const { data: decks } = useSuspenseQuery(decksQuery);
+  const others = decks.filter((d) => d.id !== deckId);
+  const rosters = useQueries({ queries: others.map((d) => rosterQuery(d.id)) });
+  const fresh = useRef(new Map<string, Fresh>());
+  const crewKey = rosters.map((r) => r.dataUpdatedAt).join(",");
+
+  useEffect(() => {
+    others.forEach((deck, i) => {
+      const crew = rosters[i]?.data;
+      if (!crew) return;
+      let seen = fresh.current.get(deck.id);
+      if (!seen) fresh.current.set(deck.id, (seen = new Fresh()));
+      const asking = seen.take(crew).filter((c) => c.status === "needs_input");
+      if (!asking.length) return;
+      const names = asking.map((c) => c.name).join(", ");
+      useWorld
+        .getState()
+        .say(
+          `🛗 ${names} on ${deck.name} ${asking.length > 1 ? "need" : "needs"} you: take the lift`,
+        );
+      playHeadsUp();
+    });
+    // Rosters are compared by when they last changed.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [crewKey, deckId]);
 }

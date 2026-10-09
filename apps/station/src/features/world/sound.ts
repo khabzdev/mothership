@@ -43,6 +43,13 @@ export function playNeedsYou(): void {
   }
 }
 
+/** One soft rising pair: someone on another deck needs you (agent-office's reminder chime). */
+export function playHeadsUp(): void {
+  unlockSound();
+  bell(784, 0, 0.14);
+  bell(1047, 0.13, 0.14);
+}
+
 /** Two notes up: a crew member finished its turn. */
 export function playDone(): void {
   unlockSound();

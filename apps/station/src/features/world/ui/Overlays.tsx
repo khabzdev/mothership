@@ -205,6 +205,6 @@ export function Overlays({
         />
       );
     case "lift":
-      return <Lift />;
+      return <Lift fromLift={overlay.fromLift} />;
   }
 }

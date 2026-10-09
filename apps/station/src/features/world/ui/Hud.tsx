@@ -18,6 +18,15 @@ function Key({ k, label }: { k: string; label: string }) {
 /** What you're facing and what you can do there (agent-office's hint bar). */
 export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
   const consoleId = useWorld((s) => s.consoleId);
+  const atLift = useWorld((s) => s.atLift);
+  if (atLift && consoleId === null) {
+    return (
+      <div className="hint" data-active>
+        <span className="hint__what">🛗 Lift</span>
+        <Key k="E" label="Ride to another deck" />
+      </div>
+    );
+  }
   if (consoleId === null) {
     return (
       <div className="hint">

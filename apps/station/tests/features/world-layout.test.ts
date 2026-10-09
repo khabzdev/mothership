@@ -5,7 +5,9 @@ import {
   AIRLOCK,
   COLLIDERS,
   addCollider,
+  LIFT_STOP,
   airlockPath,
+  liftInReach,
   partnerOf,
   consoleInReach,
   consoleSeat,
@@ -66,5 +68,12 @@ describe("deck layout", () => {
       expect(partnerOf(p)?.id).toBe(c.id);
       expect(p.rotY).not.toBe(c.rotY);
     }
+  });
+
+  test("you call the lift from in front of its doors, clear of any console", () => {
+    expect(liftInReach(LIFT_STOP.x, LIFT_STOP.z)).toBe(true);
+    expect(liftInReach(SPAWN.x, SPAWN.z)).toBe(false);
+    expect(consoleInReach(LIFT_STOP.x, LIFT_STOP.z)).toBeNull();
+    expect(moveWithCollisions(LIFT_STOP.x, LIFT_STOP.z, 0, 0)).toEqual(LIFT_STOP);
   });
 });

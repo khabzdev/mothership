@@ -2,7 +2,15 @@ import { useAnimations } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import { MathUtils, Vector3, type Group } from "three";
-import { CONSOLES, SPAWN, consoleInReach, consoleSeat, moveWithCollisions } from "../layout";
+import {
+  CONSOLES,
+  LIFT_STOP,
+  SPAWN,
+  consoleInReach,
+  consoleSeat,
+  liftInReach,
+  moveWithCollisions,
+} from "../layout";
 import { footsteps, scheduleTyping, setListener } from "../sound";
 import { gameKeysEnabled, useWorld } from "../store";
 import { KAYKIT_SCALE, useCharacter } from "./models";
@@ -14,11 +22,11 @@ const RUN = 7.5;
 const CAMERA = { distance: 7.5, pitch: 0.42, height: 1.4, minDistance: 3, maxDistance: 16 };
 
 /** Where the Captain is, for systems outside the scene (e.g. jumping to a crew member). */
-export const captain: { x: number; z: number; facing: number; snap: boolean } = {
+export const captain: { x: number; z: number; facing: number; snap: boolean | number } = {
   x: SPAWN.x,
   z: SPAWN.z,
   facing: Math.PI,
-  /** Swing the camera round behind the Captain on the next frame (after a jump). */
+  /** Swing the camera on the next frame: behind the Captain (true), or to this yaw. */
   snap: false,
 };
 
@@ -32,6 +40,15 @@ export function jumpTo(consoleId: number): void {
   captain.z = spot.z - Math.sin(def.rotY) * 0.7;
   captain.facing = def.rotY + Math.PI;
   captain.snap = true;
+}
+
+/** Step out of the lift onto this deck, facing into the room. */
+export function stepOutOfLift(): void {
+  captain.x = LIFT_STOP.x;
+  captain.z = LIFT_STOP.z;
+  captain.facing = 0;
+  // The camera stays on the room side, watching you step out, not out behind the bulkhead.
+  captain.snap = 0.35;
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
@@ -59,6 +76,7 @@ export function Captain() {
   const view = useRef({ yaw: 0.6, pitch: CAMERA.pitch, distance: CAMERA.distance });
   const clip = useRef("Idle");
   const setConsole = useWorld((s) => s.setConsole);
+  const setAtLift = useWorld((s) => s.setAtLift);
 
   useEffect(() => {
     actions.Idle?.reset().play();
@@ -113,8 +131,8 @@ export function Captain() {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1);
-    if (captain.snap) {
-      view.current.yaw = captain.facing + Math.PI;
+    if (captain.snap !== false) {
+      view.current.yaw = captain.snap === true ? captain.facing + Math.PI : captain.snap;
       captain.snap = false;
     }
     let ix = 0;
@@ -172,6 +190,7 @@ export function Captain() {
     scheduleTyping();
 
     setConsole(consoleInReach(captain.x, captain.z)?.id ?? null);
+    setAtLift(liftInReach(captain.x, captain.z));
   });
 
   return (

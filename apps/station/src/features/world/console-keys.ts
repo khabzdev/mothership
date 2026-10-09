@@ -51,7 +51,11 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!gameKeysEnabled(e)) return;
-      const { consoleId, open } = useWorld.getState();
+      const { consoleId, atLift, open } = useWorld.getState();
+      if (atLift && e.code === "KeyE") {
+        e.preventDefault();
+        return open({ kind: "lift", fromLift: true });
+      }
       if (consoleId === null) return;
       const member = crew.find((c) => c.consoleId === consoleId);
       switch (e.code) {

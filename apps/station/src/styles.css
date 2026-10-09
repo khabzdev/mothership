@@ -587,16 +587,32 @@ a:focus-visible {
 .lift__deck {
   appearance: none;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 0.1rem 0.8rem;
   width: 100%;
   padding: 0.7rem 0.9rem;
   border: 1px solid var(--panel-line);
+  border-left: 4px solid var(--deck-trim, var(--accent));
   border-radius: var(--radius);
   background: transparent;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+}
+
+.lift__deck[data-asking] {
+  background: #ff3b3b1f;
+}
+
+.lift__counts {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font: 600 0.8rem var(--font-mono);
+}
+
+.lift__deck .readout {
+  grid-column: 2 / -1;
 }
 
 .lift__deck:hover,
@@ -608,7 +624,7 @@ a:focus-visible {
   grid-row: span 2;
   align-self: center;
   font: 800 1.6rem var(--font-display);
-  color: var(--accent);
+  color: var(--deck-trim, var(--accent));
 }
 
 .lift__name {

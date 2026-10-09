@@ -144,3 +144,13 @@ export function partnerOf(c: ConsoleDef): ConsoleDef | undefined {
       Math.abs(Math.abs(o.z - c.z) - CONSOLE_SIZE.depth) < 0.01,
   );
 }
+
+/** The lift: doors in the north bulkhead, between the library wall and the cargo bay. */
+export const LIFT = { x: 10, z: DECK.minZ, width: 2.2 } as const;
+/** Where you stand to call it, and where you step out when you ride it to a deck. */
+export const LIFT_STOP = { x: LIFT.x, z: LIFT.z + 1.5 } as const;
+
+/** Standing at the lift doors. */
+export function liftInReach(x: number, z: number, reach = 1.5): boolean {
+  return Math.hypot(x - LIFT_STOP.x, z - LIFT_STOP.z) < reach;
+}

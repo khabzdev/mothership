@@ -8,15 +8,18 @@ export type Overlay =
   | { kind: "changes"; crewId: string }
   | { kind: "pr"; crewId: string }
   | { kind: "label"; consoleId: number }
-  | { kind: "lift" };
+  | { kind: "lift"; fromLift?: boolean };
 
 interface WorldState {
   /** Console the Captain is standing at. */
   consoleId: number | null;
+  /** Standing at the lift doors. */
+  atLift: boolean;
   overlay: Overlay | null;
   /** A short message over the hint bar (agent-office's toasts). */
   toast: { text: string; at: number } | null;
   setConsole: (id: number | null) => void;
+  setAtLift: (atLift: boolean) => void;
   open: (overlay: Overlay) => void;
   close: () => void;
   say: (text: string) => void;
@@ -25,9 +28,11 @@ interface WorldState {
 /** Game-wide UI state shared by the 3D scene and the DOM overlays. */
 export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
+  atLift: false,
   overlay: null,
   toast: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
+  setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
   open: (overlay) => set({ overlay }),
   close: () => set({ overlay: null }),
   say: (text) => set({ toast: { text, at: Date.now() } }),

@@ -22,12 +22,13 @@ import { Console } from "./scene/Console";
 import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { Departures } from "./scene/Departures";
+import { LiftDoors } from "./scene/LiftDoors";
 import { Sign } from "./scene/Sign";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
-import { NeedsYouBanner, Toast } from "./ui/NeedsYou";
+import { NeedsYouBanner, Toast, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
@@ -112,6 +113,7 @@ export function Game({ deck }: { deck: Deck }) {
   useConsoleKeys(deck.id, crew);
   useNextUp(crew);
   useSoundUnlock();
+  useOtherDecksHeadsUp(deck.id);
 
   return (
     <div className="game" style={{ "--deck-trim": paint.trim } as CSSProperties}>
@@ -137,6 +139,7 @@ export function Game({ deck }: { deck: Deck }) {
         />
         <Suspense fallback={null}>
           <DeckScene paint={paint} />
+          <LiftDoors deckName={deck.name} paint={paint} />
           {CONSOLES.map((def) => (
             <Console
               key={def.id}
