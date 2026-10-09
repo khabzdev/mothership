@@ -10,17 +10,33 @@ export const STATUS_COLORS: Record<CrewStatus, string> = {
   asleep: "#6c757d",
 };
 
-export const STATUS_CHIPS: Record<CrewStatus, string> = {
-  starting: "⏳ STARTING",
-  idle: "💬 READY",
-  working: "⌨️ WORKING",
-  needs_input: "🙋 NEEDS YOU",
-  done: "✅ DONE",
-  asleep: "💤 ASLEEP",
+export type StatusTone = "error" | "warning" | "success" | "neutral";
+
+const TONES: Record<CrewStatus, StatusTone> = {
+  starting: "neutral",
+  idle: "neutral",
+  working: "warning",
+  needs_input: "error",
+  done: "success",
+  asleep: "neutral",
 };
 
-/** A shell's chip: it's running or it has exited; it never works or waits by itself. */
-export function chipFor(crew: Pick<CrewInfo, "kind" | "status">): string {
-  if (crew.kind === "shell") return crew.status === "asleep" ? "💤 EXITED" : "🐚 SHELL";
-  return STATUS_CHIPS[crew.status];
+const LABELS: Record<CrewStatus, string> = {
+  starting: "Starting",
+  idle: "Ready",
+  working: "Working",
+  needs_input: "Needs you",
+  done: "Done",
+  asleep: "Asleep",
+};
+
+/** A crew member's status in words and a tone (a shell is running or has exited). */
+export function statusOf(crew: Pick<CrewInfo, "kind" | "status">): {
+  label: string;
+  tone: StatusTone;
+} {
+  if (crew.kind === "shell") {
+    return { label: crew.status === "asleep" ? "Exited" : "Shell", tone: "neutral" };
+  }
+  return { label: LABELS[crew.status], tone: TONES[crew.status] };
 }

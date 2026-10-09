@@ -264,16 +264,11 @@ kbd {
 }
 
 .crew-tag__name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: var(--text-sm);
   font-weight: 600;
-}
-
-.crew-tag__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: var(--text-xs);
-  color: var(--text-color-kumo-subtle);
 }
 
 .crew-tag__task {

@@ -1,3 +1,4 @@
+import { Cancel01Icon, Notification03Icon } from "@hugeicons/core-free-icons";
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
@@ -5,6 +6,7 @@ import { rosterQuery } from "../../crew/queries";
 import { clonesQuery, decksQuery } from "../../decks/queries";
 import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
 import { playDone, playHeadsUp, playLaunch, playNeedsYou } from "../sound";
+import { Icon } from "../../../shared/ui/Icon";
 import { useWorld } from "../store";
 import { Fresh, bannerText, needingYou } from "../waiting";
 
@@ -52,9 +54,7 @@ export function NeedsYouBanner({ crew, go }: { crew: CrewInfo[]; go: (id: string
             title={`Go to ${text.title.replace(/ needs you$/, "")}'s console (N)`}
             onClick={() => go(text.id)}
           >
-            <span className="needs-you__icon" aria-hidden>
-              🙋
-            </span>
+            <Icon icon={Notification03Icon} size={18} />
             <span className="needs-you__text">
               <strong>{text.title}</strong>
               {text.detail && <span>{text.detail}</span>}
@@ -69,7 +69,7 @@ export function NeedsYouBanner({ crew, go }: { crew: CrewInfo[]; go: (id: string
             title="Hide until another crew member needs you"
             onClick={() => setHidden(new Set(asking.map(waitKey)))}
           >
-            ✕
+            <Icon icon={Cancel01Icon} size={16} />
           </button>
         </div>
       )}
@@ -101,7 +101,8 @@ export function useOtherDecksHeadsUp(deckId: string): void {
       useWorld
         .getState()
         .say(
-          `🛗 ${names} on ${deck.name} ${asking.length > 1 ? "need" : "needs"} you: take the lift`,
+          `${names} on ${deck.name} ${asking.length > 1 ? "need" : "needs"} you: take the lift`,
+          "warning",
         );
       playHeadsUp();
     });
@@ -125,7 +126,7 @@ export function useCloneNews(): void {
     for (const c of done) {
       if (told.current.has(c.id)) continue;
       told.current.add(c.id);
-      useWorld.getState().say(`🛗 Deck ${c.name.toUpperCase()} is open: take the lift`);
+      useWorld.getState().say(`Deck ${c.name} is open: take the lift`, "warning");
       playDone();
     }
   }, [clones]);
@@ -145,7 +146,7 @@ export function useLaunchNews(deckId: string): void {
         ...(msg.crewId && { crewId: msg.crewId }),
       });
       playLaunch();
-      say(`🚀 #${msg.number} launched: ${msg.title}`);
+      say(`#${msg.number} launched: ${msg.title}`, "success");
     });
   }, [client, deckId]);
 }

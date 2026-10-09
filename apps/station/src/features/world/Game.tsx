@@ -50,15 +50,17 @@ function useNextUp(crew: CrewInfo[]) {
       const { consoleId, say } = useWorld.getState();
       const here = crew.find((c) => c.consoleId === consoleId)?.id;
       const member = nextUp.current.next(crew, here);
-      if (!member) return say("👍 Nobody is waiting on you");
+      if (!member) return say("Nobody is waiting on you", "success");
       goToCrew(member);
       const waiting = waitingInOrder(crew);
       const of =
         waiting.length > 1
           ? ` (${waiting.findIndex((c) => c.id === member.id) + 1} of ${waiting.length})`
           : "";
+      const asking = member.status === "needs_input";
       say(
-        `${member.status === "needs_input" ? `🙋 ${member.name} needs you` : `✅ ${member.name} is done`}${of}. E opens its terminal`,
+        `${member.name} ${asking ? "needs you" : "is done"}${of}. E opens its terminal`,
+        asking ? "warning" : "success",
       );
     };
     window.addEventListener("keydown", onKey);

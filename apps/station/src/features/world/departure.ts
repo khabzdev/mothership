@@ -18,19 +18,13 @@ export const EJECT = {
 export const TRUDGE = 1.9;
 
 export const PLEAS = [
-  "😨 Wait, wait, wait!",
-  "🥺 Let's talk about this!",
-  "😰 I'll fix the tests!",
-  "🙏 One more chance!",
-  "😳 Is this thing on?",
+  "Wait, wait, wait!",
+  "Let's talk about this!",
+  "I'll fix the tests!",
+  "One more chance!",
+  "Is this thing on?",
 ];
-export const CRIES = [
-  "😱 AAAAAAH!",
-  "😵 NOOOoooo…",
-  "🫨 WHOAAAA!",
-  "😭 I regret nothiiing!",
-  "🚀 Wheeeee!",
-];
+export const CRIES = ["AAAAAAH!", "NOOOoooo…", "WHOAAAA!", "I regret nothiiing!", "Wheeeee!"];
 
 type Point = { x: number; z: number };
 

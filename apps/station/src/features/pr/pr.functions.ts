@@ -14,7 +14,7 @@ export const openCrewPr = createServerFn({ method: "POST" })
     const { cwd, repoPath, ownWorktree } = crew.workdir(data.crewId);
     if (!ownWorktree || !member.branch) {
       throw new Error(
-        `${member.name} works in the deck's own checkout: hire with 🌿 own worktree for a PR`,
+        `${member.name} works in the deck's own checkout: hire it with its own worktree to open a pull request`,
       );
     }
     try {

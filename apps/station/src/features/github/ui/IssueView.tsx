@@ -121,7 +121,7 @@ export function IssueView({
                   title="The next free crew member takes it, in its own worktree"
                   onClick={() =>
                     enqueue.mutate(number, {
-                      onSuccess: () => say(`📋 #${number} is on the task queue`),
+                      onSuccess: () => say(`#${number} is on the task queue`),
                     })
                   }
                 >
@@ -134,9 +134,7 @@ export function IssueView({
                   onClick={() => {
                     carry({ number, title: i.title });
                     close();
-                    say(
-                      `📌 You've got #${number}: E at a console to hand it over, Q to put it back`,
-                    );
+                    say(`You've got #${number}: E at a console to hand it over, Q to put it back`);
                   }}
                 >
                   Pick it up
@@ -152,7 +150,8 @@ export function IssueView({
                         onSuccess: ({ member, claimed }) => {
                           close();
                           say(
-                            `🚀 ${member.name} took #${number} at Console ${member.consoleId + 1}${claimed ? "" : " (couldn't assign it on GitHub)"}`,
+                            `${member.name} took #${number} at Console ${member.consoleId + 1}${claimed ? "" : " (couldn't assign it on GitHub)"}`,
+                            "success",
                           );
                         },
                       },

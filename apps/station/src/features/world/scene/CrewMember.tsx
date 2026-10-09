@@ -1,7 +1,7 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { Html, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { Group, Mesh } from "three";
 import { ActHold, actFor } from "../acting";
 import { useWorld } from "../store";
@@ -12,7 +12,8 @@ import { Beacon } from "./Beacon";
 import { CHAIR_Z } from "./Console";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { PoseLayer, poseDebug, poseFor } from "./pose";
-import { STATUS_COLORS, chipFor } from "./status";
+import { StatusBadge } from "../ui/StatusBadge";
+import { STATUS_COLORS } from "./status";
 
 /** Seated at the console unless it's waving for you or celebrating (agent-office's stances). */
 export function stanceFor(crew: Pick<CrewInfo, "status" | "action">): {
@@ -102,10 +103,11 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
         </mesh>
         <Html position={[0, seated ? 1.9 : 2.3, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
           <div className="crew-tag" data-status={crew.status}>
-            <span className="crew-tag__name" style={{ color: crew.color }}>
+            <span className="crew-tag__name">
+              <span className="dot" style={{ "--dot": crew.color } as CSSProperties} />
               {crew.name}
             </span>
-            <span className="crew-tag__chip">{chipFor(crew)}</span>
+            <StatusBadge crew={crew} />
             {crew.task && <span className="crew-tag__task">{crew.task.split("\n")[0]}</span>}
           </div>
         </Html>

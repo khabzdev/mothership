@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { BoardId } from "./layout";
-import { notify } from "../../shared/ui/toasts";
+import { notify, type Tone } from "../../shared/ui/toasts";
 
 export type Overlay =
   | { kind: "hire"; consoleId: number; withTask: boolean }
@@ -38,7 +38,8 @@ interface WorldState {
   celebrate: (launch: { number: number; title: string; crewId?: string }) => void;
   open: (overlay: Overlay) => void;
   close: () => void;
-  say: (text: string) => void;
+  /** A short message; `tone` colours it (errors linger). */
+  say: (text: string, tone?: Tone) => void;
 }
 
 /** How long the crew cheer a launch (ms). */
@@ -68,7 +69,7 @@ export const useWorld = create<WorldState>((set) => ({
   open: (overlay) => set({ overlay }),
   close: () => set({ overlay: null }),
   // A short message (agent-office's toasts), as a Kumo toast.
-  say: (text) => notify(text),
+  say: (text, tone) => notify(text, tone),
 }));
 
 /** Game keys are ignored while typing or while a window is open (agent-office's guard). */

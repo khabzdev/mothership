@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
-import { toneOf } from "../../src/shared/ui/toasts.ts";
+import { toastOf } from "../../src/shared/ui/toasts.ts";
 
-describe("toast tone", () => {
-  test("is read off the emoji the message starts with", () => {
-    expect(toneOf("⚠️ Install the GitHub CLI")).toBe("error");
-    expect(toneOf("✅ Pulsar is done")).toBe("success");
-    expect(toneOf("🙋 Nova needs you")).toBe("warning");
-    expect(toneOf("Restarting the shell")).toBe("default");
+describe("toasts", () => {
+  test("take their tone from the caller and default to plain", () => {
+    expect(toastOf("Restarting the shell").variant).toBe("default");
+    expect(toastOf("Nova needs you", "warning").variant).toBe("warning");
+  });
+
+  test("errors linger longer than other messages", () => {
+    expect(toastOf("No gh", "error").timeout).toBeGreaterThan(toastOf("Done", "success").timeout);
   });
 });

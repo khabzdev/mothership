@@ -9,8 +9,8 @@ import { gameKeysEnabled, useWorld } from "./store";
 export function sendHomeNow(member: CrewInfo): void {
   const { say } = useWorld.getState();
   sendHomeCrew({ data: { crewId: member.id, worktree: "keep" } }).then(
-    () => say(`👋 ${member.name} is heading for the airlock`),
-    (error: Error) => say(`⚠️ ${error.message}`),
+    () => say(`${member.name} is heading for the airlock`),
+    (error: Error) => say(error.message, "error"),
   );
 }
 
@@ -18,8 +18,8 @@ export function sendHomeNow(member: CrewInfo): void {
 function resume(member: CrewInfo): void {
   const { say } = useWorld.getState();
   if (member.status !== "asleep") return say(`${member.name} is already running`);
-  say(member.kind === "shell" ? "🐚 Restarting the shell" : `⏰ Waking ${member.name} up`);
-  resumeCrew({ data: { crewId: member.id } }).catch((error: Error) => say(`⚠️ ${error.message}`));
+  say(member.kind === "shell" ? "Restarting the shell" : `Waking ${member.name} up`);
+  resumeCrew({ data: { crewId: member.id } }).catch((error: Error) => say(error.message, "error"));
 }
 
 /** B: a shell at an empty console, with its terminal open. */
@@ -27,7 +27,7 @@ function shell(deckId: string, consoleId: number): void {
   const { say, open } = useWorld.getState();
   openShell({ data: { deckId, consoleId, task: "", worktree: false } }).then(
     (member) => open({ kind: "terminal", crewId: member.id }),
-    (error: Error) => say(`⚠️ ${error.message}`),
+    (error: Error) => say(error.message, "error"),
   );
 }
 
@@ -36,14 +36,14 @@ function pullRequest(member: CrewInfo): void {
   const { say, open } = useWorld.getState();
   if (member.prUrl) return open({ kind: "pr", crewId: member.id });
   if (!member.branch)
-    return say(`${member.name} has no branch of its own: hire with 🌿 own worktree`);
-  say(`🚀 Pushing ${member.branch} and opening a pull request…`);
+    return say(`${member.name} has no branch of its own: hire it with its own worktree`);
+  say(`Pushing ${member.branch} and opening a pull request…`);
   openCrewPr({ data: { crewId: member.id } }).then(
     () => {
-      say(`🚀 ${member.name}'s pull request is open`);
+      say(`${member.name}'s pull request is open`, "success");
       open({ kind: "pr", crewId: member.id });
     },
-    (error: Error) => say(`⚠️ ${error.message}`),
+    (error: Error) => say(error.message, "error"),
   );
 }
 
@@ -57,10 +57,10 @@ function deliver(deckId: string, consoleId: number, member: CrewInfo | undefined
   const { number } = carrying;
   carry(null);
   const done = (claimed: boolean, who: string) =>
-    say(`🚀 ${who} took #${number}${claimed ? "" : " (couldn't assign it on GitHub)"}`);
+    say(`${who} took #${number}${claimed ? "" : " (couldn't assign it on GitHub)"}`, "success");
   const failed = (error: Error) => {
     carry(carrying);
-    say(`⚠️ ${error.message}`);
+    say(error.message, "error");
   };
   if (!member) {
     handIssue({ data: { deckId, number, consoleId } }).then(
@@ -93,7 +93,7 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
       if (carrying && e.code === "KeyQ") {
         e.preventDefault();
         carry(null);
-        return say(`📌 #${carrying.number} is back on the Mission board`);
+        return say(`#${carrying.number} is back on the Mission board`);
       }
       if (atBoard && consoleId === null && e.code === "KeyE") {
         e.preventDefault();
