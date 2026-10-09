@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   CONSOLES,
   SPAWN,
+  addCollider,
   consoleInReach,
   consoleSeat,
   moveWithCollisions,
@@ -27,5 +28,12 @@ describe("deck layout", () => {
     const towardConsole = moveWithCollisions(start.x, start.z, 0, (c.z - start.z) * 2);
     expect(Math.abs(towardConsole.z - start.z)).toBeLessThan(1);
     expect(moveWithCollisions(17, 0, 10, 0).x).toBeLessThan(18);
+  });
+
+  test("placed furniture blocks movement until it's removed", () => {
+    const remove = addCollider({ minX: 9, maxX: 10, minZ: 9, maxZ: 10 });
+    expect(moveWithCollisions(8, 9.5, 1, 0).x).toBe(8);
+    remove();
+    expect(moveWithCollisions(8, 9.5, 1, 0).x).toBe(9);
   });
 });

@@ -64,24 +64,29 @@ export const COLLIDERS: Box[] = CONSOLES.map((c) => ({
   maxZ: c.z + CONSOLE_SIZE.depth / 2,
 }));
 
+/** Furniture footprints, added as the pieces are placed (see useSolid). */
+const placed = new Set<Box>();
+
+/** Make a footprint solid until the returned function is called. */
+export function addCollider(box: Box): () => void {
+  placed.add(box);
+  return () => void placed.delete(box);
+}
+
 const RADIUS = 0.32;
 const WALL_MARGIN = 0.6;
 
-/** Move from (x,z) by (dx,dz), sliding along consoles and the deck walls. */
+/** Move from (x,z) by (dx,dz), sliding along consoles, furniture and the deck walls. */
 export function moveWithCollisions(
   x: number,
   z: number,
   dx: number,
   dz: number,
 ): { x: number; z: number } {
+  const hits = (b: Box, px: number, pz: number) =>
+    px > b.minX - RADIUS && px < b.maxX + RADIUS && pz > b.minZ - RADIUS && pz < b.maxZ + RADIUS;
   const blocked = (px: number, pz: number) =>
-    COLLIDERS.some(
-      (b) =>
-        px > b.minX - RADIUS &&
-        px < b.maxX + RADIUS &&
-        pz > b.minZ - RADIUS &&
-        pz < b.maxZ + RADIUS,
-    );
+    COLLIDERS.some((b) => hits(b, px, pz)) || [...placed].some((b) => hits(b, px, pz));
   const clampX = (v: number) =>
     Math.min(DECK.maxX - WALL_MARGIN, Math.max(DECK.minX + WALL_MARGIN, v));
   const clampZ = (v: number) =>
