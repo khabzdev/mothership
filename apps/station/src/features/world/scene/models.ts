@@ -23,6 +23,7 @@ export function useCharacter(name: string) {
       if ((node as { isMesh?: boolean }).isMesh) {
         node.visible = BODY.test(node.name);
         node.castShadow = true;
+        node.receiveShadow = true;
       }
     });
     return copy;
@@ -36,14 +37,7 @@ export function useProp(name: string) {
 }
 
 /** The Kenney Space Station Kit's pieces in use: bulkheads, door frames, windows and floor tiles. */
-export type StationPiece =
-  | "wall"
-  | "wall-door-wide"
-  | "wall-window"
-  | "wall-pillar"
-  | "wall-detail"
-  | "floor"
-  | "floor-panel";
+export type StationPiece = "wall" | "wall-door-wide" | "wall-window" | "floor" | "floor-panel";
 
 /**
  * A Kenney station piece's one mesh (each piece is a single mesh on the kit's colormap), for
@@ -89,8 +83,6 @@ for (const name of [
   "wall",
   "wall-door-wide",
   "wall-window",
-  "wall-pillar",
-  "wall-detail",
   "floor",
   "floor-panel",
 ] satisfies StationPiece[])

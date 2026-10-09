@@ -96,7 +96,7 @@ function CarriedCard({ number }: { number: number }) {
   return (
     <mesh position={[0, 1.15, 0.55]} rotation={[-0.25, 0, 0]}>
       <planeGeometry args={[0.45, 0.56]} />
-      <meshBasicMaterial map={texture} side={DoubleSide} toneMapped={false} />
+      <meshStandardMaterial map={texture} side={DoubleSide} roughness={0.9} />
     </mesh>
   );
 }

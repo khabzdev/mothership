@@ -1,5 +1,10 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { Vector3, type Group, type Object3D } from "three";
+import { Color, Vector3, type Group, type Object3D } from "three";
+
+/** The hologram's colours, over 1 so it glows. */
+const HOLO = new Color("#4cc9f0").multiplyScalar(1.5);
+const LAND_GLOW = new Color("#7ef0ad").multiplyScalar(1.5);
+const RING_GLOW = new Color("#ffd166").multiplyScalar(1.8);
 import type { Act } from "../acting";
 
 // What a crew member acts out its tool calls with (agent-office's worker-props.ts): papers held up
@@ -61,25 +66,25 @@ export const ActProps = forwardRef<ActPropsHandle>(function ActProps(_, ref) {
             rotation={[0, 0, (i - 1) * 0.04]}
           >
             <boxGeometry args={[PAPER.w, PAPER.h, 0.005]} />
-            <meshToonMaterial color={["#e9e4d8", "#f3efe6", "#fffaf3"][i]} />
+            <meshStandardMaterial color={["#e9e4d8", "#f3efe6", "#fffaf3"][i]} roughness={0.9} />
           </mesh>
         ))}
         {/* The top sheet hangs from the clip at the top, so it flips up and over. */}
         <group ref={page} position={[0, PAPER.h / 2, 0.006]}>
           <mesh position={[0, -PAPER.h / 2, 0]}>
             <boxGeometry args={[PAPER.w, PAPER.h, 0.005]} />
-            <meshToonMaterial color="#fffaf3" />
+            <meshStandardMaterial color="#fffaf3" roughness={0.9} />
           </mesh>
           {[0, 1, 2, 3, 4].map((i) => (
             <mesh key={i} position={[i % 3 === 2 ? -0.03 : 0, -0.05 - i * 0.045, 0.004]}>
               <boxGeometry args={[PAPER.w * (i % 3 === 2 ? 0.45 : 0.72), 0.012, 0.002]} />
-              <meshBasicMaterial color="#8d99ae" />
+              <meshStandardMaterial color="#8d99ae" roughness={0.9} />
             </mesh>
           ))}
         </group>
         <mesh position={[0, PAPER.h / 2, 0.01]}>
           <boxGeometry args={[PAPER.w * 0.5, 0.035, 0.03]} />
-          <meshToonMaterial color="#adb5bd" />
+          <meshStandardMaterial color="#adb5bd" roughness={0.4} metalness={0.6} />
         </mesh>
       </group>
 
@@ -88,7 +93,7 @@ export const ActProps = forwardRef<ActPropsHandle>(function ActProps(_, ref) {
         <group ref={ball} rotation={[0, 0, 0.41]}>
           <mesh>
             <sphereGeometry args={[0.17, 20, 14]} />
-            <meshBasicMaterial color="#4cc9f0" transparent opacity={0.75} toneMapped={false} />
+            <meshBasicMaterial color={HOLO} transparent opacity={0.75} toneMapped={false} />
           </mesh>
           {LAND.map(([lat, lon, size], i) => (
             <mesh
@@ -101,13 +106,13 @@ export const ActProps = forwardRef<ActPropsHandle>(function ActProps(_, ref) {
               scale={[1.2, 0.8, 1.2]}
             >
               <sphereGeometry args={[size * 0.17, 10, 8]} />
-              <meshBasicMaterial color="#7ef0ad" transparent opacity={0.85} toneMapped={false} />
+              <meshBasicMaterial color={LAND_GLOW} transparent opacity={0.85} toneMapped={false} />
             </mesh>
           ))}
         </group>
         <mesh rotation={[Math.PI / 2 - 0.2, 0, 0]}>
           <torusGeometry args={[0.23, 0.01, 6, 32]} />
-          <meshBasicMaterial color="#ffd166" toneMapped={false} />
+          <meshBasicMaterial color={RING_GLOW} toneMapped={false} />
         </mesh>
         {/* The beam it's projected from. */}
         <mesh position={[0, -0.27, 0]}>

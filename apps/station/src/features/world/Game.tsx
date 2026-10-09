@@ -16,6 +16,7 @@ import { toasts } from "../../shared/ui/toasts";
 import { useConsoleKeys } from "./console-keys";
 import { CONSOLES, partnerOf } from "./layout";
 import { paintFor } from "./paint";
+import { Atmosphere } from "./scene/Atmosphere";
 import { Captain, jumpTo } from "./scene/Captain";
 import { Console } from "./scene/Console";
 import { CrewMember } from "./scene/CrewMember";
@@ -130,24 +131,12 @@ export function Game({ deck }: { deck: Deck }) {
       <div className="game">
         <Canvas
           shadows
+          dpr={[1, 1.5]}
+          gl={{ antialias: false }}
           camera={{ fov: 55, near: 0.1, far: 400, position: [12, 8, 14] }}
           className="game__canvas"
         >
-          <color attach="background" args={["#05060c"]} />
-          <hemisphereLight args={["#fff5e6", "#2a3550", 1.4]} />
-          <ambientLight intensity={0.35} />
-          <directionalLight
-            position={[-8, 18, 10]}
-            intensity={2.2}
-            color="#fff1d6"
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-            shadow-camera-left={-24}
-            shadow-camera-right={24}
-            shadow-camera-top={20}
-            shadow-camera-bottom={-20}
-            shadow-bias={-0.0008}
-          />
+          <Atmosphere />
           <Suspense fallback={null}>
             <DeckScene paint={paint} />
             <LiftDoors deckName={deck.name} paint={paint} />

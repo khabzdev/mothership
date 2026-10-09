@@ -1,6 +1,13 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { Color, Object3D, type Group, type InstancedMesh, type Mesh } from "three";
+import {
+  AdditiveBlending,
+  Color,
+  Object3D,
+  type Group,
+  type InstancedMesh,
+  type Mesh,
+} from "three";
 import { BOARDS, CONSOLES, DECK, consoleSeat } from "../layout";
 import { useWorld } from "../store";
 import type { CrewInfo } from "@mothership/protocol";
@@ -9,6 +16,8 @@ import { useProp } from "./models";
 /** Seconds: the klaxon, then lift-off, then climbing out of sight. */
 const LIFTOFF = 1.7;
 const CLIMB = 6;
+/** The engine's flame, over 1 so it blooms. */
+const FLAME = new Color("#ffb020").multiplyScalar(3);
 const PAD = { x: (BOARDS.mission.x + BOARDS.launch.x) / 2, z: DECK.minZ - 5 };
 const CONFETTI = 160;
 const COLORS = ["#ff5f1f", "#ffd166", "#06d6a0", "#5aa9ff", "#ef476f", "#f8f3e6"].map(
@@ -24,6 +33,7 @@ const dummy = new Object3D();
 export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
   const launch = useWorld((s) => s.launch);
   const lander = useProp("lander_A");
+  const pad = useProp("landingpad_large");
   const ship = useRef<Group>(null);
   const flame = useRef<Mesh>(null);
   const confetti = useRef<InstancedMesh>(null);
@@ -92,11 +102,19 @@ export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
   if (!launch) return null;
   return (
     <>
+      <primitive object={pad} position={[PAD.x, 0, PAD.z]} scale={2.2} />
       <group ref={ship} position={[PAD.x, 0, PAD.z]}>
         <primitive object={lander} scale={2.2} />
         <mesh ref={flame} position={[0, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
           <coneGeometry args={[0.5, 1.6, 16, 1, true]} />
-          <meshBasicMaterial color="#ffb020" transparent opacity={0.85} toneMapped={false} />
+          <meshBasicMaterial
+            color={FLAME}
+            transparent
+            opacity={0.9}
+            blending={AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
         </mesh>
       </group>
       <instancedMesh key={launch.at} ref={confetti} args={[undefined, undefined, CONFETTI]}>

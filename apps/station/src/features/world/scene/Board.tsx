@@ -1,6 +1,8 @@
+import { RoundedBox } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { BOARDS, type BoardId } from "../layout";
+import { KIT, PAINTED } from "./materials";
 
 /** A card pinned to a board: what it says, and its colour. */
 export interface BoardCard {
@@ -145,15 +147,35 @@ export function Board({
   useEffect(() => () => surface.texture.dispose(), [surface]);
 
   return (
-    <group position={[b.x, 1.65, b.z + 0.17]}>
-      {/* Set back so its face doesn't fight the board's picture. */}
-      <mesh position={[0, 0, -0.035]}>
-        <boxGeometry args={[b.width + 0.16, b.height + 0.16, 0.04]} />
-        <meshToonMaterial color={trim} />
-      </mesh>
-      <mesh>
+    <group position={[b.x, 1.65, b.z + 0.15]}>
+      {/* A framed panel standing off the bulkhead, lit from a bar above. */}
+      <RoundedBox
+        args={[b.width + 0.16, b.height + 0.16, 0.08]}
+        radius={0.03}
+        position={[0, 0, 0.04]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
+      </RoundedBox>
+      <mesh position={[0, 0, 0.082]}>
         <planeGeometry args={[b.width, b.height]} />
-        <meshBasicMaterial map={surface.texture} toneMapped={false} />
+        <meshStandardMaterial
+          color="#000000"
+          emissive="#ffffff"
+          emissiveMap={surface.texture}
+          emissiveIntensity={0.9}
+          roughness={0.5}
+        />
+      </mesh>
+      <mesh position={[0, b.height / 2 + 0.16, 0.06]}>
+        <boxGeometry args={[b.width * 0.7, 0.04, 0.05]} />
+        <meshStandardMaterial
+          color={KIT.ice}
+          emissive={KIT.ice}
+          emissiveIntensity={1.6}
+          toneMapped={false}
+        />
       </mesh>
     </group>
   );

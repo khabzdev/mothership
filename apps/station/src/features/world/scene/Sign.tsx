@@ -1,10 +1,14 @@
 import type { ConsoleLabel } from "@mothership/protocol";
+import { RoundedBox } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { inkFor } from "../../labels/model";
 import { CONSOLE_SIZE, type ConsoleDef } from "../layout";
+import { DESK_TOP } from "./Console";
+import { KIT, PAINTED } from "./materials";
 
-const BOARD = { w: 1.9, h: 0.46, y: 2.45, top: 3.3 };
+/** The sign stands on two posts at the back of the desk, above the monitors. */
+const BOARD = { w: 1.9, h: 0.46, y: 1.8 };
 
 /** The board's picture: rounded, in its colour, the text as big as it fits. */
 function paint(canvas: HTMLCanvasElement, label: ConsoleLabel): void {
@@ -65,28 +69,45 @@ export function Sign({
   useEffect(() => () => texture.dispose(), [texture]);
 
   const z = -CONSOLE_SIZE.depth / 2;
-  const rod = BOARD.top - BOARD.y - BOARD.h / 2;
+  const post = BOARD.y - BOARD.h / 2 - DESK_TOP;
   return (
     <group position={[def.x, 0, def.z]} rotation={[0, def.rotY, 0]}>
       <group position={[0, BOARD.y, z]}>
-        <mesh position={[0, 0, 0.012]}>
+        <mesh position={[0, 0, 0.014]}>
           <planeGeometry args={[BOARD.w, BOARD.h]} />
-          <meshBasicMaterial map={texture} transparent toneMapped={false} />
+          <meshStandardMaterial
+            map={texture}
+            transparent
+            emissive="#ffffff"
+            emissiveMap={texture}
+            emissiveIntensity={0.35}
+            roughness={0.5}
+          />
         </mesh>
         {twoSided && (
-          <mesh position={[0, 0, -0.012]} rotation={[0, Math.PI, 0]}>
+          <mesh position={[0, 0, -0.014]} rotation={[0, Math.PI, 0]}>
             <planeGeometry args={[BOARD.w, BOARD.h]} />
-            <meshBasicMaterial map={texture} transparent toneMapped={false} />
+            <meshStandardMaterial
+              map={texture}
+              transparent
+              emissive="#ffffff"
+              emissiveMap={texture}
+              emissiveIntensity={0.35}
+              roughness={0.5}
+            />
           </mesh>
         )}
-        <mesh>
-          <boxGeometry args={[BOARD.w - 0.06, BOARD.h - 0.06, 0.02]} />
-          <meshToonMaterial color="#1d1b16" />
-        </mesh>
+        <RoundedBox args={[BOARD.w - 0.06, BOARD.h - 0.06, 0.024]} radius={0.01} castShadow>
+          <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
+        </RoundedBox>
         {[-1, 1].map((side) => (
-          <mesh key={side} position={[side * (BOARD.w / 2 - 0.15), BOARD.h / 2 + rod / 2, 0]}>
-            <cylinderGeometry args={[0.012, 0.012, rod, 6]} />
-            <meshToonMaterial color="#8d96a8" />
+          <mesh
+            key={side}
+            position={[side * (BOARD.w / 2 - 0.15), -BOARD.h / 2 - post / 2, 0]}
+            castShadow
+          >
+            <cylinderGeometry args={[0.015, 0.015, post, 10]} />
+            <meshStandardMaterial color={KIT.slate} {...PAINTED} />
           </mesh>
         ))}
       </group>

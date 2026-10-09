@@ -1,6 +1,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import {
+  Color,
   CanvasTexture,
   CylinderGeometry,
   DoubleSide,
@@ -18,6 +19,8 @@ import { captain } from "./Captain";
 const RED = "#ef476f";
 const INK = "#2b2d42";
 const LIGHT = "#ff2d5f";
+/** The beam over 1, so bloom halos it. */
+const BEAM_GLOW = new Color(LIGHT).multiplyScalar(2.2);
 const BEAM_HEIGHT = 5.6;
 const PIN = { w: 0.5, h: 0.645, full: 6, most: 3 };
 const RINGS = { n: 2, from: 0.6, to: 2.3, every: 2 };
@@ -117,7 +120,7 @@ export function Beacon({ x, z, top }: { x: number; z: number; top: number }) {
     <group ref={root} position={[x, 0, z]}>
       <mesh ref={beam} geometry={shapes.beam} scale={[1, BEAM_HEIGHT, 1]} renderOrder={5}>
         <meshBasicMaterial
-          color={LIGHT}
+          color={BEAM_GLOW}
           map={shapes.light}
           transparent
           opacity={0}

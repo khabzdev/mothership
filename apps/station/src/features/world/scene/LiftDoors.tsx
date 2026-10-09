@@ -1,6 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { CanvasTexture, SRGBColorSpace, type MeshStandardMaterial, type PointLight } from "three";
+import { CanvasTexture, SRGBColorSpace, type MeshStandardMaterial } from "three";
 import { DOOR_MODULE, DOOR_OPENING, WALL_H } from "../bulkheads";
 import { LIFT } from "../layout";
 import type { DeckPaint } from "../paint";
@@ -55,12 +55,10 @@ function usePlate(deckName: string, trim: string) {
 
 /** The lift car behind the north bulkhead: lit, panelled, with a handrail, seen when the doors part. */
 function Car({ open }: { open: { current: number } }) {
-  const light = useRef<PointLight>(null);
   const panel = useRef<MeshStandardMaterial>(null);
   useFrame(() => {
     // The car lights up as the doors open, so a shut lift isn't glowing through its seams.
     const on = 0.25 + open.current * 0.75;
-    if (light.current) light.current.intensity = 4 * on;
     if (panel.current) panel.current.emissiveIntensity = GLOW * on;
   });
   const z0 = -FACE - CAR.depth / 2;
@@ -99,13 +97,6 @@ function Car({ open }: { open: { current: number } }) {
         <cylinderGeometry args={[0.025, 0.025, CAR.width - 0.3, 12]} />
         <meshStandardMaterial color={KIT.orange} {...PAINTED} />
       </mesh>
-      <pointLight
-        ref={light}
-        position={[0, CAR.height - 0.4, 0]}
-        distance={3.5}
-        decay={2}
-        color={KIT.ice}
-      />
     </group>
   );
 }

@@ -1,6 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type MutableRefObject } from "react";
-import type { MeshStandardMaterial, PointLight } from "three";
+import type { MeshStandardMaterial } from "three";
 import { DOOR_MODULE, DOOR_OPENING, WALL_H } from "../bulkheads";
 import { AIRLOCK } from "../layout";
 import { GLOW, KIT } from "./materials";
@@ -53,7 +53,6 @@ function useLive(read: () => number): MutableRefObject<number> {
  * turned so the deck is to the west.
  */
 export function Airlock() {
-  const lamp = useRef<PointLight>(null);
   const strip = useRef<MeshStandardMaterial>(null);
   const inner = useLive(() => airlock.inner);
   const outer = useLive(() => airlock.outer);
@@ -62,10 +61,6 @@ export function Airlock() {
 
   useFrame(({ clock }) => {
     const flash = airlock.red ? 0.55 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 0.45 : 0;
-    if (lamp.current) {
-      lamp.current.intensity = airlock.red ? 8 * flash : 1.5;
-      lamp.current.color.set(airlock.red ? KIT.alarm : KIT.ice);
-    }
     if (strip.current) {
       strip.current.color.set(airlock.red ? KIT.alarm : IDLE);
       strip.current.emissive.set(airlock.red ? KIT.alarm : IDLE);
@@ -110,14 +105,6 @@ export function Airlock() {
           toneMapped={false}
         />
       </mesh>
-      <pointLight
-        ref={lamp}
-        position={[0, WALL_H - 0.6, -D / 2]}
-        distance={6}
-        decay={2}
-        intensity={1.5}
-        color={KIT.ice}
-      />
     </group>
   );
 }

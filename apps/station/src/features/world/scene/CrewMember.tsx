@@ -99,7 +99,12 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
         <ActProps ref={props} />
         <mesh ref={light} position={[0, seated ? 1.45 : 1.85, 0]}>
           <sphereGeometry args={[0.09, 16, 16]} />
-          <meshBasicMaterial color={STATUS_COLORS[crew.status]} toneMapped={false} />
+          <meshStandardMaterial
+            color={STATUS_COLORS[crew.status]}
+            emissive={STATUS_COLORS[crew.status]}
+            emissiveIntensity={crew.status === "needs_input" ? 3 : 1.6}
+            toneMapped={false}
+          />
         </mesh>
         <Html position={[0, seated ? 1.9 : 2.3, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
           <div className="crew-tag" data-status={crew.status}>
