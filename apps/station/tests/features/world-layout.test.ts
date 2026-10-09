@@ -5,7 +5,9 @@ import {
   AIRLOCK,
   COLLIDERS,
   addCollider,
+  BOARDS,
   LIFT_STOP,
+  boardInReach,
   airlockPath,
   liftInReach,
   partnerOf,
@@ -75,5 +77,14 @@ describe("deck layout", () => {
     expect(liftInReach(SPAWN.x, SPAWN.z)).toBe(false);
     expect(consoleInReach(LIFT_STOP.x, LIFT_STOP.z)).toBeNull();
     expect(moveWithCollisions(LIFT_STOP.x, LIFT_STOP.z, 0, 0)).toEqual(LIFT_STOP);
+  });
+
+  test("you read a board standing in front of it, not from the consoles", () => {
+    expect(boardInReach(BOARDS.mission.x, BOARDS.mission.z + 1.5)).toBe("mission");
+    expect(boardInReach(BOARDS.launch.x + 1, BOARDS.launch.z + 1)).toBe("launch");
+    for (const c of CONSOLES) {
+      const seat = consoleSeat(c, 1.25);
+      expect(boardInReach(seat.x, seat.z)).toBeNull();
+    }
   });
 });

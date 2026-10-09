@@ -6,6 +6,7 @@ import {
   CONSOLES,
   LIFT_STOP,
   SPAWN,
+  boardInReach,
   consoleInReach,
   consoleSeat,
   liftInReach,
@@ -80,6 +81,7 @@ export function Captain() {
   const clip = useRef("Idle");
   const setConsole = useWorld((s) => s.setConsole);
   const setAtLift = useWorld((s) => s.setAtLift);
+  const setAtBoard = useWorld((s) => s.setAtBoard);
 
   useEffect(() => {
     actions.Idle?.reset().play();
@@ -194,6 +196,7 @@ export function Captain() {
 
     setConsole(consoleInReach(captain.x, captain.z)?.id ?? null);
     setAtLift(liftInReach(captain.x, captain.z));
+    setAtBoard(boardInReach(captain.x, captain.z));
   });
 
   return (

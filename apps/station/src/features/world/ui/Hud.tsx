@@ -4,6 +4,8 @@ import {
   ArrowUpDownIcon,
   CheckmarkCircle02Icon,
   Notification03Icon,
+  Rocket01Icon,
+  Target02Icon,
 } from "@hugeicons/core-free-icons";
 import { Icon } from "../../../shared/ui/Icon";
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
@@ -27,6 +29,18 @@ function Key({ k, label }: { k: string; label: string }) {
 export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
   const consoleId = useWorld((s) => s.consoleId);
   const atLift = useWorld((s) => s.atLift);
+  const atBoard = useWorld((s) => s.atBoard);
+  if (atBoard && consoleId === null) {
+    return (
+      <div className="hint" data-active>
+        <span className="hint__what with-icon">
+          <Icon icon={atBoard === "mission" ? Target02Icon : Rocket01Icon} />
+          {atBoard === "mission" ? "Mission board · issues" : "Launch board · pull requests"}
+        </span>
+        <Key k="E" label="Read the board" />
+      </div>
+    );
+  }
   if (atLift && consoleId === null) {
     return (
       <div className="hint" data-active>

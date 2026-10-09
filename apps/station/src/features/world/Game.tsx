@@ -1,5 +1,5 @@
 import type { CrewInfo } from "@mothership/protocol";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 import { rosterQuery } from "../crew/queries";
+import { launchCards, missionCards } from "../github/cards";
+import { boardQuery } from "../github/queries";
 import { labelsQuery } from "../labels/queries";
 import type { Deck } from "../decks/model";
 import { Toasty } from "@cloudflare/kumo";
@@ -24,6 +26,7 @@ import { Console } from "./scene/Console";
 import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { Departures } from "./scene/Departures";
+import { Board } from "./scene/Board";
 import { LiftDoors } from "./scene/LiftDoors";
 import { Sign } from "./scene/Sign";
 import { gameKeysEnabled, useWorld } from "./store";
@@ -108,6 +111,9 @@ export function Game({ deck }: { deck: Deck }) {
   const { data: crew } = useSuspenseQuery(rosterQuery(deck.id));
   const { data: labels } = useSuspenseQuery(labelsQuery(deck.id));
   const paint = useMemo(() => paintFor(deck.repoPath), [deck.repoPath]);
+  const { data: github } = useQuery(boardQuery(deck.id));
+  const mission = useMemo(() => missionCards(github), [github]);
+  const launch = useMemo(() => launchCards(github), [github]);
   const consoleId = useWorld((s) => s.consoleId);
   const [loaded, setLoaded] = useState(false);
   const ready = useCallback(() => setLoaded(true), []);
@@ -143,6 +149,8 @@ export function Game({ deck }: { deck: Deck }) {
           <Suspense fallback={null}>
             <DeckScene paint={paint} />
             <LiftDoors deckName={deck.name} paint={paint} />
+            <Board board="mission" trim={paint.trim} {...mission} />
+            <Board board="launch" trim={paint.trim} {...launch} />
             {CONSOLES.map((def) => (
               <Console
                 key={def.id}

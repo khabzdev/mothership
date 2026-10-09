@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { BoardId } from "./layout";
 import { notify } from "../../shared/ui/toasts";
 
 export type Overlay =
@@ -9,6 +10,7 @@ export type Overlay =
   | { kind: "changes"; crewId: string }
   | { kind: "pr"; crewId: string }
   | { kind: "label"; consoleId: number }
+  | { kind: "board"; board: BoardId; open?: number }
   | { kind: "lift"; fromLift?: boolean };
 
 interface WorldState {
@@ -16,9 +18,12 @@ interface WorldState {
   consoleId: number | null;
   /** Standing at the lift doors. */
   atLift: boolean;
+  /** Standing at a board. */
+  atBoard: BoardId | null;
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
   setAtLift: (atLift: boolean) => void;
+  setAtBoard: (atBoard: BoardId | null) => void;
   open: (overlay: Overlay) => void;
   close: () => void;
   say: (text: string) => void;
@@ -28,9 +33,11 @@ interface WorldState {
 export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
   atLift: false,
+  atBoard: null,
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
+  setAtBoard: (atBoard) => set((s) => (s.atBoard === atBoard ? s : { atBoard })),
   open: (overlay) => set({ overlay }),
   close: () => set({ overlay: null }),
   // A short message (agent-office's toasts), as a Kumo toast.

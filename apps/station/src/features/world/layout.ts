@@ -154,3 +154,19 @@ export const LIFT_STOP = { x: LIFT.x, z: LIFT.z + 1.5 } as const;
 export function liftInReach(x: number, z: number, reach = 1.5): boolean {
   return Math.hypot(x - LIFT_STOP.x, z - LIFT_STOP.z) < reach;
 }
+
+export type BoardId = "mission" | "launch";
+
+/** The tack boards on the north bulkhead: issues (Mission board) and pull requests (Launch board). */
+export const BOARDS: Record<BoardId, { x: number; z: number; width: number; height: number }> = {
+  mission: { x: -10.5, z: DECK.minZ, width: 4.2, height: 2.3 },
+  launch: { x: -4.5, z: DECK.minZ, width: 4.2, height: 2.3 },
+};
+
+/** The board you're standing in front of, if any. */
+export function boardInReach(x: number, z: number): BoardId | null {
+  for (const [id, b] of Object.entries(BOARDS) as [BoardId, (typeof BOARDS)[BoardId]][]) {
+    if (Math.abs(x - b.x) < b.width / 2 && z - b.z < 2.6) return id;
+  }
+  return null;
+}

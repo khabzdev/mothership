@@ -113,9 +113,8 @@ export function Deck({ paint }: { paint: DeckPaint }) {
       <Furniture name="shelf_B_large_decorated" position={[3, 1.5, DECK.minZ + 0.45]} />
       <Furniture name="shelf_B_large_decorated" position={[6.2, 1.5, DECK.minZ + 0.45]} />
       <Furniture name="cabinet_medium_decorated" position={[4.6, 0, DECK.minZ + 0.6]} solid />
-      <Furniture name="pictureframe_large_B" position={[-6, 2, DECK.minZ + 0.25]} />
-      <Furniture name="pictureframe_large_A" position={[-12, 2, DECK.minZ + 0.25]} />
-      <Furniture name="pictureframe_medium" position={[-9.5, 2.1, DECK.minZ + 0.25]} />
+      {/* The north wall's west half holds the Mission and Launch boards (scene/Board.tsx). */}
+      <Furniture name="pictureframe_large_B" position={[0.4, 2, DECK.minZ + 0.25]} />
 
       {/* Plants and lamps around the pods. */}
       <Furniture name="cactus_medium_B" position={[DECK.minX + 1, 0, DECK.minZ + 1]} solid />

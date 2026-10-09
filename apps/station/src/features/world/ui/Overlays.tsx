@@ -4,12 +4,15 @@ import {
   GitPullRequestIcon,
   LinkSquare02Icon,
   Message01Icon,
+  Rocket01Icon,
+  Target02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
+import { BoardWindow } from "../../github/ui/BoardWindow";
 import { hireMutation, promptMutation } from "../../crew/queries";
 import { CONSOLES } from "../layout";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
@@ -204,6 +207,21 @@ export function Overlays({
           consoleId={overlay.consoleId}
           label={labels.find((l) => l.consoleId === overlay.consoleId)}
         />
+      );
+    case "board":
+      return (
+        <Modal
+          wide
+          icon={overlay.board === "mission" ? Target02Icon : Rocket01Icon}
+          title={overlay.board === "mission" ? "Mission board" : "Launch board"}
+          subtitle={
+            overlay.board === "mission"
+              ? "The repo's GitHub issues. Hand one to crew and it moves to In progress."
+              : "The repo's pull requests. Launching one merges it."
+          }
+        >
+          <BoardWindow deckId={deckId} board={overlay.board} initial={overlay.open} />
+        </Modal>
       );
     case "lift":
       return <Lift fromLift={overlay.fromLift} />;
