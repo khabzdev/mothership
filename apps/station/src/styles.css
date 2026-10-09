@@ -648,3 +648,189 @@ a:focus-visible {
   padding: 0.5rem;
   overflow: hidden;
 }
+
+/* A crew member needs you (agent-office's needsyou): banner under the top bar, red flash round the edge. */
+.needs-you {
+  position: absolute;
+  top: 5.2rem;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  max-width: min(40rem, calc(100% - 2rem));
+  border-radius: var(--radius);
+  background: var(--alert);
+  color: #fff;
+  transform: translateX(-50%);
+  animation:
+    needs-you-in 0.3s cubic-bezier(0.2, 1.4, 0.4, 1),
+    needs-you-ring 1.6s ease-out 0.3s infinite;
+}
+
+.needs-you button {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.needs-you button:hover {
+  background: #0003;
+}
+
+.needs-you__go {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.5rem 0.5rem 0.5rem 0.9rem;
+  text-align: left;
+}
+
+.needs-you__icon {
+  font-size: 1.6rem;
+  transform-origin: 50% 90%;
+  animation: needs-you-wave 1.2s ease-in-out infinite;
+}
+
+.needs-you__text {
+  display: grid;
+  min-width: 0;
+}
+
+.needs-you__text strong {
+  font: 800 1.25rem/1.1 var(--font-display);
+  text-transform: uppercase;
+}
+
+.needs-you__text span,
+.needs-you__text strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.needs-you__text span {
+  font: 500 0.75rem var(--font-mono);
+}
+
+.needs-you__more {
+  flex: none;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #0006;
+  font: 600 0.7rem var(--font-mono);
+}
+
+.needs-you kbd {
+  flex: none;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--alert);
+  font: 700 0.72rem var(--font-mono);
+}
+
+.needs-you__x {
+  flex: none;
+  width: 2.2rem;
+  border-left: 1px solid #fff5 !important;
+}
+
+.needs-you-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    inset 0 0 0 8px var(--alert),
+    inset 0 0 150px 36px #ff3b3bcc;
+  animation: needs-you-flash 2.4s ease-out;
+}
+
+.toast {
+  position: absolute;
+  bottom: 4.6rem;
+  left: 50%;
+  max-width: calc(100% - 2rem);
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: toast 3.2s ease forwards;
+}
+
+@keyframes needs-you-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-18px) scale(0.9);
+  }
+}
+
+@keyframes needs-you-ring {
+  from {
+    box-shadow: 0 0 0 0 #ff3b3bbf;
+  }
+  to {
+    box-shadow: 0 0 0 16px #ff3b3b00;
+  }
+}
+
+@keyframes needs-you-wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  15%,
+  45% {
+    transform: rotate(-14deg);
+  }
+  30% {
+    transform: rotate(12deg);
+  }
+}
+
+@keyframes needs-you-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  12%,
+  46%,
+  80% {
+    opacity: 1;
+  }
+  29%,
+  63% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes toast {
+  0% {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  8%,
+  80% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .needs-you,
+  .needs-you__icon {
+    animation: none;
+  }
+}

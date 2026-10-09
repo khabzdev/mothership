@@ -12,20 +12,24 @@ const RUN = 7.5;
 const CAMERA = { distance: 7.5, pitch: 0.42, height: 1.4, minDistance: 3, maxDistance: 16 };
 
 /** Where the Captain is, for systems outside the scene (e.g. jumping to a crew member). */
-export const captain: { x: number; z: number; facing: number } = {
+export const captain: { x: number; z: number; facing: number; snap: boolean } = {
   x: SPAWN.x,
   z: SPAWN.z,
   facing: Math.PI,
+  /** Swing the camera round behind the Captain on the next frame (after a jump). */
+  snap: false,
 };
 
 /** Put the Captain behind a console's crew member, facing the console (agent-office's N jump). */
 export function jumpTo(consoleId: number): void {
   const def = CONSOLES[consoleId];
   if (!def) return;
-  const spot = consoleSeat(def, 1.6);
-  captain.x = spot.x;
-  captain.z = spot.z;
+  // Behind the crew member, standing or seated, looking over its shoulder at the console.
+  const spot = consoleSeat(def, 2.2);
+  captain.x = spot.x + Math.cos(def.rotY) * 0.7;
+  captain.z = spot.z - Math.sin(def.rotY) * 0.7;
   captain.facing = def.rotY + Math.PI;
+  captain.snap = true;
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
@@ -107,6 +111,10 @@ export function Captain() {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1);
+    if (captain.snap) {
+      view.current.yaw = captain.facing + Math.PI;
+      captain.snap = false;
+    }
     let ix = 0;
     let iz = 0;
     for (const code of held.current) {

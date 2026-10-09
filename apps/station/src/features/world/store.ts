@@ -10,18 +10,23 @@ interface WorldState {
   /** Console the Captain is standing at. */
   consoleId: number | null;
   overlay: Overlay | null;
+  /** A short message over the hint bar (agent-office's toasts). */
+  toast: { text: string; at: number } | null;
   setConsole: (id: number | null) => void;
   open: (overlay: Overlay) => void;
   close: () => void;
+  say: (text: string) => void;
 }
 
 /** Game-wide UI state shared by the 3D scene and the DOM overlays. */
 export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
   overlay: null,
+  toast: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   open: (overlay) => set({ overlay }),
   close: () => set({ overlay: null }),
+  say: (text) => set({ toast: { text, at: Date.now() } }),
 }));
 
 /** Game keys are ignored while typing or while a window is open (agent-office's guard). */

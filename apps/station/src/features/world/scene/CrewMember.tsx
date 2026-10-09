@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type { Group, Mesh } from "three";
 import { consoleSeat, type ConsoleDef } from "../layout";
+import { Beacon } from "./Beacon";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { STATUS_CHIPS, STATUS_COLORS } from "./status";
 
@@ -45,23 +46,26 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   });
 
   return (
-    <group position={[seat.x, 0, seat.z]} rotation={[0, def.rotY + Math.PI, 0]}>
-      <group ref={body} scale={KAYKIT_SCALE}>
-        <primitive object={scene} />
+    <>
+      {crew.status === "needs_input" && <Beacon x={seat.x} z={seat.z} top={2.6} />}
+      <group position={[seat.x, 0, seat.z]} rotation={[0, def.rotY + Math.PI, 0]}>
+        <group ref={body} scale={KAYKIT_SCALE}>
+          <primitive object={scene} />
+        </group>
+        <mesh ref={light} position={[0, seated ? 1.45 : 1.85, 0]}>
+          <sphereGeometry args={[0.09, 16, 16]} />
+          <meshBasicMaterial color={STATUS_COLORS[crew.status]} toneMapped={false} />
+        </mesh>
+        <Html position={[0, seated ? 1.9 : 2.3, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
+          <div className="crew-tag" data-status={crew.status}>
+            <span className="crew-tag__name" style={{ color: crew.color }}>
+              {crew.name}
+            </span>
+            <span className="crew-tag__chip">{STATUS_CHIPS[crew.status]}</span>
+            {crew.task && <span className="crew-tag__task">{crew.task.split("\n")[0]}</span>}
+          </div>
+        </Html>
       </group>
-      <mesh ref={light} position={[0, seated ? 1.45 : 1.85, 0]}>
-        <sphereGeometry args={[0.09, 16, 16]} />
-        <meshBasicMaterial color={STATUS_COLORS[crew.status]} toneMapped={false} />
-      </mesh>
-      <Html position={[0, seated ? 1.9 : 2.3, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="crew-tag" data-status={crew.status}>
-          <span className="crew-tag__name" style={{ color: crew.color }}>
-            {crew.name}
-          </span>
-          <span className="crew-tag__chip">{STATUS_CHIPS[crew.status]}</span>
-          {crew.task && <span className="crew-tag__task">{crew.task.split("\n")[0]}</span>}
-        </div>
-      </Html>
-    </group>
+    </>
   );
 }
