@@ -14,7 +14,7 @@ function Bridge() {
       <h1>Mothership</h1>
       <p>Command Bridge</p>
       <p data-testid="station-status">
-        Station {data.status} · node {data.node}
+        Station {data.status} · node {data.node} · db {data.db}
       </p>
     </main>
   );

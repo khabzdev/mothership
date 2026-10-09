@@ -6,11 +6,16 @@ packages:
 catalogMode: prefer
 
 allowBuilds:
+  better-sqlite3: true
   esbuild: true
   lightningcss: true
 
 catalog:
+  "@types/better-sqlite3": ^9.6.0
   "@types/node": ^24
+  better-sqlite3: ^13.0.3
+  drizzle-kit: ^0.31.11
+  drizzle-orm: ^0.45.4
   typescript: ^7.0.2
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vite-plus: 1.0.0

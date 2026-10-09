@@ -8,5 +8,9 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   server: { host: "127.0.0.1" },
   preview: { host: "127.0.0.1" },
-  plugins: lazyPlugins(() => [devtools(), nitro(), tanstackStart(), viteReact()]),
+  // App plugins start servers and devtools; unit tests don't need them.
+  plugins: lazyPlugins(() =>
+    process.env.VITEST ? [] : [devtools(), nitro(), tanstackStart(), viteReact()],
+  ),
+  test: { environment: "node" },
 });
