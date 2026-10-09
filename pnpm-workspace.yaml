@@ -5,6 +5,10 @@ packages:
 
 catalogMode: prefer
 
+allowBuilds:
+  esbuild: true
+  lightningcss: true
+
 catalog:
   "@types/node": ^24
   typescript: ^7.0.2
