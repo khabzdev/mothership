@@ -1,11 +1,14 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { Html, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Group, Mesh } from "three";
+import { ActHold, actFor } from "../acting";
 import { consoleSeat, type ConsoleDef } from "../layout";
+import { ActProps, type ActPropsHandle } from "./ActProps";
 import { Beacon } from "./Beacon";
 import { KAYKIT_SCALE, useCharacter } from "./models";
+import { PoseLayer, poseDebug, poseFor } from "./pose";
 import { STATUS_CHIPS, STATUS_COLORS } from "./status";
 
 /** Seated at the console unless it's waving for you or celebrating (agent-office's stances). */
@@ -39,7 +42,27 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
     return () => void action?.fadeOut(0.25);
   }, [actions, clip]);
 
-  useFrame(({ clock }) => {
+  const layer = useMemo(() => new PoseLayer(scene), [scene]);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    poseDebug.scenes.set(crew.name, scene);
+    return () => void poseDebug.scenes.delete(crew.name);
+  }, [crew.name, scene]);
+  const hold = useRef(new ActHold());
+  const props = useRef<ActPropsHandle>(null);
+  const hands = useMemo(() => {
+    const l = scene.getObjectByName("handl") ?? scene.getObjectByName("hand.l");
+    const r = scene.getObjectByName("handr") ?? scene.getObjectByName("hand.r");
+    return l && r ? ([l, r] as [typeof l, typeof r]) : null;
+  }, [scene]);
+
+  // Runs after useAnimations' mixer update (registered first), so the offsets sit on top of the clip.
+  useFrame(({ clock }, delta) => {
+    const t = clock.elapsedTime;
+    let act = hold.current.at(seated ? actFor(crew) : "rest", t);
+    if (import.meta.env.DEV && seated && poseDebug.act) act = poseDebug.act;
+    layer.apply((import.meta.env.DEV && seated && poseDebug.pose) || poseFor(act, t), delta);
+    props.current?.update(act, t, hands);
     if (!light.current) return;
     const pulse = crew.status === "needs_input" ? 1 + Math.sin(clock.elapsedTime * 8) * 0.35 : 1;
     light.current.scale.setScalar(pulse);
@@ -52,6 +75,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
         <group ref={body} scale={KAYKIT_SCALE}>
           <primitive object={scene} />
         </group>
+        <ActProps ref={props} />
         <mesh ref={light} position={[0, seated ? 1.45 : 1.85, 0]}>
           <sphereGeometry args={[0.09, 16, 16]} />
           <meshBasicMaterial color={STATUS_COLORS[crew.status]} toneMapped={false} />

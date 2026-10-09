@@ -5,6 +5,7 @@ import { MathUtils, Vector3, type Group } from "three";
 import { CONSOLES, SPAWN, consoleInReach, consoleSeat, moveWithCollisions } from "../layout";
 import { gameKeysEnabled, useWorld } from "../store";
 import { KAYKIT_SCALE, useCharacter } from "./models";
+import { poseDebug } from "./pose";
 
 // agent-office's player tuning (src/client/player).
 const WALK = 4.6;
@@ -33,7 +34,7 @@ export function jumpTo(consoleId: number): void {
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
-  Object.assign(window, { __mothership: { captain, jumpTo } });
+  Object.assign(window, { __mothership: { captain, jumpTo, poseDebug } });
 }
 
 const MOVE_KEYS: Record<string, [number, number]> = {
