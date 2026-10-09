@@ -86,7 +86,7 @@ export function QueueWindow({ deckId }: { deckId: string }) {
             const list = tasks.filter((t) => t.state === state);
             return (
               <section key={state} className="board__column">
-                <h4 className="eyebrow">
+                <h4 className="section-label">
                   {title} · {list.length}
                 </h4>
                 {list.map((t) => (

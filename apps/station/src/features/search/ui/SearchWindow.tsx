@@ -58,7 +58,7 @@ export function SearchWindow({ deckId }: { deckId: string }) {
         )}
         {byCrew.map((group) => (
           <section key={group.crewId} className="search__group">
-            <h4 className="eyebrow">
+            <h4 className="section-label">
               {group.name} · {group.lines.length}
             </h4>
             {group.lines.map((hit) => (

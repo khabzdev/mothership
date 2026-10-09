@@ -9,7 +9,7 @@ import {
   Message01Icon,
 } from "@hugeicons/core-free-icons";
 import type { CrewInfo } from "@mothership/protocol";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { TerminalPanel } from "../../crew/ui/TerminalPanel";
 import { CONSOLES } from "../layout";
@@ -63,7 +63,7 @@ export function TerminalDrawer({ member }: { member: CrewInfo }) {
           <Drawer.Popup className="term-drawer" data-tall={tall || undefined}>
             <div className="term-drawer__grip" aria-hidden />
             <header className="term-drawer__head">
-              <span className="term-drawer__dot" style={{ background: member.color }} />
+              <span className="dot" style={{ "--dot": member.color } as CSSProperties} />
               <div className="term-drawer__who">
                 <Drawer.Title className="term-drawer__name">
                   <Icon icon={ComputerTerminal01Icon} />
@@ -77,7 +77,7 @@ export function TerminalDrawer({ member }: { member: CrewInfo }) {
                 </Drawer.Description>
               </div>
               <StatusBadge crew={member} />
-              <span className="term-drawer__link readout">{link}</span>
+              <span className="term-drawer__link meta">{link}</span>
               <div className="term-drawer__actions">
                 <Button
                   size="sm"

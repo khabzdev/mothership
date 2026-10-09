@@ -14,7 +14,7 @@ export function Boarding({ deck, progress }: { deck: string; progress?: number }
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]!);
   return (
     <div className="boarding" role="status" aria-live="polite">
-      <p className="eyebrow">Docking at deck</p>
+      <p className="section-label">Docking at deck</p>
       <h1 className="boarding__deck">{deck}</h1>
       <div className="boarding__bar" data-indeterminate={progress === undefined || undefined}>
         <span style={progress === undefined ? undefined : { width: `${progress}%` }} />

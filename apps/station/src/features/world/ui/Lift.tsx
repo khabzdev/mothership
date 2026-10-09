@@ -88,11 +88,16 @@ export function Lift({
                   className="lift__deck"
                   aria-current={deck.id === deckId}
                   data-asking={asking || undefined}
-                  style={{ "--deck-trim": paintFor(deck.repoPath).trim } as CSSProperties}
                   onClick={() => ride(deck.id)}
                 >
                   <span className="lift__level">{i + 1}</span>
-                  <span className="lift__name">{deck.name}</span>
+                  <span className="lift__name">
+                    <span
+                      className="dot"
+                      style={{ "--dot": paintFor(deck.repoPath).trim } as CSSProperties}
+                    />
+                    {deck.name}
+                  </span>
                   <span className="lift__counts">
                     {busy > 0 && (
                       <span className="with-icon" title={`${busy} at work`}>
@@ -106,7 +111,9 @@ export function Lift({
                     )}
                     {!crew.length && <span className="muted">empty</span>}
                   </span>
-                  <span className="readout">{deck.repoPath}</span>
+                  <span className="meta" title={deck.repoPath}>
+                    <bdi>{deck.repoPath}</bdi>
+                  </span>
                 </button>
               </li>
             );
@@ -125,7 +132,7 @@ export function Lift({
                 )}
                 {c.name}
               </span>
-              <span className="readout">{c.state === "failed" ? c.error : c.progress}</span>
+              <span className="meta">{c.state === "failed" ? c.error : c.progress}</span>
               {c.state === "done" && c.deckId ? (
                 <Button size="sm" variant="primary" onClick={() => ride(c.deckId!)}>
                   Go
@@ -178,7 +185,7 @@ export function Lift({
   if (standalone) {
     return (
       <main className="lift-screen">
-        <p className="eyebrow">Mothership</p>
+        <p className="section-label">Mothership</p>
         <h1>Dock your first deck</h1>
         <p className="muted">Every repo is a deck. Crew work at its consoles.</p>
         {body}

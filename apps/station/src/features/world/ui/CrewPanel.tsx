@@ -1,5 +1,5 @@
 import type { CrewInfo } from "@mothership/protocol";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   ArrowDown01Icon,
   ArrowRight01Icon,
@@ -46,7 +46,7 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
         onClick={toggle}
         aria-expanded={!collapsed}
       >
-        <span className="eyebrow with-icon">
+        <span className="section-label with-icon">
           <Icon icon={UserGroupIcon} size={12} /> Crew
         </span>
         <span className="crew-panel__count">{crew.length || ""}</span>
@@ -70,7 +70,7 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                       : `Open ${c.name}'s terminal`
                   }
                 >
-                  <span className="crew-panel__dot" style={{ background: c.color }} />
+                  <span className="dot" style={{ "--dot": c.color } as CSSProperties} />
                   <span className="crew-panel__name">
                     {c.name}
                     {(c.branch || c.prUrl) && (
@@ -82,14 +82,14 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                     )}
                     {sub && <span className="crew-panel__sub">{sub}</span>}
                   </span>
-                  <span className="crew-panel__pill">
-                    <StatusBadge crew={c} />
-                  </span>
+                  <StatusBadge crew={c} />
                   {needs && (
                     <span className="crew-panel__ask">
-                      <Icon icon={Notification03Icon} size={12} />{" "}
-                      {c.detail ?? "Waiting on an answer"}
-                      {since && ` · ${since}`}
+                      <Icon icon={Notification03Icon} size={12} />
+                      <span>
+                        {c.detail ?? "Waiting on an answer"}
+                        {since && ` · ${since}`}
+                      </span>
                     </span>
                   )}
                 </button>

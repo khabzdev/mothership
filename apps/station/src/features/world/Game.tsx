@@ -2,15 +2,7 @@ import type { CrewInfo } from "@mothership/protocol";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import {
-  type CSSProperties,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { rosterQuery } from "../crew/queries";
 import { launchCards, missionCards } from "../github/cards";
 import { boardQuery } from "../github/queries";
@@ -133,7 +125,7 @@ export function Game({ deck }: { deck: Deck }) {
 
   return (
     <Toasty toastManager={toasts}>
-      <div className="game" style={{ "--deck-trim": paint.trim } as CSSProperties}>
+      <div className="game">
         <Canvas
           shadows
           camera={{ fov: 55, near: 0.1, far: 400, position: [12, 8, 14] }}

@@ -16,7 +16,9 @@ import { crewBlocker } from "../../../app/diagnostics";
 import { diagnosticsQuery } from "../../../app/queries";
 import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
 import type { Deck } from "../../decks/model";
+import type { CSSProperties } from "react";
 import { CONSOLES } from "../layout";
+import { paintFor } from "../paint";
 import { useWorld } from "../store";
 
 function Key({ k, label }: { k: string; label: string }) {
@@ -135,10 +137,16 @@ export function TopBar({ deck, crew }: { deck: Deck; crew: CrewInfo[] }) {
           onClick={() => open({ kind: "lift" })}
           title="Ride the lift"
         >
-          <span className="eyebrow with-icon">
+          <span className="section-label with-icon">
             <Icon icon={ArrowUpDownIcon} size={12} /> Deck
           </span>
-          <span className="topbar__name">{deck.name}</span>
+          <span className="topbar__name">
+            <span
+              className="dot"
+              style={{ "--dot": paintFor(deck.repoPath).trim } as CSSProperties}
+            />
+            {deck.name}
+          </span>
         </button>
         <Surface className="topbar__right">
           {waiting > 0 && (

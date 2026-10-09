@@ -1,13 +1,21 @@
+import { Badge } from "@cloudflare/kumo";
 import { useEffect, useRef, useState } from "react";
 import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
 
-const THEME = {
-  background: "#0b0a08",
-  foreground: "#ece6d6",
-  cursor: "#ff5f1f",
-  cursorAccent: "#0b0a08",
-  selectionBackground: "#ff5f1f55",
-};
+/** xterm's colours, read from the Kumo theme so the terminal matches the windows around it. */
+function themeOf(element: HTMLElement) {
+  const css = getComputedStyle(element);
+  const token = (name: string) => css.getPropertyValue(name).trim();
+  const background = token("--color-kumo-recessed");
+  const brand = token("--color-kumo-brand");
+  return {
+    background,
+    foreground: token("--text-color-kumo-default"),
+    cursor: brand,
+    cursorAccent: background,
+    selectionBackground: `color-mix(in srgb, ${brand} 35%, transparent)`,
+  };
+}
 
 /** Live crew terminal: snapshot on attach, then streamed output; typing goes to the agent. */
 export function TerminalPanel({
@@ -39,11 +47,11 @@ export function TerminalPanel({
       if (disposed) return;
 
       const term = new Terminal({
-        fontFamily: '"Martian Mono", ui-monospace, monospace',
+        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
         fontSize: 12,
         cursorBlink: true,
         scrollback: 5000,
-        theme: THEME,
+        theme: themeOf(element),
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
@@ -109,9 +117,9 @@ export function TerminalPanel({
   return (
     <div className="terminal" data-exited={exited}>
       {error && (
-        <p role="alert" className="terminal__error">
-          {error}
-        </p>
+        <div role="alert" className="terminal__error">
+          <Badge variant="error">{error}</Badge>
+        </div>
       )}
       <div ref={host} className="terminal__screen" aria-label="Crew terminal" />
     </div>

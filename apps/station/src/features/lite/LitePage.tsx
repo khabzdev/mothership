@@ -1,4 +1,4 @@
-import { Badge, Button, Checkbox, Empty, InputArea, Select } from "@cloudflare/kumo";
+import { Badge, Banner, Button, Checkbox, Empty, InputArea, Select } from "@cloudflare/kumo";
 import {
   ArrowLeft01Icon,
   Logout03Icon,
@@ -11,7 +11,7 @@ import {
 import type { CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useRealtime } from "../../shared/realtime/RealtimeProvider";
 import { ErrorNote } from "../../shared/ui/ErrorNote";
 import { Icon } from "../../shared/ui/Icon";
@@ -63,7 +63,7 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
           icon={<Icon icon={ArrowLeft01Icon} />}
           onClick={onBack}
         />
-        <span className="lite-dot" style={{ background: member.color }} />
+        <span className="dot" style={{ "--dot": member.color } as CSSProperties} />
         <div className="lite-crew__who">
           <strong>{member.name}</strong>
           <span className="muted">
@@ -74,9 +74,11 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
         <StatusBadge crew={member} />
       </header>
       {member.status === "needs_input" && member.detail && (
-        <p className="lite-ask">
-          <Icon icon={Notification03Icon} /> {member.detail}
-        </p>
+        <Banner
+          variant="error"
+          icon={<Icon icon={Notification03Icon} />}
+          description={member.detail}
+        />
       )}
       <div className="lite-crew__term">
         <TerminalPanel crewId={member.id} />
@@ -261,7 +263,7 @@ function LiteDeck({
             {list.map((c) => (
               <li key={c.id}>
                 <button type="button" data-status={c.status} onClick={() => setSelected(c.id)}>
-                  <span className="lite-dot" style={{ background: c.color }} />
+                  <span className="dot" style={{ "--dot": c.color } as CSSProperties} />
                   <span className="lite-list__who">
                     <strong>{c.name}</strong>
                     <span className="muted">

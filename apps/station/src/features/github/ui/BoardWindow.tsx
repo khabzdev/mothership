@@ -105,7 +105,7 @@ export function BoardWindow({
                 const cards = issues.filter((i) => issueColumn(i) === column);
                 return (
                   <section key={column} className="board__column">
-                    <h4 className="eyebrow">
+                    <h4 className="section-label">
                       {title} · {cards.length}
                     </h4>
                     {cards.map((i: GhIssue) => (
@@ -130,7 +130,7 @@ export function BoardWindow({
                 const cards = pulls.filter((p) => pullColumn(p) === column);
                 return (
                   <section key={column} className="board__column">
-                    <h4 className="eyebrow">
+                    <h4 className="section-label">
                       {title} · {cards.length}
                     </h4>
                     {cards.map((p: GhPull) => (

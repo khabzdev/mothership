@@ -143,7 +143,7 @@ export function ChangesPanel({
 
       <div className="changes__body">
         <aside className="changes__files">
-          <h4 className="eyebrow">Changed files{files.length ? ` · ${files.length}` : ""}</h4>
+          <h4 className="section-label">Changed files{files.length ? ` · ${files.length}` : ""}</h4>
           <ul role="listbox" aria-label="Changed files">
             {files.map((f) => (
               <li key={f.path}>
