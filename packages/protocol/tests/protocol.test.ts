@@ -39,6 +39,7 @@ describe("types", () => {
       | "crew.roster"
       | "crew.screen"
       | "deck.labels"
+      | "deck.clones"
       | "error"
     >();
   });
@@ -128,6 +129,10 @@ describe("parseServerMsg", () => {
       type: "deck.labels",
       deckId: "d1",
       labels: [{ consoleId: 2, text: "Ops", color: "#118ab2" }],
+    },
+    {
+      type: "deck.clones",
+      clones: [{ id: "k1", spec: "o/r", name: "r", state: "cloning", progress: "Downloading 5%" }],
     },
     { type: "error", message: "boom" },
   ];

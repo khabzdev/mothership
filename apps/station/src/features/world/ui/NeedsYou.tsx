@@ -1,8 +1,8 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect, useRef, useState } from "react";
-import { useQueries, useSuspenseQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { rosterQuery } from "../../crew/queries";
-import { decksQuery } from "../../decks/queries";
+import { clonesQuery, decksQuery } from "../../decks/queries";
 import { playDone, playHeadsUp, playNeedsYou } from "../sound";
 import { useWorld } from "../store";
 import { Fresh, bannerText, needingYou } from "../waiting";
@@ -117,4 +117,25 @@ export function useOtherDecksHeadsUp(deckId: string): void {
     // Rosters are compared by when they last changed.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [crewKey, deckId]);
+}
+
+/** Everyone hears when a cloned repo's deck opens (agent-office: "everyone hears when the floor opens"). */
+export function useCloneNews(): void {
+  const { data: clones } = useQuery(clonesQuery);
+  const told = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!clones) return;
+    const done = clones.filter((c) => c.state === "done");
+    // Ones already open when the page came up aren't news.
+    if (!told.current) {
+      told.current = new Set(done.map((c) => c.id));
+      return;
+    }
+    for (const c of done) {
+      if (told.current.has(c.id)) continue;
+      told.current.add(c.id);
+      useWorld.getState().say(`🛗 Deck ${c.name.toUpperCase()} is open: take the lift`);
+      playDone();
+    }
+  }, [clones]);
 }

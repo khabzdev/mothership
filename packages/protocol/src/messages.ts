@@ -58,6 +58,21 @@ export interface ConsoleLabel {
   color: string;
 }
 
+/** A repo being cloned into a new deck (agent-office: its floor on the panel says how far along). */
+export interface CloneInfo {
+  id: string;
+  /** What was asked for: owner/name, a URL. */
+  spec: string;
+  /** The deck it becomes. */
+  name: string;
+  state: "cloning" | "done" | "failed";
+  /** "Downloading 64% · 231 MiB · 1.5 MiB/s". */
+  progress: string;
+  /** The new deck, once done. */
+  deckId?: string;
+  error?: string;
+}
+
 /** A styled run of text on a terminal row: [text, fg, bg, flags]. */
 export type Run = [string, number, number, number];
 /** Colour encoding: -1 default, 0..255 palette, >= RGB_FLAG means RGB_FLAG | rgb. */
@@ -89,6 +104,7 @@ export type ServerMsg =
   | { type: "crew.roster"; deckId: DeckId; crew: CrewInfo[] }
   | { type: "crew.screen"; crewId: CrewId; frame: ScreenFrame }
   | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
+  | { type: "deck.clones"; clones: CloneInfo[] }
   | { type: "error"; message: string };
 
 export type MsgOf<U extends { type: string }, T extends U["type"]> = Extract<U, { type: T }>;

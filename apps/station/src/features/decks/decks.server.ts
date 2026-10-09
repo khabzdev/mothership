@@ -67,3 +67,29 @@ async function gitIgnored(root: string, dirs: string[]): Promise<Set<string>> {
       .map((line) => line.replace(/\/$/, "")),
   );
 }
+
+let ghCache: { at: number; list: string[] } | undefined;
+
+/** The repos your gh login can see (cached a minute; none without gh or a login). */
+export async function listGhRepos(): Promise<string[]> {
+  if (ghCache && Date.now() - ghCache.at < 60_000) return ghCache.list;
+  const args = [
+    "repo",
+    "list",
+    "--limit",
+    "100",
+    "--json",
+    "nameWithOwner",
+    "--jq",
+    ".[].nameWithOwner",
+  ];
+  const list = await run("gh", args, {
+    timeout: 15_000,
+    env: { ...process.env, GH_PROMPT_DISABLED: "1" },
+  }).then(
+    ({ stdout }) => stdout.split("\n").filter(Boolean),
+    () => [],
+  );
+  ghCache = { at: Date.now(), list };
+  return list;
+}

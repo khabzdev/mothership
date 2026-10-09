@@ -28,7 +28,7 @@ import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
-import { NeedsYouBanner, Toast, useOtherDecksHeadsUp } from "./ui/NeedsYou";
+import { NeedsYouBanner, Toast, useCloneNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
@@ -114,6 +114,7 @@ export function Game({ deck }: { deck: Deck }) {
   useNextUp(crew);
   useSoundUnlock();
   useOtherDecksHeadsUp(deck.id);
+  useCloneNews();
 
   return (
     <div className="game" style={{ "--deck-trim": paint.trim } as CSSProperties}>

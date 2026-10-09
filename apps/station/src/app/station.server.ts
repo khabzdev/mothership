@@ -3,6 +3,8 @@ import { CrewService } from "../features/crew/service.server";
 import { onCrewSignal } from "../features/crew/hooks.server";
 import { PtyCrewLauncher } from "../features/crew/launcher.server";
 import { crewRegistry } from "../features/crew/registry.server";
+import { CloneManager } from "../features/decks/clone.server";
+import { dockRepo } from "../features/decks/decks.server";
 import { LabelService } from "../features/labels/labels.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
@@ -21,6 +23,7 @@ interface Station {
   crew: CrewService;
   launcher: PtyCrewLauncher;
   labels: LabelService;
+  clones: CloneManager;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -84,7 +87,15 @@ export function getStation(): Station {
       }
     });
     const labels = new LabelService(getDb(), (msg) => hub.broadcast(msg));
-    return { crew, launcher, labels, diagnostics };
+    const clones = new CloneManager({
+      dock: (path) => dockRepo(getDb(), path),
+      broadcast: (msg) => hub.broadcast(msg),
+    });
+    hub.onPeerOpen((peer) => {
+      const list = clones.list();
+      if (list.length) hub.send(peer, { type: "deck.clones", clones: list });
+    });
+    return { crew, launcher, labels, clones, diagnostics };
   })();
   return shared.__mothershipStation;
 }

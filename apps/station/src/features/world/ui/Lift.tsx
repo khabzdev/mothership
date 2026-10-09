@@ -1,7 +1,20 @@
-import { useMutation, useQueries, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { rosterQuery } from "../../crew/queries";
 import { useState, type CSSProperties, type FormEvent } from "react";
-import { decksQuery, dockRepoMutation } from "../../decks/queries";
+import {
+  cancelCloneMutation,
+  clonesQuery,
+  decksQuery,
+  dockRepoMutation,
+  ghReposQuery,
+  startCloneMutation,
+} from "../../decks/queries";
 import { useDeckChoice } from "../deck-choice";
 import { paintFor } from "../paint";
 import { stepOutOfLift } from "../scene/Captain";
@@ -22,7 +35,11 @@ export function Lift({
   const dock = useMutation(dockRepoMutation(queryClient));
   const { deckId, choose } = useDeckChoice();
   const close = useWorld((s) => s.close);
-  const [repoPath, setRepoPath] = useState("");
+  const [repo, setRepo] = useState("");
+  const clone = useMutation(startCloneMutation());
+  const cancel = useMutation(cancelCloneMutation());
+  const { data: clones = [] } = useQuery(clonesQuery);
+  const { data: suggestions = [] } = useQuery(ghReposQuery);
   const rosters = useQueries({ queries: decks.map((d) => rosterQuery(d.id)) });
 
   // Riding the lift, you step out of it on the deck; from the top bar, you stay where you are.
@@ -32,10 +49,14 @@ export function Lift({
     close();
   };
 
+  // A folder on this machine is docked where it is; owner/name or a URL is cloned first.
+  const local = repo.trim().startsWith("/");
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    dock.mutate(repoPath, { onSuccess: (deck) => ride(deck.id) });
+    if (local) dock.mutate(repo.trim(), { onSuccess: (deck) => ride(deck.id) });
+    else clone.mutate(repo, { onSuccess: () => setRepo("") });
   };
+  const error = dock.error ?? clone.error ?? cancel.error;
 
   const body = (
     <>
@@ -70,24 +91,61 @@ export function Lift({
           })}
         </ul>
       )}
+      {clones.length > 0 && (
+        <ul className="lift__clones">
+          {clones.map((c) => (
+            <li key={c.id} data-state={c.state}>
+              <span className="lift__clone-name">
+                {c.state === "cloning" ? "⏬" : c.state === "done" ? "✅" : "⚠️"} {c.name}
+              </span>
+              <span className="readout">{c.state === "failed" ? c.error : c.progress}</span>
+              {c.state === "done" && c.deckId ? (
+                <button type="button" className="button" onClick={() => ride(c.deckId!)}>
+                  Go
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="icon-button"
+                  title={c.state === "cloning" ? "Stop cloning" : "Dismiss"}
+                  aria-label={c.state === "cloning" ? "Stop cloning" : "Dismiss"}
+                  onClick={() => cancel.mutate(c.id)}
+                >
+                  {c.state === "cloning" ? "⏹️" : "✕"}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       <form onSubmit={onSubmit} className="inline-form">
         <label className="field">
-          <span className="field__label">Dock a repo as a new deck</span>
+          <span className="field__label">Add a deck: clone a repo, or dock a folder</span>
           <input
             autoFocus={decks.length === 0}
-            value={repoPath}
-            onChange={(e) => setRepoPath(e.target.value)}
-            placeholder="/Users/you/code/repo"
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            placeholder="owner/name, a git URL, or /path/to/repo"
             spellCheck={false}
+            list="gh-repos"
           />
+          <datalist id="gh-repos">
+            {suggestions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </label>
-        <button type="submit" className="button" disabled={dock.isPending || !repoPath.trim()}>
-          {dock.isPending ? "Docking…" : "Dock"}
+        <button
+          type="submit"
+          className="button"
+          disabled={dock.isPending || clone.isPending || !repo.trim()}
+        >
+          {local ? (dock.isPending ? "Docking…" : "Dock") : clone.isPending ? "Starting…" : "Clone"}
         </button>
       </form>
-      {dock.error && (
+      {error && (
         <p role="alert" className="error">
-          {dock.error.message}
+          {error.message}
         </p>
       )}
     </>
@@ -104,7 +162,7 @@ export function Lift({
     );
   }
   return (
-    <Modal title="🛗 Lift" subtitle="Ride to a deck, or dock a repo">
+    <Modal title="🛗 Lift" subtitle="Ride to a deck, or add one: clone a repo or dock a folder">
       {body}
     </Modal>
   );

@@ -2,6 +2,7 @@ import {
   CREW_KINDS,
   CREW_STATUSES,
   type ClientMsg,
+  type CloneInfo,
   type ConsoleLabel,
   type CrewInfo,
   type Run,
@@ -71,11 +72,27 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return isId(o.deckId) && Array.isArray(o.labels) && o.labels.every(isConsoleLabel)
         ? { type: o.type, deckId: o.deckId, labels: o.labels }
         : null;
+    case "deck.clones":
+      return Array.isArray(o.clones) && o.clones.every(isCloneInfo)
+        ? { type: o.type, clones: o.clones }
+        : null;
     case "error":
       return typeof o.message === "string" ? { type: o.type, message: o.message } : null;
     default:
       return null;
   }
+}
+
+function isCloneInfo(value: unknown): value is CloneInfo {
+  if (typeof value !== "object" || value === null) return false;
+  const c = value as Record<string, unknown>;
+  return (
+    isId(c.id) &&
+    typeof c.spec === "string" &&
+    typeof c.name === "string" &&
+    ["cloning", "done", "failed"].includes(c.state as string) &&
+    typeof c.progress === "string"
+  );
 }
 
 function isConsoleLabel(value: unknown): value is ConsoleLabel {

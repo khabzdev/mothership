@@ -1382,3 +1382,35 @@ a.button {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+
+/* Repos cloning into new decks, on the lift panel. */
+.lift__clones {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.lift__clones li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px dashed var(--panel-line);
+  border-radius: var(--radius);
+}
+
+.lift__clones li[data-state="failed"] .readout {
+  color: #ff8a8a;
+}
+
+.lift__clone-name {
+  font: 800 1.05rem var(--font-display);
+  text-transform: uppercase;
+}
+
+.lift__clones .readout {
+  overflow-wrap: anywhere;
+}
