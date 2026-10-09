@@ -1,11 +1,12 @@
 import { Badge } from "@cloudflare/kumo";
 import type { CrewInfo } from "@mothership/protocol";
 
-type Variant = "error" | "warning" | "success" | "info" | "neutral";
+/** Kumo's dot badges come in these colours only. */
+type Variant = "error" | "warning" | "success" | "neutral";
 
 const VARIANTS: Record<CrewInfo["status"], Variant> = {
   starting: "neutral",
-  idle: "info",
+  idle: "neutral",
   working: "warning",
   needs_input: "error",
   done: "success",
@@ -26,7 +27,7 @@ export function StatusBadge({ crew }: { crew: Pick<CrewInfo, "kind" | "status"> 
   if (crew.kind === "shell") {
     const exited = crew.status === "asleep";
     return (
-      <Badge variant={exited ? "neutral" : "info"} appearance="dot">
+      <Badge variant="neutral" appearance="dot">
         {exited ? "Exited" : "Shell"}
       </Badge>
     );
