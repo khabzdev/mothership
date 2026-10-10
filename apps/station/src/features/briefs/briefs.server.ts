@@ -158,7 +158,7 @@ export class BriefService {
     const waiting = this.#db.select().from(briefs).where(eq(briefs.state, "waiting")).all();
     await Promise.all(
       waiting.map(async (row) => {
-        if (dialogShown(await this.#lines(row.crewId))) return;
+        if (dialogShown((await this.#lines(row.crewId)) ?? [])) return;
         // Answered or re-planned while we looked: leave it be.
         if (this.latest(row.crewId)?.id !== row.id) return;
         this.#settle(toRecord(row), { state: "superseded" });
@@ -212,7 +212,8 @@ export class BriefService {
     if (!brief) return { ok: false, message: "No brief to answer", openTerminal: false };
     if (brief.state !== "waiting") return already(brief.state);
     const name = this.#crewName(crewId);
-    const lines = await this.#lines(crewId);
+    // Unreadable before the key: no dialog, so nothing is typed.
+    const lines = (await this.#lines(crewId)) ?? [];
     // The terminal (or a new plan) may have settled it while the screen was read.
     const now = this.latest(crewId);
     if (now?.id !== brief.id || now.state !== "waiting")
@@ -239,8 +240,9 @@ export class BriefService {
     const latest = this.latest(crewId);
     if (latest?.id !== brief.id) return already("superseded");
     if (latest.state !== "waiting") return already(latest.state);
-    // The key didn't take: an Enter now would answer the dialog, so the brief still waits.
-    if (dialogShown(after)) return missing;
+    // The key didn't take (or the screen can't be read to tell): an Enter now could answer the
+    // dialog, so the brief still waits.
+    if (after === null || dialogShown(after)) return missing;
     if (choice === "approve") {
       this.#approve(brief, "you");
       return { ok: true };
@@ -299,13 +301,13 @@ export class BriefService {
     if (latest?.state === "waiting") this.#settle(latest, { state: "superseded" });
   }
 
-  /** The crew member's screen as text lines; one that can't be read shows no dialog. */
-  async #lines(crewId: string): Promise<string[]> {
+  /** The crew member's screen as text lines, or null when it can't be read. */
+  async #lines(crewId: string): Promise<string[] | null> {
     try {
       return screenLines(await this.#screens.screen(crewId));
     } catch (error) {
       console.warn(`[briefs] can't read ${crewId}'s screen: ${(error as Error).message}`);
-      return [];
+      return null;
     }
   }
 

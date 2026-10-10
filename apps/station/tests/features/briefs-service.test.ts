@@ -249,6 +249,27 @@ describe("BriefService", () => {
     },
   );
 
+  test.each(["approve", "revise"] as const)(
+    "%s: a screen that can't be read after the key settles nothing",
+    async (choice) => {
+      const { id } = await hire();
+      plan(id);
+      onKey = () => {
+        screenFails = true;
+      };
+      vi.useFakeTimers();
+      const answer = choice === "approve" ? service.approve(id) : service.revise(id, "smaller");
+      await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS * 2);
+      expect(await answer).toEqual({
+        ok: false,
+        message: "Couldn't find Nova's approval dialog: opened its terminal",
+        openTerminal: true,
+      });
+      expect(writes).toEqual([choice === "approve" ? "1" : "3"]);
+      expect(service.info(id)?.state).toBe("waiting");
+    },
+  );
+
   test("a new plan during the wait: the reason isn't typed into it", async () => {
     const { id } = await hire();
     plan(id);
