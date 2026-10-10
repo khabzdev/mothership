@@ -47,6 +47,20 @@ describe("PR title and body", () => {
     expect(body.indexOf("### Pre-flight: GO")).toBeLessThan(body.indexOf("Opened from Mothership"));
   });
 
+  test("prBody puts the inspection after pre-flight and before the sign-off", () => {
+    const body = prBody(
+      { ...request, evidence: "### Pre-flight: GO", inspection: "## Inspection: Cleared" },
+      ["Add toggle"],
+    );
+    expect(body.indexOf("## Inspection: Cleared")).toBeGreaterThan(
+      body.indexOf("### Pre-flight: GO"),
+    );
+    expect(body.indexOf("## Inspection: Cleared")).toBeLessThan(
+      body.indexOf("Opened from Mothership"),
+    );
+    expect(prBody(request, ["x"])).not.toContain("## Inspection");
+  });
+
   test("the body quotes the task and lists the commits", () => {
     const body = prBody(request, ["Add toggle", "Add tests"]);
     expect(body).toContain("> Add dark mode\n> with a toggle in the header");

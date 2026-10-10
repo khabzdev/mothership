@@ -4,6 +4,7 @@ import { parsePrInput } from "../crew/model";
 import { prBrief } from "../briefs/model";
 import { launchGuard } from "../preflight/guard";
 import { fingerprint } from "../preflight/fingerprint.server";
+import { prInspection } from "../inspection/model";
 import { prEvidence } from "../preflight/report";
 import { CONSOLES } from "../world/layout";
 import { openPullRequest } from "./pr.server";
@@ -14,7 +15,7 @@ export type OpenPrResult = { url: string; opened: boolean } | { needsConfirm: st
 export const openCrewPr = createServerFn({ method: "POST" })
   .validator(parsePrInput)
   .handler(async ({ data }): Promise<OpenPrResult> => {
-    const { crew, preflight, checks, briefs } = getStation();
+    const { crew, preflight, checks, briefs, inspections } = getStation();
     const member = crew.member(data.crewId);
     if (member.prUrl) return { url: member.prUrl, opened: false };
     const { cwd, repoPath, ownWorktree } = crew.workdir(data.crewId);
@@ -24,6 +25,9 @@ export const openCrewPr = createServerFn({ method: "POST" })
       );
     }
     const latest = preflight.latest(data.crewId);
+    // This flight only: history is scoped to the current flight, newest first.
+    const inspected = inspections.history(data.crewId)[0] ?? null;
+    const inspectorOn = inspections.enabled(member.deckId);
     const approved = briefs.approved(data.crewId);
     try {
       // What the worktree holds now: O's guard asks about it, and stale evidence says so.
@@ -33,7 +37,10 @@ export const openCrewPr = createServerFn({ method: "POST" })
         current = await fingerprint(cwd).catch(() => undefined);
       } else {
         current = await fingerprint(cwd);
-        const reason = launchGuard(latest, current, checks.armed(member.deckId) === true);
+        const reason = launchGuard(latest, current, checks.armed(member.deckId) === true, {
+          on: inspectorOn,
+          latest: inspected,
+        });
         if (reason) return { needsConfirm: reason };
       }
       const url = await openPullRequest({
@@ -45,6 +52,10 @@ export const openCrewPr = createServerFn({ method: "POST" })
         evidence:
           latest && latest.state !== "running" && latest.state !== "cancelled"
             ? prEvidence(latest, current)
+            : undefined,
+        inspection:
+          inspected && (inspected.state === "cleared" || inspected.state === "flagged")
+            ? prInspection({ ...inspected, state: inspected.state }, current)
             : undefined,
         name: member.name,
         console: CONSOLES[member.consoleId]?.label ?? `Console ${member.consoleId + 1}`,

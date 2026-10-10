@@ -83,3 +83,27 @@ describe("prEvidence", () => {
     expect(prEvidence(record())).not.toContain(stale);
   });
 });
+
+describe("launchGuard with the Inspector", () => {
+  const NOT_CLEARED = "The Inspector hasn't cleared this commit. Launch anyway?";
+  const go = record();
+  const cur = { hash: "same" };
+  const on = (latest: { state: string; fingerprint: string } | null) => ({ on: true, latest });
+  test("flagged", () =>
+    expect(launchGuard(go, cur, true, on({ state: "flagged", fingerprint: "same" }))).toBe(
+      NOT_CLEARED,
+    ));
+  test("cleared on another fingerprint", () =>
+    expect(launchGuard(go, cur, true, on({ state: "cleared", fingerprint: "old" }))).toBe(
+      NOT_CLEARED,
+    ));
+  test("missing", () => expect(launchGuard(go, cur, true, on(null))).toBe(NOT_CLEARED));
+  test("cleared on the current hash", () =>
+    expect(launchGuard(go, cur, true, on({ state: "cleared", fingerprint: "same" }))).toBeNull());
+  test("inspector off", () =>
+    expect(launchGuard(go, cur, true, { on: false, latest: null })).toBeNull());
+  test("works with checks unarmed", () =>
+    expect(launchGuard(null, cur, false, on(null))).toBe(NOT_CLEARED));
+  test("the pre-flight reason wins", () =>
+    expect(launchGuard(null, cur, true, on(null))).toBe(NO_GO));
+});
