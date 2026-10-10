@@ -90,8 +90,15 @@ describe("the island", () => {
     expect(rim().filter((e) => e.piece === "terrain_slope_outer_corner")).toHaveLength(4);
   });
 
-  test("ground tops are at y = 0", () => {
-    for (const { piece, placement } of ground()) {
+  test("the whole grid is filled", () => {
+    expect(entries()).toHaveLength(
+      ((ISLAND.maxX - ISLAND.minX) / TILE) * ((ISLAND.maxZ - ISLAND.minZ) / TILE),
+    );
+    expect(entries()).toHaveLength(99);
+  });
+
+  test("ground and rim tops are at y = 0", () => {
+    for (const { piece, placement } of entries()) {
       expect(topOf(piece, placement)).toBeCloseTo(0, 6);
     }
     for (const { placement } of entries().filter((e) => e.piece === "terrain_tall")) {
@@ -99,8 +106,11 @@ describe("the island", () => {
     }
   });
 
-  test("three mining tiles sit in the east outer ring", () => {
-    expect(MINING_TILES).toHaveLength(3);
+  test("two mining tiles sit in the south-east outer ring", () => {
+    expect(MINING_TILES).toEqual([
+      { x: 20, z: 8 },
+      { x: 20, z: 12 },
+    ]);
     for (const t of MINING_TILES) expect(t.x).toBe(ISLAND.maxX - TILE / 2);
     const at = islandPlan().terrain_mining.map((p) => [p.position[0], p.position[2]]);
     expect(at).toEqual(MINING_TILES.map((t) => [t.x, t.z]));

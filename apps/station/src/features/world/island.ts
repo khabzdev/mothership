@@ -31,8 +31,8 @@ const reachX = (halfTiles(Math.max(-DECK.minX, DECK.maxX)) + 1) * (TILE / 2) + T
 const reachZ = (halfTiles(Math.max(-DECK.minZ, DECK.maxZ)) + 1) * (TILE / 2) + TILE / 2;
 export const ISLAND = { minX: -reachX, maxX: reachX, minZ: -reachZ, maxZ: reachZ };
 
-/** The three east outer-ring tiles under the drill. */
-export const MINING_TILES: { x: number; z: number }[] = [-TILE, 0, TILE].map((z) => ({
+/** The two south-east outer-ring tiles under the drill (the east middle stays clear for the departure pad). */
+export const MINING_TILES: { x: number; z: number }[] = [2 * TILE, 3 * TILE].map((z) => ({
   x: ISLAND.maxX - TILE / 2,
   z,
 }));
