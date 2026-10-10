@@ -200,11 +200,27 @@ function fly(
   s.toFacing = toFacing;
 }
 
-/** Fly to the review under way, or home to the pad when there's none. */
+/** Within a millimetre of its pad. */
+const atPad = (v: Vec3) =>
+  Math.abs(v.x - INSPECTOR_DOCK.x) < 1e-3 &&
+  Math.abs(v.y - DOCK_Y) < 1e-3 &&
+  Math.abs(v.z - INSPECTOR_DOCK.z) < 1e-3;
+
+/** Settle idle on the pad from `now`, facing the deck: no flight, so no hop. */
+function land(s: DroneState, now: number): void {
+  s.beat = "idle";
+  s.since = now;
+  setVec(s.from, INSPECTOR_DOCK.x, DOCK_Y, INSPECTOR_DOCK.z);
+  setVec(s.to, INSPECTOR_DOCK.x, DOCK_Y, INSPECTOR_DOCK.z);
+  s.fromFacing = s.toFacing = DOCK_FACING;
+}
+
+/** Fly to the review under way, or home to the pad when there's none (idle at once if it's there). */
 function moveOn(s: DroneState, now: number, next: DroneSpot | null): void {
   s.lostAt = -1;
   s.crewId = next?.crewId ?? null;
   if (next) fly(s, now, "flying", next.x, HOVER_Y, next.z, next.facing);
+  else if (atPad(s.at)) land(s, now);
   else fly(s, now, "returning", INSPECTOR_DOCK.x, DOCK_Y, INSPECTOR_DOCK.z, DOCK_FACING);
 }
 
@@ -239,10 +255,7 @@ export function droneStep(s: DroneState, now: number, next: DroneSpot | null): D
     s.beat = "scanning";
   } else if (s.beat === "returning" && elapsed >= FLY_S) {
     // Landed: idle from now, so the bob (phased from `since`) starts level instead of popping.
-    s.beat = "idle";
-    s.since = now;
-    setVec(s.from, s.to.x, s.to.y, s.to.z);
-    s.fromFacing = s.toFacing;
+    land(s, now);
   }
 
   const t = (now - s.since) / FLY_S;

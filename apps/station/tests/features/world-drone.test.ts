@@ -175,11 +175,14 @@ describe("droneStep", () => {
     expect(a.z).toBeCloseTo(b.z);
   };
 
+  /** A step just past (or, negated, just short of) a boundary, so no test rests on float rounding. */
+  const EPS = 1e-6;
+
   /** Fly to `target` from the pad and settle over it, scanning; returns the clock. */
   function scanning(s: DroneState, target = nova): number {
     droneStep(s, 1, target);
-    droneStep(s, 1 + FLY_S, target);
-    return 1 + FLY_S;
+    droneStep(s, 1 + FLY_S + EPS, target);
+    return 1 + FLY_S + EPS;
   }
 
   test("rests at its pad, idle, facing the deck", () => {
@@ -198,7 +201,9 @@ describe("droneStep", () => {
     droneStep(s, 1 + FLY_S / 2, nova);
     expect(s.beat).toBe("flying");
     expect(s.at.y).toBeGreaterThan(HOVER_Y);
-    droneStep(s, 1 + FLY_S, nova);
+    droneStep(s, 1 + FLY_S - EPS, nova);
+    expect(s.beat).toBe("flying");
+    droneStep(s, 1 + FLY_S + EPS, nova);
     expect(s.beat).toBe("scanning");
     near(s.at, { x: nova.x, y: HOVER_Y, z: nova.z });
   });
@@ -220,9 +225,9 @@ describe("droneStep", () => {
     const s = restingDrone();
     const t = scanning(s);
     droneStep(s, t + 0.1, null);
-    droneStep(s, t + 0.1 + LINGER_S - 0.01, null);
+    droneStep(s, t + 0.1 + LINGER_S - EPS, null);
     expect(s.beat).toBe("scanning");
-    droneStep(s, t + 0.11 + LINGER_S, null);
+    droneStep(s, t + 0.1 + LINGER_S + EPS, null);
     expect(s.beat).toBe("returning");
     expect(s.crewId).toBeNull();
   });
@@ -241,14 +246,33 @@ describe("droneStep", () => {
     near(resting.at, { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
   });
 
+  test("a verdict played at the pad ends idle in place, with no hop", () => {
+    const s = restingDrone();
+    hearVerdict(s, "vega", "flagged");
+    droneStep(s, 1, null);
+    expect(s.beat).toBe("flagged");
+    droneStep(s, 1 + VERDICT_S - EPS, null);
+    expect(s.beat).toBe("flagged");
+    const done = 1 + VERDICT_S + EPS;
+    droneStep(s, done, null);
+    expect(s.beat).toBe("idle");
+    expect(s.since).toBe(done);
+    near(s.at, { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
+    // Mid-way through what would have been a flight home, it's still on the pad: no arc.
+    droneStep(s, done + FLY_S / 2, null);
+    expect(s.beat).toBe("idle");
+    expect(s.at.y).toBeCloseTo(DOCK_Y);
+    expect(Math.cos(s.facing - DOCK_FACING)).toBeCloseTo(1);
+  });
+
   test("moves on after VERDICT_S: to the next review, or home", () => {
     const s = restingDrone();
     const t = scanning(s);
     hearVerdict(s, "nova", "cleared");
     droneStep(s, t, null);
-    droneStep(s, t + VERDICT_S - 0.01, vega);
+    droneStep(s, t + VERDICT_S - EPS, vega);
     expect(s.beat).toBe("cleared");
-    droneStep(s, t + VERDICT_S, vega);
+    droneStep(s, t + VERDICT_S + EPS, vega);
     expect(s.beat).toBe("flying");
     expect(s.crewId).toBe("vega");
 
@@ -256,7 +280,7 @@ describe("droneStep", () => {
     const u = scanning(home);
     hearVerdict(home, "nova", "failed");
     droneStep(home, u, null);
-    droneStep(home, u + VERDICT_S, null);
+    droneStep(home, u + VERDICT_S + EPS, null);
     expect(home.beat).toBe("returning");
   });
 
@@ -265,9 +289,12 @@ describe("droneStep", () => {
     const t = scanning(s);
     hearVerdict(s, "nova", "cleared");
     droneStep(s, t, null);
-    droneStep(s, t + VERDICT_S, null);
+    const left = t + VERDICT_S + EPS;
+    droneStep(s, left, null);
     expect(s.beat).toBe("returning");
-    droneStep(s, t + VERDICT_S + FLY_S, null);
+    droneStep(s, left + FLY_S - EPS, null);
+    expect(s.beat).toBe("returning");
+    droneStep(s, left + FLY_S + EPS, null);
     expect(s.beat).toBe("idle");
     near(s.at, { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
     expect(Math.cos(s.facing - DOCK_FACING)).toBeCloseTo(1);
@@ -278,8 +305,9 @@ describe("droneStep", () => {
     const t = scanning(s);
     hearVerdict(s, "nova", "cleared");
     droneStep(s, t, null);
-    droneStep(s, t + VERDICT_S, null);
-    const landed = t + VERDICT_S + FLY_S + 0.37;
+    const left = t + VERDICT_S + EPS;
+    droneStep(s, left, null);
+    const landed = left + FLY_S + 0.37;
     droneStep(s, landed, null);
     expect(s.beat).toBe("idle");
     expect(s.since).toBe(landed);
@@ -300,7 +328,7 @@ describe("droneStep", () => {
     const s = restingDrone();
     const { at, from, to } = s;
     droneStep(s, 1, nova);
-    droneStep(s, 1 + FLY_S, null);
+    droneStep(s, 1 + FLY_S + EPS, null);
     expect(s.at).toBe(at);
     expect(s.from).toBe(from);
     expect(s.to).toBe(to);
