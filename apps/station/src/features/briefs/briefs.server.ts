@@ -9,8 +9,11 @@ import type { CrewService } from "../crew/service.server";
 import { dialogShown, findOption, screenLines, type Choice } from "./dialog";
 import { goalOf } from "./model";
 
-/** After "keep planning" is pressed, how long to wait before typing the reason (ms). */
-export const REASON_DELAY_MS = 400;
+/**
+ * After an option's key is typed, how long to wait before looking again: the dialog must be gone
+ * before the brief settles, or the reason is typed (its Enter would answer the dialog).
+ */
+export const CONFIRM_DELAY_MS = 400;
 
 /** Tools whose use, with a brief waiting, means you approved it in the terminal. */
 const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
@@ -224,17 +227,19 @@ export class BriefService {
       console.warn(`[briefs] couldn't type into ${crewId}'s terminal: ${(error as Error).message}`);
       return missing;
     }
+    await new Promise((done) => setTimeout(done, CONFIRM_DELAY_MS));
+    const after = await this.#lines(crewId);
+    // Settled in the terminal, or a new plan came while we waited: nothing more to type.
+    const latest = this.latest(crewId);
+    if (latest?.id !== brief.id) return already("superseded");
+    if (latest.state !== "waiting") return already(latest.state);
+    // The key didn't take: an Enter now would answer the dialog, so the brief still waits.
+    if (dialogShown(after)) return missing;
     if (choice === "approve") {
       this.#approve(brief, "you");
       return { ok: true };
     }
-    // Settled in the terminal while the key went in: no reason to type.
-    if (!this.#settle(brief, { state: "revised", reason })) {
-      return already(this.#state(brief.id) ?? "superseded");
-    }
-    await new Promise((done) => setTimeout(done, REASON_DELAY_MS));
-    // A new plan already came: the reason would land on it, not this one.
-    if (this.latest(crewId)?.id !== brief.id) return already("superseded");
+    this.#settle(brief, { state: "revised", reason });
     try {
       await this.#crew.prompt(crewId, reason, "station");
     } catch (error) {
@@ -281,10 +286,6 @@ export class BriefService {
       .run();
     if (changes > 0) this.#changed(brief.deckId, brief.crewId);
     return changes > 0;
-  }
-
-  #state(briefId: string): BriefState | undefined {
-    return this.#db.select().from(briefs).where(eq(briefs.id, briefId)).get()?.state;
   }
 
   #supersedeWaiting(crewId: string): void {

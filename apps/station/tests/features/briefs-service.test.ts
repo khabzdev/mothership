@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
-import { BriefService, REASON_DELAY_MS } from "../../src/features/briefs/briefs.server.ts";
+import { BriefService, CONFIRM_DELAY_MS } from "../../src/features/briefs/briefs.server.ts";
 import { BRIEF_INSTRUCTIONS } from "../../src/features/briefs/model.ts";
 import type { CrewLauncher, LaunchRequest } from "../../src/features/crew/launcher.server.ts";
 import type { PromptFrom } from "../../src/features/crew/service.server.ts";
@@ -58,6 +58,8 @@ let screenGate: Promise<void> | null;
 let reads: number;
 /** Runs as the service types a key, before it lands; throws to fail the write. */
 let onKey: ((data: string) => void) | null;
+/** Whether Claude takes a typed key: its dialog leaves the screen. */
+let keyCloses: boolean;
 let service: BriefService;
 
 const frame = (lines: string[]): ScreenFrame => ({
@@ -83,6 +85,7 @@ beforeEach(() => {
   screenGate = null;
   reads = 0;
   onKey = null;
+  keyCloses = true;
   const broadcast = (msg: ServerMsg) => sent.push(msg);
   launcher = new FakeLauncher();
   // Crew prompts go through the launcher: record them in the same list as the service's keys.
@@ -103,9 +106,10 @@ beforeEach(() => {
       },
     },
     broadcast,
-    write: async (_crewId, data) => {
+    write: async (crewId, data) => {
       onKey?.(data);
       writes.push(data);
+      if (keyCloses) screens[crewId] = ["> "];
     },
   });
   crew.describeWith((id) => ({ brief: service.info(id) }));
@@ -210,17 +214,60 @@ describe("BriefService", () => {
     crew.onPrompt((e) => heard.push(e));
     vi.useFakeTimers();
     const answer = service.revise(id, "Keep the light theme too");
-    await vi.advanceTimersByTimeAsync(REASON_DELAY_MS - 1);
+    await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS - 1);
+    // Not settled until the dialog is seen gone.
     expect(writes).toEqual(["3"]);
+    expect(service.info(id)?.state).toBe("waiting");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await answer).toEqual({ ok: true });
     expect(service.history(id)[0]).toMatchObject({
       state: "revised",
       reason: "Keep the light theme too",
     });
-    await vi.advanceTimersByTimeAsync(1);
-    expect(await answer).toEqual({ ok: true });
     expect(writes).toEqual(["3", "\x1b[200~Keep the light theme too\x1b[201~"]);
     expect(heard).toEqual([{ crewId: id, from: "station" }]);
     expect(cleanBriefs(id)).toBe(0);
+  });
+
+  test.each(["approve", "revise"] as const)(
+    "%s: a key the dialog didn't take settles nothing and types nothing more",
+    async (choice) => {
+      const { id } = await hire();
+      plan(id);
+      keyCloses = false;
+      vi.useFakeTimers();
+      const answer = choice === "approve" ? service.approve(id) : service.revise(id, "smaller");
+      await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS * 2);
+      expect(await answer).toEqual({
+        ok: false,
+        message: "Couldn't find Nova's approval dialog: opened its terminal",
+        openTerminal: true,
+      });
+      expect(writes).toEqual([choice === "approve" ? "1" : "3"]);
+      expect(service.info(id)?.state).toBe("waiting");
+      expect(cleanBriefs(id)).toBe(0);
+    },
+  );
+
+  test("a new plan during the wait: the reason isn't typed into it", async () => {
+    const { id } = await hire();
+    plan(id);
+    vi.useFakeTimers();
+    const answer = service.revise(id, "smaller");
+    await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS / 2);
+    screens[id] = V1;
+    plan(id, "## Goal\nSmaller.");
+    await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS);
+    expect(await answer).toEqual({
+      ok: false,
+      message: "Already superseded",
+      openTerminal: false,
+    });
+    expect(writes).toEqual(["3"]);
+    expect(service.history(id).map((b) => [b.revision, b.state])).toEqual([
+      [2, "waiting"],
+      [1, "superseded"],
+    ]);
   });
 
   test("no dialog on screen: nothing typed", async () => {
@@ -298,7 +345,7 @@ describe("BriefService", () => {
       signal(id, { type: "working", activity: { tool: "Edit", filePath: join(repo, "a.ts") } });
     vi.useFakeTimers();
     const answer = service.revise(id, "smaller");
-    await vi.advanceTimersByTimeAsync(REASON_DELAY_MS * 2);
+    await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS * 2);
     expect(await answer).toEqual({ ok: false, message: "Already approved", openTerminal: false });
     expect(writes).toEqual(["3"]);
     expect(service.history(id)[0]).toMatchObject({ state: "approved", approvedBy: "terminal" });
@@ -309,7 +356,7 @@ describe("BriefService", () => {
     plan(id);
     vi.useFakeTimers();
     const answer = service.revise(id, "smaller");
-    await vi.advanceTimersByTimeAsync(REASON_DELAY_MS);
+    await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS);
     await answer;
     vi.useRealTimers();
     plan(id, "## Goal\nSmaller.");
