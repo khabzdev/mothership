@@ -25,7 +25,7 @@ import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
 import { useRealtime } from "../../shared/realtime/RealtimeProvider";
 import { ErrorNote } from "../../shared/ui/ErrorNote";
-import { toasts } from "../../shared/ui/toasts";
+import { notify, toasts } from "../../shared/ui/toasts";
 import { Icon } from "../../shared/ui/Icon";
 import { resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { hireMutation, promptMutation, rosterQuery } from "../crew/queries";
@@ -242,7 +242,12 @@ function LiteInspection({ member }: { member: CrewInfo }) {
               variant="secondary"
               loading={again.isPending}
               disabled={running}
-              onClick={() => again.mutate()}
+              onClick={() =>
+                again.mutate(undefined, {
+                  onSuccess: ({ started }) =>
+                    notify(started ? "Re-inspecting…" : "Already inspecting"),
+                })
+              }
             >
               Re-inspect
             </Button>

@@ -74,6 +74,8 @@ export function InspectionWindow({ member }: { member: CrewInfo }) {
         return;
       e.preventDefault();
       e.stopImmediatePropagation();
+      // Holding I opens the window; its repeats mustn't re-inspect too.
+      if (e.repeat) return;
       if (act.current.ready) act.current.reinspect();
     };
     window.addEventListener("keydown", onKey, true);
