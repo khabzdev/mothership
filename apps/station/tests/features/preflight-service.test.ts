@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { BriefService } from "../../src/features/briefs/briefs.server.ts";
 import type { CrewLauncher } from "../../src/features/crew/launcher.server.ts";
 import { CrewService } from "../../src/features/crew/service.server.ts";
 import { CheckService } from "../../src/features/preflight/checks.server.ts";
@@ -207,6 +208,42 @@ describe("PreflightService", () => {
     await settled(id);
     planning = false;
     writeFileSync(join(crew.workdir(id).cwd, "more.txt"), "more");
+    expect(await service.run(id, "stop")).not.toBeNull();
+  });
+
+  test("with briefs: a stop runs once the latest is superseded, not while waiting or revised", async () => {
+    const { id } = await hireWithChange();
+    let screen = [
+      " Would you like to proceed?",
+      " 1. Yes, and auto-accept edits",
+      " 3. No, keep planning",
+    ];
+    const briefs = new BriefService({
+      db,
+      crew,
+      screens: {
+        screen: async () => ({
+          cols: 80,
+          rows: screen.length,
+          lines: screen.map((t) => [[t, 0, 0, 0]]),
+        }),
+      },
+      broadcast: () => {},
+      write: async () => {
+        screen = ["> "];
+      },
+    });
+    service.planningWith((crewId) => briefs.planning(crewId));
+    const planned = (text: string) =>
+      briefs.handleSignal({ crewId: id, missionId: id, signal: { type: "plan", plan: text } });
+    planned("## Goal\nOne.");
+    expect(await service.run(id, "stop")).toBeNull();
+    expect((await briefs.revise(id, "smaller")).ok).toBe(true);
+    expect(briefs.latest(id)?.state).toBe("revised");
+    expect(await service.run(id, "stop")).toBeNull();
+    planned("## Goal\nTwo.");
+    crew.handleExit(id);
+    expect(briefs.latest(id)?.state).toBe("superseded");
     expect(await service.run(id, "stop")).not.toBeNull();
   });
 

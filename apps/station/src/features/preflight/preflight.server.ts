@@ -105,7 +105,7 @@ export class PreflightService {
   }
 
   /**
-   * Ask whether a crew member is still planning (its brief isn't approved): a stop then is Claude
+   * Ask whether a crew member is still planning (its brief waits or was revised): a stop then is Claude
    * asking or waiting on its plan, with nothing built to check and no place for a hand-back.
    */
   planningWith(fn: (crewId: string) => boolean): void {
@@ -128,7 +128,7 @@ export class PreflightService {
    * Start a pre-flight for a crew member, or queue it behind the ones running. Resolves with its
    * id once accepted, or null when there's nothing to run: a shell, crew in the deck's checkout,
    * a deck not armed or with no checks on, one already on the way, or (on a stop) no change since
-   * the last run or a brief not yet approved.
+   * the last run or a brief still being planned (waiting or revised).
    */
   async run(crewId: string, trigger: PreflightTrigger): Promise<string | null> {
     if (this.#busy.has(crewId)) return null;

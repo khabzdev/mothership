@@ -416,6 +416,26 @@ describe("BriefService", () => {
     expect(service.waiting(id)).toBe(false);
   });
 
+  test("planning: waiting or revised, not superseded", async () => {
+    const { id } = await hire();
+    plan(id);
+    vi.useFakeTimers();
+    const answer = service.revise(id, "smaller");
+    await vi.advanceTimersByTimeAsync(CONFIRM_DELAY_MS);
+    await answer;
+    vi.useRealTimers();
+    expect(service.info(id)?.state).toBe("revised");
+    expect(service.planning(id)).toBe(true);
+    // Y with no dialog on screen supersedes it: nothing is planning any more.
+    plan(id, "## Goal\nAgain.");
+    screens[id] = ["> "];
+    await service.approve(id);
+    expect(service.info(id)?.state).toBe("superseded");
+    expect(service.planning(id)).toBe(false);
+    // Resume still plans: no brief of its was ever approved.
+    expect(service.unapproved(id)).toBe(true);
+  });
+
   test("a revision-2 approval isn't clean", async () => {
     const { id } = await hire();
     plan(id);

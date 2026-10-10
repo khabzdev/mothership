@@ -121,10 +121,13 @@ export class BriefService {
     return this.latest(crewId)?.state === "waiting";
   }
 
-  /** Whether it has a brief and that brief isn't approved yet: it is still planning. */
+  /**
+   * Whether it is still planning: its latest brief waits on you, or Claude is planning again
+   * after a revise. A superseded brief holds nothing back.
+   */
   planning(crewId: string): boolean {
-    const latest = this.latest(crewId);
-    return !!latest && latest.state !== "approved";
+    const state = this.latest(crewId)?.state;
+    return state === "waiting" || state === "revised";
   }
 
   /** Whether it has briefs and none of them is approved: a resume must plan again. */
