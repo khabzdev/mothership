@@ -10,13 +10,17 @@ export const inspectionQuery = (crewId: string) =>
     queryFn: () => getInspections({ data: { crewId } }),
   });
 
+/** Re-inspect a crew member by hand; its inspections refetch once it's accepted or refused. */
 export const reinspectMutation = (queryClient: QueryClient, crewId: string) =>
   mutationOptions({
     mutationFn: () => reinspect({ data: { crewId } }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: inspectionQuery(crewId).queryKey }),
   });
 
-// The server broadcasts `deck.checks` after the switch; refetching too covers a dropped socket.
+/**
+ * Switch a deck's Inspector on or off. The server broadcasts `deck.checks` after the switch;
+ * refetching too covers a dropped socket.
+ */
 export const setInspectorMutation = (queryClient: QueryClient, deckId: string) =>
   mutationOptions({
     mutationFn: (on: boolean) => setInspector({ data: { deckId, on } }),

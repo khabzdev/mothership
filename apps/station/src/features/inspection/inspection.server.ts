@@ -24,8 +24,10 @@ const exec = promisify(execFile);
 /** At most this many AI reviews run at once, station-wide; the rest wait their turn. */
 export const MAX_REVIEWS = 1;
 
+/** What started an inspection: a stop (which can hand blockers back) or a Re-inspect. */
 export type InspectionTrigger = "stop" | "manual";
 
+/** One inspection as stored: its run, verdict and findings. */
 export interface InspectionRecord {
   id: string;
   crewId: string;
@@ -45,6 +47,7 @@ export interface InspectionRecord {
 
 type Print = { hash: string; commit: string };
 
+/** What the Inspector needs; `run`, `readDiff`, `fingerprint` and `homeRef` are swapped in tests. */
 export interface InspectionDeps {
   db: Db;
   crew: CrewService;
@@ -338,6 +341,7 @@ export class InspectionService {
     };
   }
 
+  /** A crew member's newest inspection, from any flight. */
   latest(crewId: string): InspectionRecord | null {
     return this.#records(eq(inspections.crewId, crewId), 1)[0] ?? null;
   }
