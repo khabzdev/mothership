@@ -56,6 +56,10 @@ function HoloScreen({
   }, []);
 
   const briefPanel = showsBriefPanel(brief, status);
+  // Painted from its fields, so a roster broadcast (a new brief object) doesn't repaint it.
+  const briefRevision = brief?.revision;
+  const briefState = brief?.state;
+  const briefGoal = brief?.goal;
   const panel = !briefPanel && showsPreflightPanel(preflight, status);
   const shownAt = useRef(0);
   if (!panel) shownAt.current = 0;
@@ -63,8 +67,9 @@ function HoloScreen({
 
   useEffect(() => {
     const { canvas, ctx, texture } = screen;
-    if (briefPanel && brief) {
-      paintBrief(ctx, canvas.width, canvas.height, brief);
+    if (briefPanel && briefRevision !== undefined && briefState && briefGoal !== undefined) {
+      const shown = { revision: briefRevision, state: briefState, goal: briefGoal };
+      paintBrief(ctx, canvas.width, canvas.height, shown);
       texture.needsUpdate = true;
       return;
     }
@@ -86,7 +91,17 @@ function HoloScreen({
     };
     paint();
     return crewId ? onScreen(crewId, paint) : undefined;
-  }, [screen, crewId, placeholder, panel, preflight, briefPanel, brief]);
+  }, [
+    screen,
+    crewId,
+    placeholder,
+    panel,
+    preflight,
+    briefPanel,
+    briefRevision,
+    briefState,
+    briefGoal,
+  ]);
 
   useEffect(() => () => screen.texture.dispose(), [screen]);
 

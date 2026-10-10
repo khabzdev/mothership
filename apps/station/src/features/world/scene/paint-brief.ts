@@ -2,12 +2,12 @@ import type { BriefInfo, CrewInfo } from "@mothership/protocol";
 
 // The brief panel for a console's holo screen: the goal Claude plans to work toward, waiting on Y / N.
 
-/** The panel replaces the terminal while a brief waits for the captain's answer. */
+/** The panel replaces the terminal while a brief waits for the captain's answer (not asleep). */
 export function showsBriefPanel(
   brief: BriefInfo | undefined,
-  _status: CrewInfo["status"] | undefined,
+  status: CrewInfo["status"] | undefined,
 ): boolean {
-  return brief?.state === "waiting";
+  return brief?.state === "waiting" && status !== "asleep";
 }
 
 const BACKGROUND = "#04131d";

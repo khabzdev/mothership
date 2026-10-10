@@ -86,6 +86,10 @@ describe("showsBriefPanel", () => {
     expect(showsBriefPanel(brief("approved"), "working")).toBe(false);
   });
 
+  test("not while asleep: nobody is at the dialog to answer", () => {
+    expect(showsBriefPanel(brief("waiting"), "asleep")).toBe(false);
+  });
+
   test("no brief does not", () => {
     expect(showsBriefPanel(undefined, undefined)).toBe(false);
   });
