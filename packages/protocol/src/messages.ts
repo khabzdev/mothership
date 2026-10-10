@@ -68,6 +68,8 @@ export interface InspectionInfo {
   firstBlocker?: string;
   /** Running, but the AI review hasn't started yet. */
   queued?: true;
+  /** Cancelled because the Inspector couldn't run (not superseded or a restart). */
+  failed?: true;
 }
 
 /** A crew member at a console on a deck (agent-office's WorkerInfo). */

@@ -333,6 +333,8 @@ export class InspectionService {
       notes: record.findings.length - blockers.length,
       ...(blockers[0] && { firstBlocker: blockers[0].title }),
       ...(record.state === "running" && job && !job.reviewing && { queued: true as const }),
+      ...(record.state === "cancelled" &&
+        record.reason?.startsWith("failed:") && { failed: true as const }),
     };
   }
 

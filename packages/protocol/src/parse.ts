@@ -261,7 +261,8 @@ function isInspectionInfo(value: unknown): value is InspectionInfo {
     Number.isInteger(i.notes) &&
     (i.notes as number) >= 0 &&
     (i.firstBlocker === undefined || typeof i.firstBlocker === "string") &&
-    (i.queued === undefined || i.queued === true)
+    (i.queued === undefined || i.queued === true) &&
+    (i.failed === undefined || i.failed === true)
   );
 }
 

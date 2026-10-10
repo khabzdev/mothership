@@ -19,12 +19,18 @@ const STATE: Record<
   cancelled: { label: "Cancelled", tone: "neutral" },
 };
 
+// A run the Inspector couldn't do reads as such, not as a plain cancel.
+const stateOf = (record: InspectionRecord) =>
+  record.state === "cancelled" && record.reason?.startsWith("failed:")
+    ? ({ label: "Couldn't inspect", tone: "warning" } as const)
+    : STATE[record.state];
+
 const time = (at: number) =>
   new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 function stateLine(member: CrewInfo, record: InspectionRecord): string {
   const { preflight } = member;
-  const parts = [STATE[record.state].label];
+  const parts = [stateOf(record).label];
   parts.push(
     preflight
       ? `attempt ${record.attempt} of ${preflight.maxFuel + 1}`
@@ -82,7 +88,7 @@ export function InspectionWindow({ member }: { member: CrewInfo }) {
       {current && (
         <>
           <div className="inspection__bar">
-            <Badge variant={STATE[current.state].tone} appearance="dot">
+            <Badge variant={stateOf(current).tone} appearance="dot">
               {stateLine(member, current)}
             </Badge>
             <span className="inspection__meta">{time(current.startedAt)}</span>
@@ -107,8 +113,8 @@ export function InspectionWindow({ member }: { member: CrewInfo }) {
           <ul className="inspection__runs">
             {earlier.map((r) => (
               <li key={r.id} className="inspection__run">
-                <Badge variant={STATE[r.state].tone} appearance="dot">
-                  {STATE[r.state].label}
+                <Badge variant={stateOf(r).tone} appearance="dot">
+                  {stateOf(r).label}
                 </Badge>
                 <span className="inspection__meta">
                   Attempt {r.attempt} · {time(r.startedAt)} · {r.findings.length}{" "}

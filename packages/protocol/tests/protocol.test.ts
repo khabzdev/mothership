@@ -167,6 +167,7 @@ describe("parseServerMsg", () => {
           inspection: { state: "flagged", blockers: 1, notes: 0, firstBlocker: "T" },
         },
         { ...nova, inspection: { state: "running", blockers: 0, notes: 0, queued: true } },
+        { ...nova, inspection: { state: "cancelled", blockers: 0, notes: 0, failed: true } },
       ],
     },
     { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1", state: "cleared" },
@@ -258,6 +259,7 @@ describe("parseServerMsg", () => {
     expect(parseServerMsg(roster({ ...ok, state: "bogus" }))).toBeNull();
     expect(parseServerMsg(roster({ ...ok, firstBlocker: 5 }))).toBeNull();
     expect(parseServerMsg(roster({ ...ok, queued: false }))).toBeNull();
+    expect(parseServerMsg(roster({ ...ok, failed: "yes" }))).toBeNull();
     const msg = { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1" };
     expect(parseServerMsg(JSON.stringify({ ...msg, state: "bogus" }))).toBeNull();
     expect(parseServerMsg(JSON.stringify({ ...msg, state: "cleared", failed: 3 }))).toBeNull();

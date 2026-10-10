@@ -104,7 +104,10 @@ export function prInspection(
   return lines.join("\n");
 }
 
-/** The chip on a crew row: nothing until an inspection has run this flight. */
+/**
+ * The chip on a crew row: nothing until an inspection has run this flight, nor for one that was
+ * superseded; one the Inspector couldn't run shows, so its reason stays a click away.
+ */
 export function inspectionChip(
   info?: InspectionInfo,
 ): { label: string; tone: "warning" | "success" | "error" } | null {
@@ -112,6 +115,7 @@ export function inspectionChip(
   if (info.state === "running") return { label: "Inspecting…", tone: "warning" };
   if (info.state === "cleared") return { label: "Cleared", tone: "success" };
   if (info.state === "flagged") return { label: "Flagged", tone: "error" };
+  if (info.failed) return { label: "Couldn't inspect", tone: "warning" };
   return null;
 }
 

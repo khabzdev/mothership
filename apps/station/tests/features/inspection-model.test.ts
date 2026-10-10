@@ -93,6 +93,13 @@ describe("inspectionChip", () => {
     expect(inspectionChip(info("cancelled"))).toBeNull();
     expect(inspectionChip(undefined)).toBeNull();
   });
+
+  test("a run the Inspector couldn't do shows, unlike a superseded one", () => {
+    expect(inspectionChip({ ...info("cancelled"), failed: true })).toEqual({
+      label: "Couldn't inspect",
+      tone: "warning",
+    });
+  });
 });
 
 describe("inputs", () => {

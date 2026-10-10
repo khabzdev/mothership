@@ -7,7 +7,6 @@ import { clonesQuery, decksQuery } from "../../decks/queries";
 import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
 import { playDone, playHeadsUp, playLaunch, playNeedsYou } from "../sound";
 import { Icon } from "../../../shared/ui/Icon";
-import { inspectionFailedToast } from "../../inspection/model";
 import { useWorld } from "../store";
 import { Fresh, bannerText, needingYou } from "../waiting";
 
@@ -148,22 +147,6 @@ export function useLaunchNews(deckId: string): void {
       });
       playLaunch();
       say(`#${msg.number} launched: ${msg.title}`, "success");
-    });
-  }, [client, deckId]);
-}
-
-/** The Inspector couldn't run for a crew member on the deck being viewed: a warning toast, once. */
-export function useInspectionNews(deckId: string, crew: CrewInfo[]): void {
-  const { client } = useRealtime();
-  const roster = useRef(crew);
-  roster.current = crew;
-  useEffect(() => {
-    if (!client) return;
-    return client.onMessage((msg) => {
-      if (msg.type !== "crew.inspection" || msg.deckId !== deckId) return;
-      if (msg.state !== "cancelled" || msg.failed === undefined) return;
-      const name = roster.current.find((c) => c.id === msg.crewId)?.name ?? "this crew member";
-      useWorld.getState().say(inspectionFailedToast(name, msg.failed), "warning");
     });
   }, [client, deckId]);
 }

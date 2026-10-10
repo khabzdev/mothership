@@ -34,14 +34,9 @@ import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
 import { usePreflightPoll } from "./usePreflightPoll";
-import {
-  NeedsYouBanner,
-  useCloneNews,
-  useInspectionNews,
-  useLaunchNews,
-  useOtherDecksHeadsUp,
-} from "./ui/NeedsYou";
+import { NeedsYouBanner, useCloneNews, useLaunchNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
+import { useInspectionNews } from "../inspection/ui/useInspectionNews";
 import { CAMERA_FAR } from "./sky";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";

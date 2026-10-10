@@ -402,6 +402,7 @@ describe("InspectionService", () => {
     const record = service.latest(id)!;
     expect(record.state).toBe("cancelled");
     expect(record.reason).toBe("failed: Timed out");
+    expect(service.info(id)).toMatchObject({ failed: true });
     expect(inspectionMsgs().at(-1)).toMatchObject({ state: "cancelled", failed: "Timed out" });
     expect(fuelOf(id).fuel).toBe(3);
     expect(pastes()).toEqual([]);
@@ -435,6 +436,7 @@ describe("InspectionService", () => {
       state: "cancelled",
       failed: "Credit balance is too low",
     });
+    expect(service.info(id)).toEqual({ state: "cancelled", blockers: 0, notes: 0, failed: true });
     expect(fuelOf(id).fuel).toBe(3);
     expect(pastes()).toEqual([]);
   });
@@ -469,6 +471,7 @@ describe("InspectionService", () => {
     expect(service.latest(id)).toMatchObject({ state: "cancelled", reason: "superseded" });
     expect(inspectionMsgs().at(-1)).toMatchObject({ state: "cancelled" });
     expect(inspectionMsgs().at(-1)).not.toHaveProperty("failed");
+    expect(service.info(id) ?? {}).not.toHaveProperty("failed");
     release(ran([BLOCKER]));
     await new Promise((r) => setTimeout(r, 20));
     expect(service.latest(id)?.state).toBe("cancelled");

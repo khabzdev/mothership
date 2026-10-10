@@ -1,4 +1,14 @@
-import { Badge, Banner, Button, Checkbox, Empty, Input, InputArea, Select } from "@cloudflare/kumo";
+import {
+  Badge,
+  Banner,
+  Button,
+  Checkbox,
+  Empty,
+  Input,
+  InputArea,
+  Select,
+  Toasty,
+} from "@cloudflare/kumo";
 import {
   AirplaneTakeOff01Icon,
   ArrowLeft01Icon,
@@ -15,6 +25,7 @@ import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
 import { useRealtime } from "../../shared/realtime/RealtimeProvider";
 import { ErrorNote } from "../../shared/ui/ErrorNote";
+import { toasts } from "../../shared/ui/toasts";
 import { Icon } from "../../shared/ui/Icon";
 import { resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { hireMutation, promptMutation, rosterQuery } from "../crew/queries";
@@ -27,6 +38,7 @@ import { inspectionChip, windowSections } from "../inspection/model";
 import { inspectionQuery, reinspectMutation } from "../inspection/queries";
 import { FindingList } from "../inspection/ui/FindingList";
 import { InspectorSwitch } from "../inspection/ui/InspectorSwitch";
+import { useInspectionNews } from "../inspection/ui/useInspectionNews";
 import { preflightChip } from "../preflight/model";
 import { preflightQuery, runPreflightMutation } from "../preflight/queries";
 import { useDeckChoice } from "../world/deck-choice";
@@ -464,72 +476,75 @@ function LiteDeck({
   const member = crew.find((c) => c.id === selected);
   const needs = crew.filter((c) => c.status === "needs_input").length;
   const done = crew.filter((c) => c.status === "done").length;
+  useInspectionNews(deckId, crew);
 
   return (
-    <main className="lite">
-      <header className="lite__bar">
-        <Select
-          aria-label="Deck"
-          value={deckId}
-          onValueChange={(v) => {
-            if (v) choose(v);
-            setSelected(null);
-          }}
-          items={Object.fromEntries(decks.map((d) => [d.id, d.name]))}
-        />
-        {needs > 0 && <Badge variant="error">{needs} need you</Badge>}
-        {done > 0 && <Badge variant="success">{done} done</Badge>}
-        <Link to="/" className="lite__3d">
-          <Icon icon={ViewIcon} /> 3D
-        </Link>
-      </header>
-      {member ? (
-        <CrewView member={member} onBack={() => setSelected(null)} />
-      ) : (
-        <>
-          <ul className="lite-list">
-            {list.map((c) => (
-              <li key={c.id}>
-                <button type="button" data-status={c.status} onClick={() => setSelected(c.id)}>
-                  <span className="dot" style={{ "--dot": c.color } as CSSProperties} />
-                  <span className="lite-list__who">
-                    <strong>{c.name}</strong>
-                    <span className="muted">
-                      {CONSOLES[c.consoleId]?.label} ·{" "}
-                      {c.status === "needs_input" && c.detail
-                        ? c.detail
-                        : c.task.split("\n")[0] || (c.kind === "shell" ? "Shell" : "No task")}
+    <Toasty toastManager={toasts}>
+      <main className="lite">
+        <header className="lite__bar">
+          <Select
+            aria-label="Deck"
+            value={deckId}
+            onValueChange={(v) => {
+              if (v) choose(v);
+              setSelected(null);
+            }}
+            items={Object.fromEntries(decks.map((d) => [d.id, d.name]))}
+          />
+          {needs > 0 && <Badge variant="error">{needs} need you</Badge>}
+          {done > 0 && <Badge variant="success">{done} done</Badge>}
+          <Link to="/" className="lite__3d">
+            <Icon icon={ViewIcon} /> 3D
+          </Link>
+        </header>
+        {member ? (
+          <CrewView member={member} onBack={() => setSelected(null)} />
+        ) : (
+          <>
+            <ul className="lite-list">
+              {list.map((c) => (
+                <li key={c.id}>
+                  <button type="button" data-status={c.status} onClick={() => setSelected(c.id)}>
+                    <span className="dot" style={{ "--dot": c.color } as CSSProperties} />
+                    <span className="lite-list__who">
+                      <strong>{c.name}</strong>
+                      <span className="muted">
+                        {CONSOLES[c.consoleId]?.label} ·{" "}
+                        {c.status === "needs_input" && c.detail
+                          ? c.detail
+                          : c.task.split("\n")[0] || (c.kind === "shell" ? "Shell" : "No task")}
+                      </span>
                     </span>
-                  </span>
-                  <span className="lite-list__badges">
-                    <StatusBadge crew={c} />
-                    {c.brief && (
-                      <Badge variant={briefTone(c.brief)} appearance="dot">
-                        Brief
-                      </Badge>
-                    )}
-                    <PreflightChip info={c.preflight} />
-                    <InspectionChip info={c.inspection} />
-                  </span>
-                </button>
-              </li>
-            ))}
-            {!list.length && (
-              <li>
-                <Empty
-                  size="sm"
-                  title="No crew on this deck yet"
-                  description="Hire someone below to get started."
-                />
-              </li>
-            )}
-          </ul>
-          <section className="lite-deck" aria-label="Deck settings">
-            <InspectorSwitch deckId={deckId} />
-          </section>
-          <HireForm deckId={deckId} crew={crew} />
-        </>
-      )}
-    </main>
+                    <span className="lite-list__badges">
+                      <StatusBadge crew={c} />
+                      {c.brief && (
+                        <Badge variant={briefTone(c.brief)} appearance="dot">
+                          Brief
+                        </Badge>
+                      )}
+                      <PreflightChip info={c.preflight} />
+                      <InspectionChip info={c.inspection} />
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {!list.length && (
+                <li>
+                  <Empty
+                    size="sm"
+                    title="No crew on this deck yet"
+                    description="Hire someone below to get started."
+                  />
+                </li>
+              )}
+            </ul>
+            <section className="lite-deck" aria-label="Deck settings">
+              <InspectorSwitch deckId={deckId} />
+            </section>
+            <HireForm deckId={deckId} crew={crew} />
+          </>
+        )}
+      </main>
+    </Toasty>
   );
 }
