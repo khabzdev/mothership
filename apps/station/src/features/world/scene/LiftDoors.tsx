@@ -1,13 +1,12 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { CanvasTexture, SRGBColorSpace, type MeshStandardMaterial } from "three";
-import { DOOR_MODULE, DOOR_OPENING, WALL_H } from "../bulkheads";
 import { LIFT } from "../layout";
 import type { DeckPaint } from "../paint";
 import { playLiftChime } from "../sound";
 import { captain } from "./Captain";
 import { GLOW, KIT, PAINTED } from "./materials";
-import { SlidingDoors } from "./SlidingDoors";
+import { DOOR_MODULE, DOOR_OPENING, SlidingDoors, WALL_H } from "./SlidingDoors";
 
 /** The doorway in the Kenney door frame. */
 const OPEN_W = DOOR_MODULE * DOOR_OPENING.width;

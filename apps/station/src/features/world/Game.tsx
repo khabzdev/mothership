@@ -146,7 +146,7 @@ export function Game({ deck }: { deck: Deck }) {
         >
           <Atmosphere />
           <Suspense fallback={null}>
-            <DeckScene paint={paint} />
+            <DeckScene />
             <LiftDoors deckName={deck.name} paint={paint} />
             <Board board="mission" trim={paint.trim} {...mission} />
             <Board board="launch" trim={paint.trim} {...launch} />

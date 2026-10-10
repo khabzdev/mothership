@@ -2,11 +2,10 @@ import { Stars } from "@react-three/drei";
 import { useRef } from "react";
 import type { Object3D } from "three";
 import { DECK } from "../layout";
-import type { DeckPaint } from "../paint";
 import { Airlock } from "./Airlock";
 import { Furniture } from "./Furniture";
 import { KAYKIT_SCALE, useProp } from "./models";
-import { Shell } from "./Shell";
+import { Island } from "./Island";
 import { useSolid } from "./solid";
 
 function Prop({
@@ -36,13 +35,13 @@ function Prop({
   );
 }
 
-/** The deck: its shell (bulkheads, windows, floor), the airlock, cargo and furniture. */
-export function Deck({ paint }: { paint: DeckPaint }) {
+/** The deck: its terrain island, the airlock, cargo and furniture. */
+export function Deck() {
   return (
     <group>
       <Stars radius={120} depth={60} count={4000} factor={4} fade speed={0.4} />
 
-      <Shell paint={paint} />
+      <Island />
 
       <Airlock />
 

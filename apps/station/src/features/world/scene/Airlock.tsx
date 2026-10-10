@@ -1,11 +1,10 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type MutableRefObject } from "react";
 import type { MeshStandardMaterial } from "three";
-import { DOOR_MODULE, DOOR_OPENING, WALL_H } from "../bulkheads";
 import { AIRLOCK } from "../layout";
 import { GLOW, KIT } from "./materials";
 import { useStationPiece, type StationPiece } from "./models";
-import { SlidingDoors } from "./SlidingDoors";
+import { DOOR_MODULE, DOOR_OPENING, SlidingDoors, WALL_H } from "./SlidingDoors";
 
 /** The airlock's doors and lights, set each frame by whoever is going through it. */
 export const airlock = { inner: 0, outer: 0, red: false, using: null as string | null };

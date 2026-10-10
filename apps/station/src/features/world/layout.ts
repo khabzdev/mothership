@@ -164,7 +164,7 @@ export function partnerOf(c: ConsoleDef): ConsoleDef | undefined {
   );
 }
 
-/** The lift: doors in the north bulkhead (a door module of bulkheads.ts), by the cargo bay. */
+/** The lift: doors in the north bulkhead, by the cargo bay. */
 export const LIFT = { x: 10.5, z: DECK.minZ, width: 1.8 } as const;
 /** Where you stand to call it, and where you step out when you ride it to a deck. */
 export const LIFT_STOP = { x: LIFT.x, z: LIFT.z + 1.5 } as const;

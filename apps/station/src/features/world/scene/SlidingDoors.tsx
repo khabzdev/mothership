@@ -6,6 +6,13 @@ import { KIT, PAINTED } from "./materials";
 
 const THICK = 0.06;
 
+/** Bulkhead height (m) of the lift's and airlock's door frames. */
+export const WALL_H = 3.2;
+/** A door module's width (m): its opening is 0.6 of it, 1.8 m, the lift's and airlock's width. */
+export const DOOR_MODULE = 3;
+/** The door frame's opening, as a share of the module's width and height. */
+export const DOOR_OPENING = { width: 0.6, height: 0.695 } as const;
+
 /** One leaf: a rounded panel, an orange edge where the two leaves meet, and a narrow window. */
 function Leaf({ width, height, side }: { width: number; height: number; side: -1 | 1 }) {
   const edge = -side * (width / 2 - 0.03);

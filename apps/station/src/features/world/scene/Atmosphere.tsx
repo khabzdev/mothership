@@ -29,11 +29,11 @@ export function Atmosphere() {
     <>
       <DevHandle />
       <color attach="background" args={["#05060c"]} />
-      <hemisphereLight args={["#fff5e6", "#2a3550", 0.7]} />
+      <hemisphereLight args={["#ffe2c4", "#1a1f33", 0.55]} />
       <directionalLight
         position={[-8, 18, 10]}
-        intensity={2}
-        color="#fff1d6"
+        intensity={2.2}
+        color="#ffd9b0"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-24}
