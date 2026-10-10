@@ -16,3 +16,18 @@ export function usePreflightTurn(info: PreflightInfo | undefined, to: "go" | "no
   }, [now]);
   return at;
 }
+
+/**
+ * Whether `ms` haven't yet passed since `since` (0: never); re-renders when they have, so what
+ * it gates unmounts on time instead of lingering.
+ */
+export function useFor(since: number, ms: number): boolean {
+  const [, rerender] = useState(0);
+  useEffect(() => {
+    const wait = since + ms - Date.now();
+    if (since <= 0 || wait <= 0) return;
+    const timer = setTimeout(() => rerender((n) => n + 1), wait);
+    return () => clearTimeout(timer);
+  }, [since, ms]);
+  return since > 0 && Date.now() - since < ms;
+}

@@ -12,8 +12,8 @@ import {
 import { getScreen, onScreen } from "../../../shared/realtime/screens";
 import { CONSOLE_SIZE, type ConsoleDef } from "../layout";
 import { isGo } from "../../preflight/poll";
-import { Breach } from "./Breach";
-import { usePreflightTurn } from "./useTurn";
+import { Breach, BREACH_MS } from "./Breach";
+import { useFor, usePreflightTurn } from "./useTurn";
 import { Furniture } from "./Furniture";
 import { GLOW, KIT, PAINTED } from "./materials";
 import { KAYKIT_SCALE } from "./models";
@@ -179,6 +179,7 @@ export function Console({
   active: boolean;
 }) {
   const nogoAt = usePreflightTurn(crew?.preflight, "nogo");
+  const breaching = useFor(nogoAt, BREACH_MS);
   const glow = crew ? STATUS_COLORS[crew.status] : active ? KIT.orange : "#3d4a63";
   return (
     <group position={[def.x, 0, def.z]} rotation={[0, def.rotY, 0]}>
@@ -209,7 +210,7 @@ export function Console({
           />
         </mesh>
       )}
-      {nogoAt > 0 && <Breach since={nogoAt} />}
+      {breaching && <Breach since={nogoAt} />}
       {/* Pre-flight lamps, just above the status strip. */}
       <Lamps preflight={crew?.preflight} y={DESK_TOP - 0.005} />
       {/* Monitor: a foot on the desk, a neck, and the screen tilted toward the seat. */}

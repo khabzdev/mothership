@@ -5,6 +5,8 @@ import { GLOW, KIT } from "./materials";
 
 const SPARKS = 24;
 const LIFE = 4;
+/** How long a breach shows; its parent unmounts it after this (useFor). */
+export const BREACH_MS = LIFE * 1000;
 
 /**
  * A hull breach at a console after a NO-GO: sparks flung up from the desk (one instanced mesh)

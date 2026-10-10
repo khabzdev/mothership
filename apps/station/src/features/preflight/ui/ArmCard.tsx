@@ -10,7 +10,8 @@ import { armChecksMutation, checksQuery } from "../queries";
 
 /**
  * Flight Control's one question: the first time the deck's checks are found and there's crew
- * on a branch, arm them? Y arms, E opens Flight Control to look first, N says no.
+ * on a branch, arm them? Y arms; looking first (Flight Control) and saying no are buttons, so E
+ * and N keep their usual game meaning while the card shows.
  */
 export function ArmCard({
   deckId,
@@ -29,18 +30,16 @@ export function ArmCard({
   const shown =
     data?.armed === null && checks.length > 0 && crew.some((c) => c.kind === "agent" && c.branch);
 
-  // The keys act before any other game key (N also jumps to waiting crew), and only while shown.
-  const act = useRef({ shown, busy: arm.isPending, arm: arm.mutate, open });
-  act.current = { shown, busy: arm.isPending, arm: arm.mutate, open };
+  // Y arms, and only while shown.
+  const act = useRef({ shown, busy: arm.isPending, arm: arm.mutate });
+  act.current = { shown, busy: arm.isPending, arm: arm.mutate };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const { shown, busy, arm, open } = act.current;
-      if (!shown || !gameKeysEnabled(e)) return;
-      if (e.code !== "KeyY" && e.code !== "KeyE" && e.code !== "KeyN") return;
+      const { shown, busy, arm } = act.current;
+      if (!shown || !gameKeysEnabled(e) || e.code !== "KeyY") return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (e.code === "KeyE") return open({ kind: "flightControl" });
-      if (!busy) arm(e.code === "KeyY");
+      if (!busy) arm(true);
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -57,10 +56,10 @@ export function ArmCard({
       <ErrorNote error={arm.error} />
       <div className="arm-card__actions">
         <Button variant="ghost" disabled={arm.isPending} onClick={() => arm.mutate(false)}>
-          <kbd>N</kbd> Don&apos;t arm
+          Don&apos;t arm
         </Button>
         <Button variant="secondary" onClick={() => open({ kind: "flightControl" })}>
-          <kbd>E</kbd> Edit first
+          Edit first
         </Button>
         <Button variant="primary" loading={arm.isPending} onClick={() => arm.mutate(true)}>
           <kbd>Y</kbd> Arm
