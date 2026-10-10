@@ -83,7 +83,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
     let act = hold.current.at(seated ? (failing ? "failing" : actFor(crew)) : "rest", t);
     if (import.meta.env.DEV && seated && poseDebug.act) act = poseDebug.act;
     layer.apply((import.meta.env.DEV && seated && poseDebug.pose) || poseFor(act, t), delta);
-    props.current?.update(act, t, hands);
+    props.current?.update(act, t, hands, crew.brief?.state === "waiting");
     setTyping(crew.id, seat.x, seat.z, act === "type" || act === "edit");
     if (!light.current) return;
     const pulse = crew.status === "needs_input" ? 1 + Math.sin(clock.elapsedTime * 8) * 0.35 : 1;

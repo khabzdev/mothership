@@ -6,6 +6,7 @@ const HOLO = new Color("#4cc9f0").multiplyScalar(1.5);
 const LAND_GLOW = new Color("#7ef0ad").multiplyScalar(1.5);
 const RING_GLOW = new Color("#ffd166").multiplyScalar(1.8);
 import type { Act } from "../acting";
+import { GLOW } from "./materials";
 
 // What a crew member acts out its tool calls with (agent-office's worker-props.ts): papers held up
 // to read, their top sheet flipping over, and a globe for the web, here a spinning hologram.
@@ -23,7 +24,7 @@ const LAND: [lat: number, lon: number, size: number][] = [
 
 export interface ActPropsHandle {
   /** Show the props for `act`; `hands` are the character's hand bones. Call after posing. */
-  update(act: Act, t: number, hands: [Object3D, Object3D] | null): void;
+  update(act: Act, t: number, hands: [Object3D, Object3D] | null, holdingBrief?: boolean): void;
 }
 
 const a = new Vector3();
@@ -35,9 +36,20 @@ export const ActProps = forwardRef<ActPropsHandle>(function ActProps(_, ref) {
   const page = useRef<Group>(null);
   const globe = useRef<Group>(null);
   const ball = useRef<Group>(null);
+  const board = useRef<Group>(null);
 
   useImperativeHandle(ref, () => ({
-    update(act, t, hands) {
+    update(act, t, hands, holdingBrief = false) {
+      const c = board.current;
+      if (c) {
+        c.visible = holdingBrief && !!hands;
+        if (c.visible && hands && c.parent) {
+          // Held at the right hand, tipped back so its face is toward the console.
+          hands[1].getWorldPosition(a);
+          c.parent.worldToLocal(a);
+          c.position.set(a.x, a.y + 0.06, a.z + 0.04);
+        }
+      }
       const p = papers.current;
       if (p) {
         p.visible = act === "read" && !!hands;
@@ -85,6 +97,31 @@ export const ActProps = forwardRef<ActPropsHandle>(function ActProps(_, ref) {
         <mesh position={[0, PAPER.h / 2, 0.01]}>
           <boxGeometry args={[PAPER.w * 0.5, 0.035, 0.03]} />
           <meshStandardMaterial color="#adb5bd" roughness={0.4} metalness={0.6} />
+        </mesh>
+      </group>
+
+      {/* The brief's clipboard, held at the right hand while the brief waits. */}
+      <group ref={board} visible={false} rotation={[-0.3, 0, 0]}>
+        <mesh>
+          <boxGeometry args={[0.2, 0.28, 0.012]} />
+          <meshStandardMaterial color="#6b4f3a" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, -0.005, 0.008]}>
+          <boxGeometry args={[0.17, 0.23, 0.004]} />
+          <meshStandardMaterial color="#fffaf3" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.135, 0.012]}>
+          <boxGeometry args={[0.08, 0.03, 0.014]} />
+          <meshStandardMaterial color="#adb5bd" roughness={0.4} metalness={0.6} />
+        </mesh>
+        <mesh position={[0, -0.142, 0.004]}>
+          <boxGeometry args={[0.2, 0.006, 0.006]} />
+          <meshStandardMaterial
+            color="#4cc9f0"
+            emissive="#4cc9f0"
+            emissiveIntensity={GLOW}
+            toneMapped={false}
+          />
         </mesh>
       </group>
 

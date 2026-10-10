@@ -1,5 +1,6 @@
-import type { PreflightInfo } from "@mothership/protocol";
+import type { BriefInfo, PreflightInfo } from "@mothership/protocol";
 import { describe, expect, test } from "vite-plus/test";
+import { showsBriefPanel } from "../../src/features/world/scene/paint-brief.ts";
 import { lampStates, showsPreflightPanel } from "../../src/features/world/scene/paint-preflight.ts";
 
 const info = (over: Partial<PreflightInfo>): PreflightInfo => ({
@@ -71,5 +72,21 @@ describe("showsPreflightPanel", () => {
     expect(showsPreflightPanel(info({ state: "go" }), "idle")).toBe(false);
     expect(showsPreflightPanel(info({ state: "cancelled" }), "idle")).toBe(false);
     expect(showsPreflightPanel(undefined, "idle")).toBe(false);
+  });
+});
+
+describe("showsBriefPanel", () => {
+  const brief = (state: BriefInfo["state"]): BriefInfo => ({ revision: 1, state, goal: "g" });
+
+  test("a waiting brief shows the panel", () => {
+    expect(showsBriefPanel(brief("waiting"), "needs_input")).toBe(true);
+  });
+
+  test("an approved brief does not", () => {
+    expect(showsBriefPanel(brief("approved"), "working")).toBe(false);
+  });
+
+  test("no brief does not", () => {
+    expect(showsBriefPanel(undefined, undefined)).toBe(false);
   });
 });

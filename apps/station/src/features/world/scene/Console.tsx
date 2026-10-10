@@ -1,4 +1,4 @@
-import type { CrewInfo, PreflightInfo } from "@mothership/protocol";
+import type { BriefInfo, CrewInfo, PreflightInfo } from "@mothership/protocol";
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
@@ -18,6 +18,7 @@ import { Furniture } from "./Furniture";
 import { GLOW, KIT, PAINTED } from "./materials";
 import { KAYKIT_SCALE } from "./models";
 import { Lamps } from "./Lamps";
+import { paintBrief, showsBriefPanel } from "./paint-brief";
 import { paintPreflight, showsPreflightPanel } from "./paint-preflight";
 import { paintScreen } from "./paint-screen";
 import { STATUS_COLORS } from "./status";
@@ -34,11 +35,13 @@ function HoloScreen({
   crewId,
   placeholder,
   preflight,
+  brief,
   status,
 }: {
   crewId?: string;
   placeholder: string;
   preflight?: PreflightInfo;
+  brief?: BriefInfo;
   status?: CrewInfo["status"];
 }) {
   const screen = useMemo(() => {
@@ -52,13 +55,19 @@ function HoloScreen({
     return { canvas, ctx: canvas.getContext("2d")!, texture };
   }, []);
 
-  const panel = showsPreflightPanel(preflight, status);
+  const briefPanel = showsBriefPanel(brief, status);
+  const panel = !briefPanel && showsPreflightPanel(preflight, status);
   const shownAt = useRef(0);
   if (!panel) shownAt.current = 0;
   else if (!shownAt.current) shownAt.current = Date.now();
 
   useEffect(() => {
     const { canvas, ctx, texture } = screen;
+    if (briefPanel && brief) {
+      paintBrief(ctx, canvas.width, canvas.height, brief);
+      texture.needsUpdate = true;
+      return;
+    }
     if (panel && preflight) {
       // Elapsed time is counted from when the panel appeared: PreflightInfo has no start time.
       const since = shownAt.current;
@@ -77,7 +86,7 @@ function HoloScreen({
     };
     paint();
     return crewId ? onScreen(crewId, paint) : undefined;
-  }, [screen, crewId, placeholder, panel, preflight]);
+  }, [screen, crewId, placeholder, panel, preflight, briefPanel, brief]);
 
   useEffect(() => () => screen.texture.dispose(), [screen]);
 
@@ -230,6 +239,7 @@ export function Console({
         <HoloScreen
           crewId={crew?.id}
           preflight={crew?.preflight}
+          brief={crew?.brief}
           status={crew?.status}
           placeholder={!crew ? "STANDBY" : crew.status === "asleep" ? "OFFLINE" : "BOOTING…"}
         />
