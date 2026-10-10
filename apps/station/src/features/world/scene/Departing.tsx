@@ -3,7 +3,7 @@ import { Html, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
-import { CRIES, PLEAS, departure, nextAtDoor, walkTime } from "../departure";
+import { CRIES, PLEAS, departure, queueTurn, walkTime } from "../departure";
 import { garage } from "./Garage";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 
@@ -40,15 +40,24 @@ export function Departing({
 
   useEffect(() => () => leave(crew.id), [crew.id]);
 
+  const gone = useRef(false);
+
   useFrame((_, delta) => {
+    if (gone.current) return;
     let t = clock.current + Math.min(delta, 0.1);
-    // One at a time: wait at the corner while someone else is going through.
-    if (garage.using !== crew.id && t >= queueAt) {
-      if (!garage.queue.includes(crew.id)) garage.queue.push(crew.id);
-      if (nextAtDoor(garage.queue, garage.using) === crew.id) {
-        garage.queue.splice(garage.queue.indexOf(crew.id), 1);
-        garage.using = crew.id;
-      } else t = queueAt;
+    // One at a time: wait in line (each place a little further back) while someone else is going through.
+    if (garage.using !== crew.id) {
+      const turn = queueTurn(garage.queue, garage.using, crew.id, queueAt);
+      if (t >= turn.limit) {
+        if (!garage.queue.includes(crew.id)) garage.queue.push(crew.id);
+        if (turn.go) {
+          // Its turn: walk on to the corner, then through.
+          if (t >= queueAt) {
+            garage.queue.splice(garage.queue.indexOf(crew.id), 1);
+            garage.using = crew.id;
+          }
+        } else t = Math.min(t, turn.limit);
+      }
     }
     clock.current = t;
     const f = departure(path, t);
@@ -64,6 +73,7 @@ export function Departing({
     if (root.current) root.current.rotation.y = f.facing;
     if (f.says !== says) setSays(f.says);
     if (f.done) {
+      gone.current = true;
       leave(crew.id);
       onGone();
     }

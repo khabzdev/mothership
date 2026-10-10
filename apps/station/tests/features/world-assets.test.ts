@@ -9,12 +9,20 @@ describe("space base assets", () => {
     expect(SPACE_PIECES).toHaveLength(35);
     for (const name of SPACE_PIECES) {
       const gltf = new URL(`${name}.gltf`, dir);
-      expect(existsSync(gltf), `${name}.gltf`).toBe(true);
+      expect(existsSync(gltf), `${name}.gltf missing: run vp run assets`).toBe(true);
       const json = JSON.parse(readFileSync(gltf, "utf8")) as { buffers: { uri: string }[] };
-      expect(existsSync(new URL(json.buffers[0].uri, dir)), `${name} bin`).toBe(true);
+      expect(
+        existsSync(new URL(json.buffers[0].uri, dir)),
+        `${name} bin missing: run vp run assets`,
+      ).toBe(true);
     }
-    expect(existsSync(new URL("spacebits_texture.png", dir))).toBe(true);
-    expect(existsSync(new URL("License.txt", dir))).toBe(true);
+    expect(
+      existsSync(new URL("spacebits_texture.png", dir)),
+      "texture missing: run vp run assets",
+    ).toBe(true);
+    expect(existsSync(new URL("License.txt", dir)), "License.txt missing: run vp run assets").toBe(
+      true,
+    );
   });
 });
 

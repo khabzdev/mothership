@@ -124,3 +124,24 @@ export function departure(path: Point[], t: number): DepartureFrame {
 export function nextAtDoor(queue: string[], busy: string | null): string | null {
   return busy ?? queue[0] ?? null;
 }
+
+/** How far back along the approach each place in the queue stands (m). */
+export const QUEUE_GAP = 0.8;
+
+/**
+ * Where `id` stands in the line at the garage door. `queueAt` is when the corner before the door is
+ * reached; each place in line waits `QUEUE_GAP` further back, so waiters don't stack on one point.
+ * `limit` is the walk time it may not pass until its turn; `go` is whether it may go through now.
+ */
+export function queueTurn(
+  queue: string[],
+  busy: string | null,
+  id: string,
+  queueAt: number,
+): { place: number; limit: number; go: boolean } {
+  const i = queue.indexOf(id);
+  const place = i >= 0 ? i : queue.length;
+  const limit = Math.max(0, queueAt - (place * QUEUE_GAP) / TRUDGE);
+  const line = i >= 0 ? queue : [...queue, id];
+  return { place, limit, go: nextAtDoor(line, busy) === id };
+}

@@ -1,5 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
-import { GATE, departure, nextAtDoor, walkTime } from "../../src/features/world/departure.ts";
+import {
+  GATE,
+  departure,
+  nextAtDoor,
+  queueTurn,
+  walkTime,
+  QUEUE_GAP,
+  TRUDGE,
+} from "../../src/features/world/departure.ts";
 import { GARAGE_DOOR } from "../../src/features/world/layout.ts";
 
 const path = [
@@ -65,5 +73,24 @@ describe("one at a time at the garage door", () => {
 
   test("the second waits while the first is busy", () => {
     expect(nextAtDoor(["b"], "a")).toBe("a");
+  });
+});
+
+describe("waiting in line", () => {
+  const corner = 10;
+  test("each place stands further back along the approach", () => {
+    const a = queueTurn(["a", "b", "c"], "x", "a", corner).limit;
+    const b = queueTurn(["a", "b", "c"], "x", "b", corner).limit;
+    const c = queueTurn(["a", "b", "c"], "x", "c", corner).limit;
+    expect(a).toBe(corner);
+    expect(corner - b).toBeCloseTo(QUEUE_GAP / TRUDGE);
+    expect(corner - c).toBeCloseTo((2 * QUEUE_GAP) / TRUDGE);
+  });
+
+  test("a newcomer takes the next place and only the first goes when free", () => {
+    expect(queueTurn(["a", "b"], "x", "c", corner).place).toBe(2);
+    expect(queueTurn([], null, "a", corner).go).toBe(true);
+    expect(queueTurn(["a", "b"], null, "b", corner).go).toBe(false);
+    expect(queueTurn(["a", "b"], "x", "a", corner).go).toBe(false);
   });
 });

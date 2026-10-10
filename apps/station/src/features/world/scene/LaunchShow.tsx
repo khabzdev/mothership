@@ -56,12 +56,22 @@ export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
   }, [launch, crew]);
 
   useFrame(() => {
-    if (!launch) return;
-    const t = (Date.now() - launch.at) / 1000;
+    const t = launch ? (Date.now() - launch.at) / 1000 : Infinity;
     const s = ship.current;
+    // At rest, or once the show is over, the lander stands on its pad.
+    if (!launch || t >= LIFTOFF + CLIMB) {
+      if (s) {
+        s.visible = true;
+        s.position.set(LAUNCH_PAD.x, PAD_TOP, LAUNCH_PAD.z);
+        s.rotation.z = 0;
+      }
+      if (flame.current) flame.current.visible = false;
+      if (confetti.current) confetti.current.visible = false;
+      return;
+    }
     if (s) {
       const climb = Math.max(0, t - LIFTOFF);
-      s.visible = t < LIFTOFF + CLIMB;
+      s.visible = true;
       // Rumbling on the pad, then accelerating up and away.
       s.position.set(
         LAUNCH_PAD.x + (climb > 0 ? 0 : Math.sin(t * 60) * 0.03),
@@ -99,13 +109,12 @@ export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
     }
   });
 
-  if (!launch) return null;
   return (
     <>
       <primitive object={pad} position={[LAUNCH_PAD.x, 0, LAUNCH_PAD.z]} scale={OUTPOST_SCALE} />
       <group ref={ship} position={[LAUNCH_PAD.x, PAD_TOP, LAUNCH_PAD.z]}>
         <primitive object={lander} scale={OUTPOST_SCALE} />
-        <mesh ref={flame} position={[0, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
+        <mesh ref={flame} visible={false} position={[0, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
           <coneGeometry args={[0.5, 1.6, 16, 1, true]} />
           <meshBasicMaterial
             color={FLAME}
@@ -117,10 +126,12 @@ export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
           />
         </mesh>
       </group>
-      <instancedMesh key={launch.at} ref={confetti} args={[undefined, undefined, CONFETTI]}>
-        <planeGeometry args={[0.07, 0.11]} />
-        <meshBasicMaterial side={2} toneMapped={false} />
-      </instancedMesh>
+      {launch && (
+        <instancedMesh key={launch.at} ref={confetti} args={[undefined, undefined, CONFETTI]}>
+          <planeGeometry args={[0.07, 0.11]} />
+          <meshBasicMaterial side={2} toneMapped={false} />
+        </instancedMesh>
+      )}
     </>
   );
 }

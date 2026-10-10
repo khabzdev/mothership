@@ -6,7 +6,7 @@ The Mothership app: TanStack Start + TanStack Query, served by Nitro on 127.0.0.
 src/
   app/        router context, query client, app-wide server fns
   routes/     file-based routes (routeTree.gen.ts is generated)
-  features/   decks · missions · crew · preflight · airlock (ui · api · model · scene)
+  features/   decks · missions · crew · preflight (ui · api · model · scene)
   shared/     ui kit, db, realtime client, r3f helpers
 ```
 
