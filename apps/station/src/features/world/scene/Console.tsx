@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo, PreflightInfo } from "@mothership/protocol";
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
@@ -14,6 +14,8 @@ import { CONSOLE_SIZE, type ConsoleDef } from "../layout";
 import { Furniture } from "./Furniture";
 import { GLOW, KIT, PAINTED } from "./materials";
 import { KAYKIT_SCALE } from "./models";
+import { Lamps } from "./Lamps";
+import { paintPreflight, showsPreflightPanel } from "./paint-preflight";
 import { paintScreen } from "./paint-screen";
 import { STATUS_COLORS } from "./status";
 
@@ -25,7 +27,17 @@ export const DESK_TOP = TABLE.height * KAYKIT_SCALE;
 const SCREEN = { width: 0.86, height: 0.49, px: 1024 };
 
 /** The console's screen: its crew member's live terminal (agent-office's laptop screen). */
-function HoloScreen({ crewId, placeholder }: { crewId?: string; placeholder: string }) {
+function HoloScreen({
+  crewId,
+  placeholder,
+  preflight,
+  status,
+}: {
+  crewId?: string;
+  placeholder: string;
+  preflight?: PreflightInfo;
+  status?: CrewInfo["status"];
+}) {
   const screen = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = SCREEN.px;
@@ -37,8 +49,24 @@ function HoloScreen({ crewId, placeholder }: { crewId?: string; placeholder: str
     return { canvas, ctx: canvas.getContext("2d")!, texture };
   }, []);
 
+  const panel = showsPreflightPanel(preflight, status);
+  const shownAt = useRef(0);
+  if (!panel) shownAt.current = 0;
+  else if (!shownAt.current) shownAt.current = Date.now();
+
   useEffect(() => {
     const { canvas, ctx, texture } = screen;
+    if (panel && preflight) {
+      // Elapsed time is counted from when the panel appeared: PreflightInfo has no start time.
+      const since = shownAt.current;
+      const paint = () => {
+        paintPreflight(ctx, canvas.width, canvas.height, preflight, (Date.now() - since) / 1000);
+        texture.needsUpdate = true;
+      };
+      paint();
+      const tick = preflight.state === "running" ? setInterval(paint, 1000) : undefined;
+      return () => clearInterval(tick);
+    }
     const paint = () => {
       const frame = crewId ? getScreen(crewId)?.frame : undefined;
       paintScreen(ctx, canvas.width, canvas.height, frame, placeholder);
@@ -46,7 +74,7 @@ function HoloScreen({ crewId, placeholder }: { crewId?: string; placeholder: str
     };
     paint();
     return crewId ? onScreen(crewId, paint) : undefined;
-  }, [screen, crewId, placeholder]);
+  }, [screen, crewId, placeholder, panel, preflight]);
 
   useEffect(() => () => screen.texture.dispose(), [screen]);
 
@@ -165,6 +193,8 @@ export function Console({
           toneMapped={false}
         />
       </mesh>
+      {/* Pre-flight lamps, just above the status strip. */}
+      <Lamps preflight={crew?.preflight} y={DESK_TOP - 0.005} />
       {/* Monitor: a foot on the desk, a neck, and the screen tilted toward the seat. */}
       <group position={[0, DESK_TOP, -0.22]}>
         <RoundedBox args={[0.3, 0.014, 0.18]} radius={0.006} position={[0, 0.007, 0]} castShadow>
@@ -181,6 +211,8 @@ export function Console({
         </RoundedBox>
         <HoloScreen
           crewId={crew?.id}
+          preflight={crew?.preflight}
+          status={crew?.status}
           placeholder={!crew ? "STANDBY" : crew.status === "asleep" ? "OFFLINE" : "BOOTING…"}
         />
       </group>
