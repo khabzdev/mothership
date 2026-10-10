@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import type { LaunchPlan } from "@mothership/providers";
 import { REVIEW_OUTPUT_CAP, runReview } from "../../src/features/inspection/runner.server.ts";
@@ -28,6 +31,25 @@ const alive = (pid: number) => {
   } catch {
     return false;
   }
+};
+
+const readPid = (file: string): number => {
+  try {
+    return Number(readFileSync(file, "utf8").trim());
+  } catch {
+    return 0;
+  }
+};
+
+/** Polls until the child has written a pid to the file (up to 5 s); returns 0 if it never does. */
+const waitForPid = async (file: string): Promise<number> => {
+  const deadline = Date.now() + 5000;
+  let pid = readPid(file);
+  while (!(pid > 0) && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 20));
+    pid = readPid(file);
+  }
+  return pid;
 };
 
 describe("runReview", () => {
@@ -77,21 +99,26 @@ describe("runReview", () => {
   });
 
   test("an abort stops the run and its whole process group", async () => {
-    const ac = new AbortController();
-    const plan = node(
-      "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {stdio:'inherit'}); console.log(c.pid); setInterval(()=>{},1000)",
-    );
-    const started = Date.now();
-    const p = runReview({ plan, prompt: "x", timeoutMs: 20_000, signal: ac.signal });
-    await new Promise((r) => setTimeout(r, 400));
-    ac.abort();
-    const r = await p;
-    expect(r.ok).toBe(false);
-    expect(Date.now() - started).toBeLessThan(3000);
-    const grandchild = Number(r.stdout.trim());
-    expect(grandchild).toBeGreaterThan(0);
-    await new Promise((res) => setTimeout(res, 100));
-    expect(alive(grandchild)).toBe(false);
+    const dir = mkdtempSync(join(tmpdir(), "inspection-abort-"));
+    try {
+      const pidFile = join(dir, "grandchild.pid");
+      const ac = new AbortController();
+      const plan = node(
+        `const fs = require('fs'); const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {stdio:'inherit'}); fs.writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); setInterval(()=>{},1000)`,
+      );
+      const p = runReview({ plan, prompt: "x", timeoutMs: 20_000, signal: ac.signal });
+      const grandchild = await waitForPid(pidFile);
+      expect(grandchild).toBeGreaterThan(0);
+      const abortedAt = Date.now();
+      ac.abort();
+      const r = await p;
+      expect(r.ok).toBe(false);
+      expect(Date.now() - abortedAt).toBeLessThan(3000);
+      await new Promise((res) => setTimeout(res, 100));
+      expect(alive(grandchild)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test("an already aborted signal never starts the command", async () => {
