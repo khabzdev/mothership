@@ -1,3 +1,5 @@
+import { parseCrewIdInput } from "../crew/model";
+
 /** The text appended to Claude's system prompt: a brief is written and submitted before any edit. */
 export const BRIEF_INSTRUCTIONS =
   "Before you change anything, write a brief as your plan, under 25 lines, with exactly these headings: Goal (one sentence: what will be true when you're done), Approach, Files (the ones you expect to touch), Proof (the checks or tests that will show it works), Not doing (what's out of scope). Then submit it for approval.";
@@ -59,4 +61,15 @@ export function goalOf(text: string): string {
   const at = lines.findIndex((line) => goalHeading(line) !== null);
   const found = at === -1 ? "" : goalHeading(lines[at]!) || sectionText(lines, at + 1);
   return clip(found || firstText(lines, 0) || EMPTY);
+}
+
+export const REASON_MAX = 500;
+
+/** Asking for a revision needs the crew member and what to change (trimmed, 1 to 500 characters). */
+export function parseReviseInput(input: unknown): { crewId: string; reason: string } {
+  const { crewId } = parseCrewIdInput(input);
+  const raw = (input as { reason?: unknown }).reason;
+  const reason = typeof raw === "string" ? raw.trim() : "";
+  if (!reason || reason.length > REASON_MAX) throw new Error("Say what to change");
+  return { crewId, reason };
 }

@@ -1,4 +1,6 @@
 import {
+  BRIEF_STATES,
+  type BriefInfo,
   CHECK_VERDICTS,
   CREW_KINDS,
   CREW_STATUSES,
@@ -205,7 +207,21 @@ function isCrewInfo(value: unknown): value is CrewInfo {
     typeof c.consoleId === "number" &&
     typeof c.name === "string" &&
     CREW_STATUSES.includes(c.status as CrewInfo["status"]) &&
-    (c.preflight === undefined || isPreflightInfo(c.preflight))
+    (c.preflight === undefined || isPreflightInfo(c.preflight)) &&
+    (c.brief === undefined || isBriefInfo(c.brief)) &&
+    (c.cleanBriefs === undefined ||
+      (Number.isInteger(c.cleanBriefs) && (c.cleanBriefs as number) >= 0))
+  );
+}
+
+function isBriefInfo(value: unknown): value is BriefInfo {
+  if (typeof value !== "object" || value === null) return false;
+  const b = value as Record<string, unknown>;
+  return (
+    Number.isInteger(b.revision) &&
+    (b.revision as number) >= 1 &&
+    BRIEF_STATES.includes(b.state as BriefInfo["state"]) &&
+    typeof b.goal === "string"
   );
 }
 

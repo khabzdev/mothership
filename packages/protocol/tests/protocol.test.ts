@@ -150,6 +150,14 @@ describe("parseServerMsg", () => {
       done: true,
     },
     {
+      type: "crew.roster",
+      deckId: "d1",
+      crew: [
+        { ...nova, brief: { revision: 2, state: "waiting", goal: "Ship it" }, cleanBriefs: 3 },
+      ],
+    },
+    { type: "crew.brief", deckId: "d1", crewId: "c1" },
+    {
       type: "crew.screen",
       crewId: "c1",
       frame: { cols: 80, rows: 2, lines: [[["hi", -1, -1, 0]], []] },
@@ -206,6 +214,21 @@ describe("parseServerMsg", () => {
         }),
       ),
     ).toBeNull();
+  });
+
+  test("rejects a roster with a malformed brief or clean-brief count", () => {
+    const roster = (extra: object) =>
+      JSON.stringify({ type: "crew.roster", deckId: "d1", crew: [{ ...nova, ...extra }] });
+    const brief = { revision: 1, state: "waiting", goal: "g" };
+    expect(parseServerMsg(roster({ brief: { ...brief, state: "pondering" } }))).toBeNull();
+    expect(parseServerMsg(roster({ brief: { ...brief, revision: 0 } }))).toBeNull();
+    expect(parseServerMsg(roster({ brief: { ...brief, goal: 5 } }))).toBeNull();
+    expect(parseServerMsg(roster({ cleanBriefs: -1 }))).toBeNull();
+    expect(parseServerMsg(roster({ cleanBriefs: 1.5 }))).toBeNull();
+  });
+
+  test("rejects a crew.brief without a crewId", () => {
+    expect(parseServerMsg(JSON.stringify({ type: "crew.brief", deckId: "d1" }))).toBeNull();
   });
 
   test("rejects a crew.preflight with an unknown verdict or no done flag", () => {

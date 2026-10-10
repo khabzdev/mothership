@@ -31,12 +31,14 @@ const LABELS: Record<CrewStatus, string> = {
 };
 
 /** A crew member's status in words and a tone (a shell is running or has exited). */
-export function statusOf(crew: Pick<CrewInfo, "kind" | "status">): {
+export function statusOf(crew: Pick<CrewInfo, "kind" | "status" | "brief">): {
   label: string;
   tone: StatusTone;
 } {
   if (crew.kind === "shell") {
     return { label: crew.status === "asleep" ? "Exited" : "Shell", tone: "neutral" };
   }
+  if (crew.status === "needs_input" && crew.brief?.state === "waiting")
+    return { label: "Brief ready", tone: TONES.needs_input };
   return { label: LABELS[crew.status], tone: TONES[crew.status] };
 }
