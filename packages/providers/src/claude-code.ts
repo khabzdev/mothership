@@ -67,7 +67,7 @@ function launchPlan(options: LaunchOptions): LaunchPlan {
   };
 }
 
-/** A read-only `claude -p` run: it may read and search, never edit or run commands. */
+/** A read-only `claude -p` run: it may read and search, never edit, run commands, use MCP or go online. */
 function reviewPlan(options: ReviewOptions): LaunchPlan {
   return {
     command: "claude",
@@ -78,6 +78,8 @@ function reviewPlan(options: ReviewOptions): LaunchPlan {
       "json",
       "--permission-mode",
       "default",
+      // No --mcp-config with it: none of the user's MCP servers (or their tools) load.
+      "--strict-mcp-config",
       "--allowedTools",
       "Read",
       "Grep",
@@ -88,6 +90,9 @@ function reviewPlan(options: ReviewOptions): LaunchPlan {
       "MultiEdit",
       "NotebookEdit",
       "Bash",
+      // The user's settings may allow these; a review has no business on the web.
+      "WebFetch",
+      "WebSearch",
     ],
     cwd: options.cwd,
     env: {},

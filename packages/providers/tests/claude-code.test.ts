@@ -291,6 +291,7 @@ describe("reviewPlan", () => {
     "json",
     "--permission-mode",
     "default",
+    "--strict-mcp-config",
     "--allowedTools",
     "Read",
     "Grep",
@@ -301,6 +302,8 @@ describe("reviewPlan", () => {
     "MultiEdit",
     "NotebookEdit",
     "Bash",
+    "WebFetch",
+    "WebSearch",
   ];
 
   test("runs claude -p read-only in the given directory", () => {
@@ -320,6 +323,14 @@ describe("reviewPlan", () => {
     const { args } = claudeCode.reviewPlan!({ cwd: "/w" });
     expect(args.indexOf("Edit")).toBeGreaterThan(args.indexOf("--disallowedTools"));
     expect(args.indexOf("Bash")).toBeGreaterThan(args.indexOf("--disallowedTools"));
+  });
+
+  test("loads no MCP servers and can't reach the web", () => {
+    const { args } = claudeCode.reviewPlan!({ cwd: "/w" });
+    expect(args).toContain("--strict-mcp-config");
+    expect(args).not.toContain("--mcp-config");
+    expect(args.indexOf("WebFetch")).toBeGreaterThan(args.indexOf("--disallowedTools"));
+    expect(args.indexOf("WebSearch")).toBeGreaterThan(args.indexOf("--disallowedTools"));
   });
 
   test("a model goes first", () => {
