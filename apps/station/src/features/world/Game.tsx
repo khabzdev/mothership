@@ -27,7 +27,7 @@ import { Departures } from "./scene/Departures";
 import { Board } from "./scene/Board";
 import { FlightControl } from "./scene/FlightControl";
 import { LaunchShow } from "./scene/LaunchShow";
-import { LiftDoors } from "./scene/LiftDoors";
+import { ShipPad } from "./scene/ShipPad";
 import { Sign } from "./scene/Sign";
 import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
@@ -147,7 +147,7 @@ export function Game({ deck }: { deck: Deck }) {
           <Atmosphere />
           <Suspense fallback={null}>
             <DeckScene />
-            <LiftDoors deckName={deck.name} paint={paint} />
+            <ShipPad />
             <Board board="mission" trim={paint.trim} {...mission} />
             <Board board="launch" trim={paint.trim} {...launch} />
             <Board board="queue" trim={paint.trim} {...queued} />

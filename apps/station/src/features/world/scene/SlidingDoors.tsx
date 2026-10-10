@@ -6,9 +6,9 @@ import { KIT, PAINTED } from "./materials";
 
 const THICK = 0.06;
 
-/** Bulkhead height (m) of the lift's and airlock's door frames. */
+/** Bulkhead height (m) of the airlock's door frame. */
 export const WALL_H = 3.2;
-/** A door module's width (m): its opening is 0.6 of it, 1.8 m, the lift's and airlock's width. */
+/** A door module's width (m): its opening is 0.6 of it, 1.8 m, the airlock's width. */
 export const DOOR_MODULE = 3;
 /** The door frame's opening, as a share of the module's width and height. */
 export const DOOR_OPENING = { width: 0.6, height: 0.695 } as const;

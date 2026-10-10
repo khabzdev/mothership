@@ -1,13 +1,13 @@
 import { CommandPalette } from "@cloudflare/kumo";
 import {
   AirplaneTakeOff01Icon,
-  ArrowUpDownIcon,
   ComputerTerminal01Icon,
   GitPullRequestIcon,
   Notification03Icon,
   Rocket01Icon,
   Search01Icon,
   SmartPhone01Icon,
+  SpaceshipIcon,
   Target02Icon,
   TaskDaily01Icon,
   UserAdd01Icon,
@@ -169,11 +169,11 @@ export function Palette({
         run: () => window.location.assign("/lite"),
       },
       {
-        id: "a:lift",
-        title: "Ride the lift",
+        id: "a:flight",
+        title: "Fly to another deck",
         subtitle: "Another deck, or add one",
-        icon: ArrowUpDownIcon,
-        run: () => openOverlay({ kind: "lift" }),
+        icon: SpaceshipIcon,
+        run: () => openOverlay({ kind: "flight" }),
       },
     ];
 
@@ -271,7 +271,7 @@ export function Palette({
         id: `d:${d.id}`,
         title: `Deck ${d.name}`,
         subtitle: d.repoPath,
-        icon: ArrowUpDownIcon,
+        icon: SpaceshipIcon,
         run: () => choose(d.id),
       }));
 

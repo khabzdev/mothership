@@ -6,12 +6,12 @@ export const KIT = {
   hull: "#a0a8c9",
   /** Shaded panels and door frames. */
   slate: "#868ba1",
-  /** Dark metal: frames, bezels, the inside of the lift. */
+  /** Dark metal: frames, bezels. */
   charcoal: "#38383d",
   /** The kit's orange trim. */
   orange: "#ff7e44",
   amber: "#ffc044",
-  /** Pale blue light (lamps, the lift's ceiling). */
+  /** Pale blue light (lamps). */
   ice: "#d0e8ff",
   /** Alarm red. */
   alarm: "#ff3b3b",

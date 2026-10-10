@@ -1,13 +1,13 @@
 import { Button, Input, Loader } from "@cloudflare/kumo";
 import {
   Alert02Icon,
-  ArrowUpDownIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
   Download04Icon,
   KeyboardIcon,
   Notification03Icon,
   Rocket01Icon,
+  SpaceshipIcon,
   StopCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
@@ -31,24 +31,25 @@ import {
 } from "../../decks/queries";
 import { useDeckChoice } from "../deck-choice";
 import { paintFor } from "../paint";
-import { stepOutOfLift } from "../scene/Captain";
+import { rideAction } from "../ship";
 import { waitingOnYou } from "../waiting";
 import { useWorld } from "../store";
 import { Modal } from "./Modal";
 
-/** The lift: ride to another deck, or dock a new repo as a deck (agent-office's elevator). */
-export function Lift({
+/** The Flight plan: fly to another deck, or dock a new repo as a deck (agent-office's elevator). */
+export function FlightPlan({
   standalone = false,
-  fromLift = false,
+  fromShip = false,
 }: {
   standalone?: boolean;
-  fromLift?: boolean;
+  fromShip?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { data: decks } = useSuspenseQuery(decksQuery);
   const dock = useMutation(dockRepoMutation(queryClient));
   const { deckId, choose } = useDeckChoice();
   const close = useWorld((s) => s.close);
+  const startFlight = useWorld((s) => s.startFlight);
   const [repo, setRepo] = useState("");
   const clone = useMutation(startCloneMutation());
   const cancel = useMutation(cancelCloneMutation());
@@ -56,10 +57,12 @@ export function Lift({
   const { data: suggestions = [] } = useQuery(ghReposQuery);
   const rosters = useQueries({ queries: decks.map((d) => rosterQuery(d.id)) });
 
-  // Riding the lift, you step out of it on the deck; from the top bar, you stay where you are.
+  // From your ship you take off and the deck switches once you're away; from the top bar or the
+  // palette it switches at once and you stay where you are.
   const ride = (id: string) => {
-    if (fromLift && id !== deckId) stepOutOfLift();
-    choose(id);
+    const action = rideAction(fromShip, id, deckId);
+    if (action === "fly") startFlight(id);
+    else if (action === "choose") choose(id);
     close();
   };
 
@@ -75,7 +78,7 @@ export function Lift({
   const body = (
     <>
       {decks.length > 0 && (
-        <ul className="lift__decks">
+        <ul className="flightplan__decks">
           {decks.map((deck, i) => {
             const crew = rosters[i]?.data ?? [];
             const busy = crew.filter((c) => c.status === "working").length;
@@ -85,20 +88,20 @@ export function Lift({
               <li key={deck.id}>
                 <button
                   type="button"
-                  className="lift__deck"
+                  className="flightplan__deck"
                   aria-current={deck.id === deckId}
                   data-asking={asking || undefined}
                   onClick={() => ride(deck.id)}
                 >
-                  <span className="lift__level">{i + 1}</span>
-                  <span className="lift__name">
+                  <span className="flightplan__level">{i + 1}</span>
+                  <span className="flightplan__name">
                     <span
                       className="dot"
                       style={{ "--dot": paintFor(deck.repoPath).trim } as CSSProperties}
                     />
                     {deck.name}
                   </span>
-                  <span className="lift__counts">
+                  <span className="flightplan__counts">
                     {busy > 0 && (
                       <span className="with-icon" title={`${busy} at work`}>
                         <Icon icon={KeyboardIcon} size={14} /> {busy}
@@ -121,10 +124,10 @@ export function Lift({
         </ul>
       )}
       {clones.length > 0 && (
-        <ul className="lift__clones">
+        <ul className="flightplan__clones">
           {clones.map((c) => (
             <li key={c.id} data-state={c.state}>
-              <span className="lift__clone-name with-icon">
+              <span className="flightplan__clone-name with-icon">
                 {c.state === "cloning" ? (
                   <Loader size="sm" />
                 ) : (
@@ -154,7 +157,7 @@ export function Lift({
       )}
       <form onSubmit={onSubmit} className="inline-form">
         <Input
-          className="lift__input"
+          className="flightplan__input"
           label="Add a deck: clone a repo, or dock a folder"
           autoFocus={decks.length === 0}
           value={repo}
@@ -184,7 +187,7 @@ export function Lift({
 
   if (standalone) {
     return (
-      <main className="lift-screen">
+      <main className="flightplan-screen">
         <p className="section-label">Mothership</p>
         <h1>Dock your first deck</h1>
         <p className="muted">Every repo is a deck. Crew work at its consoles.</p>
@@ -194,9 +197,9 @@ export function Lift({
   }
   return (
     <Modal
-      icon={ArrowUpDownIcon}
-      title="Lift"
-      subtitle="Ride to a deck, or add one: clone a repo or dock a folder"
+      icon={SpaceshipIcon}
+      title="Flight plan"
+      subtitle="Fly to a deck, or add one: clone a repo or dock a folder"
     >
       {body}
     </Modal>

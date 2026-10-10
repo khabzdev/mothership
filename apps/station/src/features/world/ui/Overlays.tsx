@@ -28,7 +28,7 @@ import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";
 import { useWorld } from "../store";
 import { LabelWindow } from "./LabelWindow";
-import { Lift } from "./Lift";
+import { FlightPlan } from "./FlightPlan";
 import { Modal } from "./Modal";
 import { SendHomeWindow } from "./SendHome";
 import { StatusBadge } from "./StatusBadge";
@@ -281,8 +281,8 @@ export function Overlays({
           <BoardWindow deckId={deckId} board={overlay.board} initial={overlay.open} />
         </Modal>
       );
-    case "lift":
-      return <Lift fromLift={overlay.fromLift} />;
+    case "flight":
+      return <FlightPlan fromShip={overlay.fromShip} />;
     case "flightControl":
       return (
         <Modal

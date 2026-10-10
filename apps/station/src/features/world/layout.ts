@@ -168,14 +168,12 @@ export function partnerOf(c: ConsoleDef): ConsoleDef | undefined {
   );
 }
 
-/** The lift: doors in the north bulkhead, by the cargo bay. */
-export const LIFT = { x: 10.5, z: DECK.minZ, width: 1.8 } as const;
-/** Where you stand to call it, and where you step out when you ride it to a deck. */
-export const LIFT_STOP = { x: LIFT.x, z: LIFT.z + 1.5 } as const;
+/** Where you stand to board your ship, and where you step out when it lands on a deck. */
+export const SHIP_STOP = { x: SHIP_PAD.x, z: DECK.minZ + 1.5 } as const;
 
-/** Standing at the lift doors. */
-export function liftInReach(x: number, z: number, reach = 1.5): boolean {
-  return Math.hypot(x - LIFT_STOP.x, z - LIFT_STOP.z) < reach;
+/** Standing in front of your ship's pad. */
+export function shipInReach(x: number, z: number, reach = 1.5): boolean {
+  return Math.hypot(x - SHIP_STOP.x, z - SHIP_STOP.z) < reach;
 }
 
 export type BoardId = "mission" | "launch" | "queue";

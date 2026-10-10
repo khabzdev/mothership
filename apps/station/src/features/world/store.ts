@@ -14,15 +14,19 @@ export type Overlay =
   | { kind: "launchCheck"; crewId: string; reason: string }
   | { kind: "label"; consoleId: number }
   | { kind: "board"; board: BoardId; open?: number }
-  | { kind: "lift"; fromLift?: boolean }
+  | { kind: "flight"; fromShip?: boolean }
   | { kind: "search" }
   | { kind: "flightControl" };
 
 interface WorldState {
   /** Console the Captain is standing at. */
   consoleId: number | null;
-  /** Standing at the lift doors. */
-  atLift: boolean;
+  /** Standing in front of your ship. */
+  atShip: boolean;
+  /** Your ship taking off for another deck (`at`: when you picked it, ms). */
+  flight: { to: string; at: number } | null;
+  /** Your ship has just flown you here and is coming down on the pad. */
+  arriving: boolean;
   /** Standing at the Flight Control desk. */
   atFlightControl: boolean;
   /** The last pull request launched on this deck, for the klaxon, rocket and confetti. */
@@ -37,7 +41,11 @@ interface WorldState {
   atBoard: BoardId | null;
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
-  setAtLift: (atLift: boolean) => void;
+  setAtShip: (atShip: boolean) => void;
+  startFlight: (to: string) => void;
+  cancelFlight: () => void;
+  endFlight: () => void;
+  setArriving: (arriving: boolean) => void;
   setAtFlightControl: (atFlightControl: boolean) => void;
   setAtBoard: (atBoard: BoardId | null) => void;
   setPalette: (open: boolean) => void;
@@ -55,7 +63,9 @@ export const CHEER_MS = 6000;
 /** Game-wide UI state shared by the 3D scene and the DOM overlays. */
 export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
-  atLift: false,
+  atShip: false,
+  flight: null,
+  arriving: false,
   atFlightControl: false,
   atBoard: null,
   launch: null,
@@ -64,7 +74,11 @@ export const useWorld = create<WorldState>((set) => ({
   paletteOpen: false,
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
-  setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
+  setAtShip: (atShip) => set((s) => (s.atShip === atShip ? s : { atShip })),
+  startFlight: (to) => set({ flight: { to, at: Date.now() } }),
+  cancelFlight: () => set({ flight: null }),
+  endFlight: () => set({ flight: null }),
+  setArriving: (arriving) => set({ arriving }),
   setAtFlightControl: (atFlightControl) =>
     set((s) => (s.atFlightControl === atFlightControl ? s : { atFlightControl })),
   setAtBoard: (atBoard) => set((s) => (s.atBoard === atBoard ? s : { atBoard })),
@@ -84,8 +98,9 @@ export const useWorld = create<WorldState>((set) => ({
 
 /** Game keys are ignored while typing or while a window is open (agent-office's guard). */
 export function gameKeysEnabled(event: KeyboardEvent): boolean {
-  const { overlay, paletteOpen } = useWorld.getState();
-  if (overlay || paletteOpen) return false;
+  const { overlay, paletteOpen, flight, arriving } = useWorld.getState();
+  // Aboard your ship you're not walking the deck.
+  if (overlay || paletteOpen || flight || arriving) return false;
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
   // Keys sent to the window or document (not an element) are game keys too.
   const target = event.target instanceof HTMLElement ? event.target : null;

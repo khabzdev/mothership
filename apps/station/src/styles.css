@@ -356,20 +356,20 @@ kbd {
   gap: 0.8rem;
 }
 
-/* ---------- lift ---------- */
+/* ---------- flight plan ---------- */
 
-.lift-screen {
+.flightplan-screen {
   width: min(40rem, calc(100% - 2rem));
   margin: 0 auto;
   padding: 18vh 0 4rem;
 }
 
-.lift-screen h1 {
+.flightplan-screen h1 {
   margin-bottom: 0.6rem;
 }
 
-.lift__decks,
-.lift__clones {
+.flightplan__decks,
+.flightplan__clones {
   display: grid;
   gap: 0.35rem;
   margin: 0 0 1rem;
@@ -377,7 +377,7 @@ kbd {
   list-style: none;
 }
 
-.lift__deck {
+.flightplan__deck {
   appearance: none;
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -394,20 +394,20 @@ kbd {
   cursor: pointer;
 }
 
-.lift__deck:hover {
+.flightplan__deck:hover {
   background: var(--color-kumo-fill);
 }
 
-.lift__deck[aria-current="true"] {
+.flightplan__deck[aria-current="true"] {
   border-color: var(--color-kumo-interact);
 }
 
-.lift__deck[data-asking] {
+.flightplan__deck[data-asking] {
   border-color: color-mix(in oklab, var(--color-kumo-danger) 60%, transparent);
 }
 
 /* A repo path, cut from the left: its end is the part that tells decks apart. */
-.lift__deck .meta {
+.flightplan__deck .meta {
   grid-column: 2 / -1;
   overflow: hidden;
   direction: rtl;
@@ -416,7 +416,7 @@ kbd {
   text-overflow: ellipsis;
 }
 
-.lift__level {
+.flightplan__level {
   grid-row: span 2;
   min-width: 1.5rem;
   font-size: var(--text-lg);
@@ -425,14 +425,14 @@ kbd {
   color: var(--text-color-kumo-subtle);
 }
 
-.lift__name {
+.flightplan__name {
   display: flex;
   align-items: center;
   gap: 0.45rem;
   font-weight: 600;
 }
 
-.lift__counts {
+.flightplan__counts {
   display: flex;
   gap: 0.6rem;
   align-items: center;
@@ -440,7 +440,7 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-.lift__clones li {
+.flightplan__clones li {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -451,19 +451,19 @@ kbd {
   background: var(--color-kumo-recessed);
 }
 
-.lift__clones li[data-state="failed"] .meta {
+.flightplan__clones li[data-state="failed"] .meta {
   color: var(--text-color-kumo-danger);
 }
 
-.lift__clones .meta {
+.flightplan__clones .meta {
   overflow-wrap: anywhere;
 }
 
-.lift__clone-name {
+.flightplan__clone-name {
   font-weight: 600;
 }
 
-.lift__input {
+.flightplan__input {
   flex: 1;
 }
 

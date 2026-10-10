@@ -4,6 +4,7 @@ import { openShell, resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { giveIssue, handIssue } from "../github/github.functions";
 import { openCrewPr } from "../pr/pr.functions";
 import { notify, toasts } from "../../shared/ui/toasts";
+import { canCancel } from "./ship";
 import { gameKeysEnabled, useWorld } from "./store";
 
 /** Send a crew member without a worktree of its own home at once (agent-office's X). */
@@ -91,8 +92,16 @@ function deliver(deckId: string, consoleId: number, member: CrewInfo | undefined
 export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Escape calls your ship's take-off off while it's still rumbling on the pad.
+      if (e.key === "Escape") {
+        const { flight, cancelFlight } = useWorld.getState();
+        if (canCancel(flight, Date.now())) {
+          e.preventDefault();
+          return cancelFlight();
+        }
+      }
       if (!gameKeysEnabled(e)) return;
-      const { consoleId, atLift, atFlightControl, atBoard, open, carrying, carry, say } =
+      const { consoleId, atShip, atFlightControl, atBoard, open, carrying, carry, say } =
         useWorld.getState();
       // / searches every terminal on the deck, wherever you are.
       if (e.key === "/") {
@@ -109,9 +118,9 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
         e.preventDefault();
         return open({ kind: "board", board: atBoard });
       }
-      if (atLift && e.code === "KeyE") {
+      if (atShip && e.code === "KeyE") {
         e.preventDefault();
-        return open({ kind: "lift", fromLift: true });
+        return open({ kind: "flight", fromShip: true });
       }
       if (atFlightControl && consoleId === null && e.code === "KeyE") {
         e.preventDefault();

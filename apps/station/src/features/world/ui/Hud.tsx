@@ -2,11 +2,11 @@ import { Badge, Banner, Surface } from "@cloudflare/kumo";
 import {
   Alert02Icon,
   AirplaneTakeOff01Icon,
-  ArrowUpDownIcon,
   CheckmarkCircle02Icon,
   HandGrabIcon,
   Notification03Icon,
   Rocket01Icon,
+  SpaceshipIcon,
   Target02Icon,
   TaskDaily01Icon,
 } from "@hugeicons/core-free-icons";
@@ -39,7 +39,7 @@ const BOARD_HINTS = {
 /** What you're facing and what you can do there (agent-office's hint bar). */
 export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
   const consoleId = useWorld((s) => s.consoleId);
-  const atLift = useWorld((s) => s.atLift);
+  const atShip = useWorld((s) => s.atShip);
   const atFlightControl = useWorld((s) => s.atFlightControl);
   const atBoard = useWorld((s) => s.atBoard);
   const carrying = useWorld((s) => s.carrying);
@@ -68,13 +68,13 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
       </div>
     );
   }
-  if (atLift && consoleId === null) {
+  if (atShip && consoleId === null) {
     return (
       <div className="hint" data-active>
         <span className="hint__what with-icon">
-          <Icon icon={ArrowUpDownIcon} /> Lift
+          <Icon icon={SpaceshipIcon} /> Your ship
         </span>
-        <Key k="E" label="Ride to another deck" />
+        <Key k="E" label="Fly to another deck" />
       </div>
     );
   }
@@ -134,7 +134,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
   );
 }
 
-/** Deck name (opens the lift), who's waiting, comms, and a crew-offline warning. */
+/** Deck name (opens the Flight plan), who's waiting, comms, and a crew-offline warning. */
 export function TopBar({ deck, crew }: { deck: Deck; crew: CrewInfo[] }) {
   const open = useWorld((s) => s.open);
   const { state } = useRealtime();
@@ -148,11 +148,11 @@ export function TopBar({ deck, crew }: { deck: Deck; crew: CrewInfo[] }) {
         <button
           type="button"
           className="topbar__deck"
-          onClick={() => open({ kind: "lift" })}
-          title="Ride the lift"
+          onClick={() => open({ kind: "flight" })}
+          title="Fly to another deck"
         >
           <span className="section-label with-icon">
-            <Icon icon={ArrowUpDownIcon} size={12} /> Deck
+            <Icon icon={SpaceshipIcon} size={12} /> Deck
           </span>
           <span className="topbar__name">
             <span

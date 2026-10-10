@@ -80,7 +80,7 @@ export interface CloneDeps {
   workspace?: string;
 }
 
-/** Clones in progress (and the last ones finished or failed), shown on every lift panel. */
+/** Clones in progress (and the last ones finished or failed), shown in every Flight plan. */
 export class CloneManager {
   readonly #deps: CloneDeps;
   readonly #clones = new Map<string, Running>();

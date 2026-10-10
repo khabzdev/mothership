@@ -4,14 +4,14 @@ import { useEffect, useMemo, useRef } from "react";
 import { CanvasTexture, DoubleSide, MathUtils, SRGBColorSpace, Vector3, type Group } from "three";
 import {
   CONSOLES,
-  LIFT_STOP,
+  SHIP_STOP,
   SPAWN,
   boardInReach,
   consoleInReach,
   consoleSeat,
   flightControlInReach,
-  liftInReach,
   moveWithCollisions,
+  shipInReach,
 } from "../layout";
 import { footsteps, scheduleTyping, setListener } from "../sound";
 import { gameKeysEnabled, useWorld } from "../store";
@@ -47,12 +47,12 @@ export function jumpTo(consoleId: number): void {
 /** Where the camera orbits the Captain from (dev tools can set it to frame a shot). */
 export const cameraView = { yaw: 0.6, pitch: CAMERA.pitch, distance: CAMERA.distance };
 
-/** Step out of the lift onto this deck, facing into the room. */
-export function stepOutOfLift(): void {
-  captain.x = LIFT_STOP.x;
-  captain.z = LIFT_STOP.z;
+/** Step out of your ship onto this deck, in front of its pad, facing into the room. */
+export function stepOutOfShip(): void {
+  captain.x = SHIP_STOP.x;
+  captain.z = SHIP_STOP.z;
   captain.facing = 0;
-  // The camera stays on the room side, watching you step out, not out behind the bulkhead.
+  // The camera stays on the room side, watching you step out, not out over the pad.
   captain.snap = 0.35;
 }
 
@@ -112,7 +112,7 @@ export function Captain() {
   const view = useRef(cameraView);
   const clip = useRef("Idle");
   const setConsole = useWorld((s) => s.setConsole);
-  const setAtLift = useWorld((s) => s.setAtLift);
+  const setAtShip = useWorld((s) => s.setAtShip);
   const setAtFlightControl = useWorld((s) => s.setAtFlightControl);
   const setAtBoard = useWorld((s) => s.setAtBoard);
   const carrying = useWorld((s) => s.carrying);
@@ -126,7 +126,7 @@ export function Captain() {
     };
     const up = (e: KeyboardEvent) => held.current.delete(e.code);
     const clear = () => held.current.clear();
-    const offOverlay = useWorld.subscribe((s) => s.overlay && clear());
+    const offOverlay = useWorld.subscribe((s) => (s.overlay || s.flight || s.arriving) && clear());
 
     let dragging = false;
     const canvas = gl.domElement;
@@ -183,7 +183,10 @@ export function Captain() {
         iz += dir[1];
       }
     }
-    const moving = ix !== 0 || iz !== 0;
+    // Aboard your ship (taking off, or coming down on a new deck) you're hidden and still.
+    const { flight, arriving } = useWorld.getState();
+    const aboard = flight !== null || arriving;
+    const moving = !aboard && (ix !== 0 || iz !== 0);
     const running = held.current.has("ShiftLeft") || held.current.has("ShiftRight");
 
     if (moving) {
@@ -212,7 +215,10 @@ export function Captain() {
     }
 
     body.current?.position.set(captain.x, 0, captain.z);
-    if (body.current) body.current.rotation.y = captain.facing;
+    if (body.current) {
+      body.current.rotation.y = captain.facing;
+      body.current.visible = !aboard;
+    }
 
     const { yaw, pitch, distance } = view.current;
     target.set(captain.x, CAMERA.height, captain.z);
@@ -229,7 +235,7 @@ export function Captain() {
     scheduleTyping();
 
     setConsole(consoleInReach(captain.x, captain.z)?.id ?? null);
-    setAtLift(liftInReach(captain.x, captain.z));
+    setAtShip(shipInReach(captain.x, captain.z));
     setAtFlightControl(flightControlInReach(captain.x, captain.z));
     setAtBoard(boardInReach(captain.x, captain.z));
   });

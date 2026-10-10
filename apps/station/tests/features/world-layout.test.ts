@@ -7,12 +7,12 @@ import {
   COLLIDERS,
   addCollider,
   BOARDS,
-  LIFT_STOP,
+  SHIP_STOP,
   FLIGHT_CONTROL,
   flightControlInReach,
   boardInReach,
   airlockPath,
-  liftInReach,
+  shipInReach,
   partnerOf,
   consoleInReach,
   consoleSeat,
@@ -75,11 +75,11 @@ describe("deck layout", () => {
     }
   });
 
-  test("you call the lift from in front of its doors, clear of any console", () => {
-    expect(liftInReach(LIFT_STOP.x, LIFT_STOP.z)).toBe(true);
-    expect(liftInReach(SPAWN.x, SPAWN.z)).toBe(false);
-    expect(consoleInReach(LIFT_STOP.x, LIFT_STOP.z)).toBeNull();
-    expect(moveWithCollisions(LIFT_STOP.x, LIFT_STOP.z, 0, 0)).toEqual(LIFT_STOP);
+  test("you board your ship from in front of its pad, clear of any console", () => {
+    expect(shipInReach(SHIP_STOP.x, SHIP_STOP.z)).toBe(true);
+    expect(shipInReach(SPAWN.x, SPAWN.z)).toBe(false);
+    expect(consoleInReach(SHIP_STOP.x, SHIP_STOP.z)).toBeNull();
+    expect(moveWithCollisions(SHIP_STOP.x, SHIP_STOP.z, 0, 0)).toEqual(SHIP_STOP);
   });
 
   test("boards stand on the island inside the play area", () => {

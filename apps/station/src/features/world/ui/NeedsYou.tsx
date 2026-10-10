@@ -101,7 +101,7 @@ export function useOtherDecksHeadsUp(deckId: string): void {
       useWorld
         .getState()
         .say(
-          `${names} on ${deck.name} ${asking.length > 1 ? "need" : "needs"} you: take the lift`,
+          `${names} on ${deck.name} ${asking.length > 1 ? "need" : "needs"} you: fly your ship there`,
           "warning",
         );
       playHeadsUp();
@@ -126,7 +126,7 @@ export function useCloneNews(): void {
     for (const c of done) {
       if (told.current.has(c.id)) continue;
       told.current.add(c.id);
-      useWorld.getState().say(`Deck ${c.name} is open: take the lift`, "warning");
+      useWorld.getState().say(`Deck ${c.name} is open: fly your ship there`, "warning");
       playDone();
     }
   }, [clones]);
