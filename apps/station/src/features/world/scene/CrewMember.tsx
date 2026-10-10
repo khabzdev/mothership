@@ -1,7 +1,7 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { Html, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Group, Mesh } from "three";
 import { ActHold, actFor } from "../acting";
 import { useWorld } from "../store";
@@ -12,8 +12,13 @@ import { Beacon } from "./Beacon";
 import { CHAIR_Z } from "./Console";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { PoseLayer, poseDebug, poseFor } from "./pose";
+import { usePreflightTurn } from "./useTurn";
 import { StatusBadge } from "../ui/StatusBadge";
 import { STATUS_COLORS } from "./status";
+
+/** How long the cheer on GO and the failing act on NO-GO last (ms). */
+const CHEER_MS = 2500;
+const FAIL_MS = 3000;
 
 /** Seated at the console unless it's waving for you or celebrating (agent-office's stances). */
 export function stanceFor(crew: Pick<CrewInfo, "status" | "action">): {
@@ -46,9 +51,23 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   const light = useRef<Mesh>(null);
   const { actions } = useAnimations(animations, body);
   const cheering = useWorld((s) => s.cheering);
+  const goAt = usePreflightTurn(crew.preflight, "go");
+  const nogoAt = usePreflightTurn(crew.preflight, "nogo");
+  const [, tick] = useState(0);
+  // The cheer and the failing act each last a few seconds from the moment the verdict turns.
+  useEffect(() => {
+    const ends = [goAt + CHEER_MS, nogoAt + FAIL_MS].filter((t) => t > Date.now());
+    if (!ends.length) return;
+    const id = setTimeout(() => tick((n) => n + 1), Math.min(...ends) - Date.now() + 20);
+    return () => clearTimeout(id);
+  }, [goAt, nogoAt]);
+  const cheerGo = goAt > 0 && Date.now() < goAt + CHEER_MS;
+  const failing = nogoAt > 0 && Date.now() < nogoAt + FAIL_MS;
   // A launch gets everyone awake on their feet, cheering (agent-office's desk dance).
   const { clip, seated } =
-    cheering && crew.status !== "asleep" ? { clip: "Cheer", seated: false } : stanceFor(crew);
+    (cheering || cheerGo) && crew.status !== "asleep"
+      ? { clip: "Cheer", seated: false }
+      : stanceFor(crew);
   // Seated in the console's chair, or standing just behind it.
   const seat = consoleSeat(def, seated ? SEATED : 1.45);
 
@@ -76,7 +95,7 @@ export function CrewMember({ crew, def }: { crew: CrewInfo; def: ConsoleDef }) {
   // Runs after useAnimations' mixer update (registered first), so the offsets sit on top of the clip.
   useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime;
-    let act = hold.current.at(seated ? actFor(crew) : "rest", t);
+    let act = hold.current.at(seated ? (failing ? "failing" : actFor(crew)) : "rest", t);
     if (import.meta.env.DEV && seated && poseDebug.act) act = poseDebug.act;
     layer.apply((import.meta.env.DEV && seated && poseDebug.pose) || poseFor(act, t), delta);
     props.current?.update(act, t, hands);

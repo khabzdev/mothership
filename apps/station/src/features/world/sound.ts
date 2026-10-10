@@ -262,3 +262,20 @@ export function playLaunch(): void {
   noise.start(at);
   noise.stop(at + 4);
 }
+
+/** A pre-flight check's verdict: a bright blip for GO, a low double buzz for NO-GO (only if sound is on). */
+export function playCheck(verdict: "go" | "nogo" | "skipped"): void {
+  if (ctx?.state !== "running" || verdict === "skipped") return;
+  if (verdict === "go") bell(988, 0, 0.12, 0.18);
+  else {
+    bell(196, 0, 0.16, 0.2);
+    bell(185, 0.14, 0.16, 0.26);
+  }
+}
+
+/** Say a line aloud, dropping whatever was still queued; silent where speech isn't available. */
+export function speak(line: string): void {
+  if (ctx?.state !== "running" || typeof speechSynthesis === "undefined") return;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(line));
+}

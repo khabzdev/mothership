@@ -33,6 +33,7 @@ import { gameKeysEnabled, useWorld } from "./store";
 import { HintBar, TopBar } from "./ui/Hud";
 import { Boarding } from "./ui/Boarding";
 import { CrewPanel } from "./ui/CrewPanel";
+import { usePreflightPoll } from "./usePreflightPoll";
 import { NeedsYouBanner, useCloneNews, useLaunchNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
@@ -131,6 +132,7 @@ export function Game({ deck }: { deck: Deck }) {
   useOtherDecksHeadsUp(deck.id);
   useCloneNews();
   useLaunchNews(deck.id);
+  usePreflightPoll(deck.id, deck.name);
 
   return (
     <Toasty toastManager={toasts}>

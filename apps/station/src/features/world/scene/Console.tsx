@@ -11,6 +11,9 @@ import {
 } from "three";
 import { getScreen, onScreen } from "../../../shared/realtime/screens";
 import { CONSOLE_SIZE, type ConsoleDef } from "../layout";
+import { isGo } from "../../preflight/poll";
+import { Breach } from "./Breach";
+import { usePreflightTurn } from "./useTurn";
 import { Furniture } from "./Furniture";
 import { GLOW, KIT, PAINTED } from "./materials";
 import { KAYKIT_SCALE } from "./models";
@@ -175,6 +178,7 @@ export function Console({
   crew?: CrewInfo;
   active: boolean;
 }) {
+  const nogoAt = usePreflightTurn(crew?.preflight, "nogo");
   const glow = crew ? STATUS_COLORS[crew.status] : active ? KIT.orange : "#3d4a63";
   return (
     <group position={[def.x, 0, def.z]} rotation={[0, def.rotY, 0]}>
@@ -193,6 +197,19 @@ export function Console({
           toneMapped={false}
         />
       </mesh>
+      {/* GO: a green rim around the desk's front edge, emissive like the status strip. */}
+      {isGo(crew?.preflight) && (
+        <mesh position={[0, DESK_TOP + 0.004, CONSOLE_SIZE.depth / 2 - 0.005]}>
+          <boxGeometry args={[2.9, 0.012, 0.012]} />
+          <meshStandardMaterial
+            color="#3ddc84"
+            emissive="#3ddc84"
+            emissiveIntensity={GLOW}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
+      {nogoAt > 0 && <Breach since={nogoAt} />}
       {/* Pre-flight lamps, just above the status strip. */}
       <Lamps preflight={crew?.preflight} y={DESK_TOP - 0.005} />
       {/* Monitor: a foot on the desk, a neck, and the screen tilted toward the seat. */}
