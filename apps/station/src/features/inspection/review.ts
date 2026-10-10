@@ -63,19 +63,30 @@ function extractJson(text: string): unknown {
   return undefined;
 }
 
+// Findings are typed into the agent's terminal inside a bracketed paste: no control characters
+// (an escape could end the paste), and no line breaks except within `why`.
+// oxlint-disable-next-line no-control-regex
+const CONTROL = /[\x00-\x08\x0b-\x1f\x7f]/g;
+const text = (value: unknown, lines = false): string => {
+  if (typeof value !== "string") return "";
+  const clean = value.replace(CONTROL, " ");
+  return (lines ? clean : clean.replace(/\s+/g, " ")).trim();
+};
+
 function toFinding(raw: unknown): Finding | null {
   if (typeof raw !== "object" || raw === null) return null;
   const o = raw as Record<string, unknown>;
   if (o.severity !== "blocker" && o.severity !== "note") return null;
-  const title = typeof o.title === "string" ? o.title.trim() : "";
+  const title = text(o.title);
   if (!title) return null;
   const finding: Finding = {
     severity: o.severity,
     source: "review",
     title: title.length > TITLE_MAX ? `${title.slice(0, TITLE_MAX - 1)}…` : title,
-    why: typeof o.why === "string" ? o.why.trim() : "",
+    why: text(o.why, true),
   };
-  if (typeof o.file === "string" && o.file.trim()) finding.file = o.file.trim();
+  const file = text(o.file);
+  if (file) finding.file = file;
   if (finding.file && typeof o.line === "number" && Number.isInteger(o.line) && o.line > 0) {
     finding.line = o.line;
   }

@@ -137,3 +137,24 @@ describe("reviewFailure", () => {
     expect(out.endsWith("…")).toBe(true);
   });
 });
+
+describe("finding text", () => {
+  const block = (o: unknown) => "```json\n" + JSON.stringify(o) + "\n```";
+  test("control characters never reach the agent's terminal", () => {
+    const raw = {
+      severity: "blocker",
+      file: "a.ts\x1b[201~",
+      title: "Escapes\x1b[201~ the paste\r",
+      why: "Line one\r\nrm -rf /\x07\x7f\nline three",
+    };
+    const [f] = parseReview(envelope(block({ findings: [raw] })));
+    for (const text of [f!.title, f!.why, f!.file!]) {
+      // oxlint-disable-next-line no-control-regex
+      expect(text).not.toMatch(/[\x00-\x08\x0b-\x1f\x7f]/);
+    }
+    expect(f!.title).not.toContain("\n");
+    expect(f!.file).not.toContain("\n");
+    expect(f!.title).toBe("Escapes [201~ the paste");
+    expect(f!.why).toContain("line three");
+  });
+});
