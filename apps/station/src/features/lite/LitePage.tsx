@@ -63,6 +63,19 @@ const KEYS: [label: string, data: string][] = [
 
 const RESULT_TONE = { go: "success", nogo: "error", skipped: "neutral" } as const;
 
+type Chip = { label: string; tone: "warning" | "success" | "error" };
+
+/** A pre-flight or inspection chip (see preflightChip / inspectionChip) as a dot badge. */
+function ChipBadge({ chip }: { chip: Chip | null }) {
+  return (
+    chip && (
+      <Badge variant={chip.tone} appearance="dot">
+        {chip.label}
+      </Badge>
+    )
+  );
+}
+
 /** A manual pre-flight and the latest results, for crew in their own worktree. */
 function LitePreflight({ member }: { member: CrewInfo }) {
   const queryClient = useQueryClient();
@@ -209,9 +222,10 @@ function LiteBrief({ member, brief }: { member: CrewInfo; brief: NonNullable<Cre
 /** The latest inspection as a chip that opens its findings, with Re-inspect once it's done. */
 function LiteInspection({ member }: { member: CrewInfo }) {
   const queryClient = useQueryClient();
-  const { data } = useQuery(inspectionQuery(member.id));
-  const again = useMutation(reinspectMutation(queryClient, member.id));
   const [open, setOpen] = useState(false);
+  // The history is only read while its sheet is open.
+  const { data } = useQuery({ ...inspectionQuery(member.id), enabled: open });
+  const again = useMutation(reinspectMutation(queryClient, member.id));
   const chip = inspectionChip(member.inspection);
   const { current, blockers, notes } = windowSections(data ?? []);
   const running = member.inspection?.state === "running" || current?.state === "running";
@@ -224,9 +238,7 @@ function LiteInspection({ member }: { member: CrewInfo }) {
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <Badge variant={chip.tone} appearance="dot">
-          {chip.label}
-        </Badge>
+        <ChipBadge chip={chip} />
       </Button>
       {open && (
         <div className="lite-inspection__sheet">
@@ -376,28 +388,6 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
   );
 }
 
-function PreflightChip({ info }: { info?: CrewInfo["preflight"] }) {
-  const chip = preflightChip(info);
-  return (
-    chip && (
-      <Badge variant={chip.tone} appearance="dot">
-        {chip.label}
-      </Badge>
-    )
-  );
-}
-
-function InspectionChip({ info }: { info?: CrewInfo["inspection"] }) {
-  const chip = inspectionChip(info);
-  return (
-    chip && (
-      <Badge variant={chip.tone} appearance="dot">
-        {chip.label}
-      </Badge>
-    )
-  );
-}
-
 function HireForm({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
   const queryClient = useQueryClient();
   const hire = useMutation(hireMutation(queryClient));
@@ -528,8 +518,8 @@ function LiteDeck({
                           Brief
                         </Badge>
                       )}
-                      <PreflightChip info={c.preflight} />
-                      <InspectionChip info={c.inspection} />
+                      <ChipBadge chip={preflightChip(c.preflight)} />
+                      <ChipBadge chip={inspectionChip(c.inspection)} />
                     </span>
                   </button>
                 </li>
