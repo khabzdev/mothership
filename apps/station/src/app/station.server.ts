@@ -84,6 +84,7 @@ export function getStation(): Station {
     }));
     crew.briefWaitingWith((crewId) => briefs.waiting(crewId));
     crew.briefApprovedWith((crewId) => briefs.approved(crewId) !== null);
+    preflight.planningWith((crewId) => briefs.planning(crewId));
 
     onCrewSignal((event) => crew.handleSignal(event));
     onCrewSignal((event) => preflight.handleSignal(event));

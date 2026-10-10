@@ -384,6 +384,17 @@ describe("BriefService", () => {
     expect(service.info(id)?.state).toBe("superseded");
   });
 
+  test("planning: a brief that isn't approved yet", async () => {
+    const { id } = await hire();
+    expect(service.planning(id)).toBe(false);
+    plan(id);
+    expect(service.planning(id)).toBe(true);
+    expect(service.waiting(id)).toBe(true);
+    expect(await service.approve(id)).toEqual({ ok: true });
+    expect(service.planning(id)).toBe(false);
+    expect(service.waiting(id)).toBe(false);
+  });
+
   test("a revision-2 approval isn't clean", async () => {
     const { id } = await hire();
     plan(id);

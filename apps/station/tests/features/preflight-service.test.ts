@@ -193,6 +193,23 @@ describe("PreflightService", () => {
     });
   });
 
+  test("a stop while its brief isn't approved runs nothing; a manual run still goes", async () => {
+    const { id } = await hireWithChange();
+    const other = await hireWithChange(1);
+    let planning = true;
+    service.planningWith((crewId) => crewId === id && planning);
+    expect(await service.run(id, "stop")).toBeNull();
+    expect(calls).toEqual([]);
+    // Crew without a brief are unaffected.
+    expect(await service.run(other.id, "stop")).not.toBeNull();
+    await settled(other.id);
+    expect(await service.run(id, "manual")).not.toBeNull();
+    await settled(id);
+    planning = false;
+    writeFileSync(join(crew.workdir(id).cwd, "more.txt"), "more");
+    expect(await service.run(id, "stop")).not.toBeNull();
+  });
+
   test("stop without changes since the last run does nothing", async () => {
     const { id } = await hireWithChange();
     stop(id);

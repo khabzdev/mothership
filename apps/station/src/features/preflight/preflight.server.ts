@@ -90,6 +90,7 @@ export class PreflightService {
   readonly #busy = new Map<string, Job | Pending>();
   readonly #queue: Job[] = [];
   readonly #active = new Map<string, Job>();
+  #planning: (crewId: string) => boolean = () => false;
 
   constructor(deps: Deps) {
     this.#db = deps.db;
@@ -101,6 +102,14 @@ export class PreflightService {
     this.#fingerprint = deps.fingerprint ?? worktreeFingerprint;
     this.#crew.onPrompt((e) => this.#prompted(e));
     this.#crew.onGone((crewId) => this.cancel(crewId));
+  }
+
+  /**
+   * Ask whether a crew member is still planning (its brief isn't approved): a stop then is Claude
+   * asking or waiting on its plan, with nothing built to check and no place for a hand-back.
+   */
+  planningWith(fn: (crewId: string) => boolean): void {
+    this.#planning = fn;
   }
 
   /** A stop starts a pre-flight; going back to work cancels one, spending no fuel. */
@@ -119,10 +128,11 @@ export class PreflightService {
    * Start a pre-flight for a crew member, or queue it behind the ones running. Resolves with its
    * id once accepted, or null when there's nothing to run: a shell, crew in the deck's checkout,
    * a deck not armed or with no checks on, one already on the way, or (on a stop) no change since
-   * the last run.
+   * the last run or a brief not yet approved.
    */
   async run(crewId: string, trigger: PreflightTrigger): Promise<string | null> {
     if (this.#busy.has(crewId)) return null;
+    if (trigger === "stop" && this.#planning(crewId)) return null;
     const row = this.#crewRow(crewId);
     if (!row || row.provider === "shell") return null;
     const { cwd, ownWorktree } = this.#crew.workdir(crewId);
