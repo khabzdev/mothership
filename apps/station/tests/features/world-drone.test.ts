@@ -18,7 +18,7 @@ const v = (): Vec3 => ({ x: 0, y: 0, z: 0 });
 
 describe("drone size and height", () => {
   test("hovers above the name tags and is drawn larger", () => {
-    expect(HOVER_Y).toBe(2.9);
+    expect(HOVER_Y).toBe(2.3);
     expect(DRONE_SCALE).toBe(1.4);
   });
 });
@@ -89,9 +89,13 @@ describe("droneTarget", () => {
     );
     const c = CONSOLES[5]!;
     expect(target?.crewId).toBe("b");
-    expect(Math.hypot(target!.x - c.x, target!.z - c.z)).toBeLessThan(0.5);
-    // The screen faces the crew side (rotY); the drone faces back toward it.
-    expect(Math.cos(target!.facing - (c.rotY + Math.PI))).toBeCloseTo(1);
+    // Beyond the screen, on the side away from the crew member (the crew side is +rotY).
+    expect(Math.hypot(target!.x - c.x, target!.z - c.z)).toBeCloseTo(0.7);
+    expect(
+      (target!.x - c.x) * Math.sin(c.rotY) + (target!.z - c.z) * Math.cos(c.rotY),
+    ).toBeLessThan(0);
+    // The screen faces the crew side (rotY); the drone faces the same way, at the screen and the crew.
+    expect(Math.cos(target!.facing - c.rotY)).toBeCloseTo(1);
   });
 
   test("skips queued runs, and picks the lowest console of the rest", () => {

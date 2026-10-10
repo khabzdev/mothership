@@ -45,7 +45,7 @@ const DOCK_FACING = Math.PI;
 /** How long it waits once its review is gone before heading home: the verdict may still be on its way. */
 const LINGER_S = 0.4;
 /** The scan cone in the drone's own (scaled) frame: from the eye down to the console's screen. */
-const CONE = { radius: 0.3, length: 1.4, tilt: -0.2, sweep: 0.3 };
+const CONE = { radius: 0.3, length: 1.0, tilt: -0.26, sweep: 0.3 };
 
 type Target = NonNullable<ReturnType<typeof droneTarget>>;
 type Verdict = Extract<DroneBeat, "cleared" | "flagged" | "failed">;

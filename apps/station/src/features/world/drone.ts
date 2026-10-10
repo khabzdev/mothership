@@ -4,8 +4,8 @@ import { consoleSeat, type ConsoleDef } from "./layout";
 // The Inspector drone's moves: where it goes, how it flies there and how it reacts to a verdict.
 // Pure and allocation-free, so the scene can call it every frame.
 
-/** How high the drone hovers over a console it's inspecting (m): above the crew name tags. */
-export const HOVER_Y = 2.9;
+/** How high the drone hovers over a console it's inspecting (m): above the crew name tags, low enough to read over its console. */
+export const HOVER_Y = 2.3;
 /** How much bigger the drone is drawn than its modelled size, so it reads from the default camera. */
 export const DRONE_SCALE = 1.4;
 /** How high it hovers over its pad. */
@@ -17,8 +17,8 @@ export const VERDICT_S = 1.5;
 
 /** How far the arc rises over the higher end of a flight. */
 const ARC = 0.8;
-/** How far in front of the console's middle (crew side) it hovers, over the keyboard. */
-const OVER_KEYBOARD = 0.25;
+/** Where it hovers along the console's depth: negative is beyond the monitor, away from the crew member (m). */
+const BEYOND_SCREEN = -0.7;
 const SHAKE = 0.25;
 const SHAKES = 3;
 const SHRUG = 0.35;
@@ -57,8 +57,9 @@ export function droneFlight(from: Vec3, to: Vec3, t: number, out: Vec3): Vec3 {
 }
 
 /**
- * The crew member being reviewed, and where the drone hovers for it: over its console's
- * keyboard, facing the screen. The lowest console's running review that isn't queued.
+ * The crew member being reviewed, and where the drone hovers for it: just beyond its console's
+ * screen (on the side away from the crew member), facing the screen and the crew member.
+ * The lowest console's running review that isn't queued.
  */
 export function droneTarget(
   roster: CrewInfo[],
@@ -73,8 +74,8 @@ export function droneTarget(
     if (def) best = { member, def };
   }
   if (!best) return null;
-  const spot = consoleSeat(best.def, OVER_KEYBOARD);
-  return { crewId: best.member.id, ...spot, facing: best.def.rotY + Math.PI };
+  const spot = consoleSeat(best.def, BEYOND_SCREEN);
+  return { crewId: best.member.id, ...spot, facing: best.def.rotY };
 }
 
 /** The eye's colour for a beat. */
