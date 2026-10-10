@@ -584,4 +584,27 @@ describe("PreflightService", () => {
     );
     expect(fuelOf(id)?.fuel).toBe(3);
   });
+
+  test("manual runs don't count toward a flight's attempts", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["nogo", "nogo"];
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(2));
+
+    verdicts = ["nogo", "nogo"];
+    await service.run(id, "manual");
+    await settled(id);
+    expect(service.info(id)).toMatchObject({ attempt: 1, fuel: 2 });
+
+    verdicts = ["nogo", "nogo"];
+    writeFileSync(join(crew.workdir(id).cwd, "change.txt"), "again");
+    stop(id);
+    await vi.waitFor(() => expect(service.history(id)).toHaveLength(3));
+    await settled(id);
+    await vi.waitFor(() => expect(pastes()).toHaveLength(2));
+    expect(pastes()[1]![1]).toContain("Pre-flight NO-GO (attempt 3 of 4)");
+    await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(1));
+    expect(service.info(id)?.attempt).toBe(2);
+  });
 });

@@ -196,9 +196,7 @@ export class PreflightService {
     const record = this.latest(crewId);
     if (!record) return undefined;
     const row = this.#crewRow(crewId);
-    const attempt = row
-      ? this.history(crewId).filter((r) => r.state !== "cancelled").length
-      : record.attempt;
+    const attempt = row ? this.#stopAttempts(crewId) : record.attempt;
     const job = this.#active.get(record.id);
     const checks = job
       ? job.checks.map((check, i) => {
@@ -355,7 +353,7 @@ export class PreflightService {
       });
       this.#crew.refresh(job.deckId);
     }
-    await this.#handBack(job, member.flight, attempt, verdicts, failures);
+    await this.#handBack(job, member.flight, verdicts, failures);
   }
 
   /**
@@ -365,13 +363,13 @@ export class PreflightService {
   async #handBack(
     job: Job,
     flight: number,
-    attempt: number,
     verdicts: CheckVerdict[],
     failures: CheckFailure[],
   ): Promise<void> {
     if (job.trigger !== "stop" || job.abort.signal.aborted) return;
     const member = this.#crewRow(job.crewId);
     if (!member || member.flight !== flight) return;
+    const attempt = this.#stopAttempts(job.crewId);
     const outcome = afterPreflight(verdicts, member.fuel, attempt);
     if (outcome.kind === "go") return;
     const names = failures.map((f) => f.name);
@@ -392,6 +390,12 @@ export class PreflightService {
       .set({ fuel: sql`max(${crewTable.fuel} - 1, 0)` })
       .where(and(eq(crewTable.id, job.crewId), eq(crewTable.flight, flight)))
       .run();
+  }
+
+  /** This flight's attempts: stop runs that finished. Manual runs spend no fuel, so don't count. */
+  #stopAttempts(crewId: string): number {
+    return this.history(crewId).filter((r) => r.trigger === "stop" && r.state !== "cancelled")
+      .length;
   }
 
   /** Your prompt starts a new flight with a full tank, and cancels a pre-flight under way. */
