@@ -18,6 +18,10 @@ const dot = (a: readonly number[], b: readonly number[]) => a.reduce((s, x, i) =
 /** A body's angular radius seen from the sky's centre (the camera), in degrees. */
 const angular = (b: Body, scale = 1) =>
   (Math.asin((b.radius * scale) / b.distance) * 180) / Math.PI;
+const DEG = 180 / Math.PI;
+/** Compass bearing: degrees from north (-z) toward east (+x). */
+const bearing = (b: Body) => Math.atan2(b.direction[0], -b.direction[2]) * DEG;
+const elevation = (b: Body) => Math.asin(b.direction[1]) * DEG;
 /** Earth's outermost shell (the atmosphere) relative to its radius. */
 const EARTH_SHELL = EARTH.atmosphere;
 const apart = (a: Body, b: Body) =>
@@ -53,14 +57,27 @@ describe("sky placement", () => {
     }
   });
 
-  test("Earth fills the lower sky beyond the north side as a big curved horizon", () => {
+  test("Earth rises well above the island's west edge, clear of the north board wall", () => {
     expect(angular(EARTH)).toBeGreaterThanOrEqual(25);
-    // Its centre is below the horizon, north of the deck, and its top limb reaches about eye level.
-    expect(EARTH.direction[1]).toBeLessThan(0);
-    expect(EARTH.direction[2]).toBeLessThan(0);
-    const top = (Math.asin(EARTH.direction[1]) * 180) / Math.PI + angular(EARTH);
-    expect(top).toBeGreaterThan(-6);
-    expect(top).toBeLessThan(6);
+    expect(elevation(EARTH) + angular(EARTH)).toBeGreaterThanOrEqual(15);
+    expect(bearing(EARTH)).toBeGreaterThanOrEqual(-110);
+    expect(bearing(EARTH)).toBeLessThanOrEqual(-60);
+  });
+
+  test("the Sun stands upper right of the default view", () => {
+    expect(bearing(SUN)).toBeGreaterThanOrEqual(30);
+    expect(bearing(SUN)).toBeLessThanOrEqual(70);
+    expect(elevation(SUN)).toBeGreaterThanOrEqual(30);
+    expect(elevation(SUN)).toBeLessThanOrEqual(50);
+  });
+
+  test("the side of Earth facing the deck is mostly sunlit", () => {
+    expect(
+      dot(
+        SUN_DIRECTION,
+        EARTH.direction.map((x) => -x),
+      ),
+    ).toBeGreaterThanOrEqual(0.5);
   });
 
   test("the Sun and the Moon stand clear of Earth's disc (and its atmosphere)", () => {

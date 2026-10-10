@@ -15,8 +15,8 @@ import {
 import { EARTH, MOON, PLANET_TEXTURES, SUN, SUN_DIRECTION, type Body } from "../sky";
 import { GLOW } from "./materials";
 
-// The orbit sky: Earth below the island's north side, the Moon beside it and the Sun where the key
-// light comes from. It rides along with the camera (no rotation) so the bodies never parallax as you
+// The orbit sky: Earth rising beyond the island's west edge, the Moon low in the south-west and the
+// Sun upper right, where the key light comes from. It rides along with the camera (no rotation) so the bodies never parallax as you
 // walk. No lights of its own: Earth and the Moon shade themselves from SUN_DIRECTION in small
 // shaders, and the Sun's disc is emissive over 1 so the existing bloom halos it.
 
@@ -25,8 +25,8 @@ const EARTH_AT = at(EARTH);
 const MOON_AT = at(MOON);
 const SUN_AT = at(SUN);
 const SUN_UNIFORM = { value: new Vector3(...SUN_DIRECTION) };
-/** Earth's axis, tipped so the deck looks down on its mid-latitudes rather than the pole. */
-const EARTH_TILT: [number, number, number] = [-0.3, 0, 0.41];
+/** Earth's axis, tipped a little toward the deck so it looks on the northern mid-latitudes. */
+const EARTH_TILT: [number, number, number] = [0, 0, -0.15];
 const SUN_COLOR = new Color("#fff1d6").multiplyScalar(GLOW);
 const GLARE_COLOR = new Color("#ffd9b0").multiplyScalar(1.1);
 const ATMOSPHERE = "vec3(0.32, 0.56, 1.0)";
@@ -83,7 +83,6 @@ const CLOUDS_FRAGMENT = /* glsl */ `
   uniform vec3 sun;
   varying vec2 vUv;
   varying vec3 vNormal;
-  varying vec3 vToCamera;
   void main() {
     float light = dot(normalize(vNormal), sun);
     float shade = 0.03 + 0.85 * max(light, 0.0);
@@ -114,7 +113,6 @@ const MOON_FRAGMENT = /* glsl */ `
   uniform vec3 sun;
   varying vec2 vUv;
   varying vec3 vNormal;
-  varying vec3 vToCamera;
   ${SOFTEN}
   void main() {
     float light = max(dot(normalize(vNormal), sun), 0.0);
@@ -160,11 +158,12 @@ export function Sky() {
     };
   }, [maps]);
 
+  // Priority 0.5: after the Captain moves the camera (0), before the composer renders (1).
   useFrame(({ camera }, dt) => {
     sky.current?.position.copy(camera.position);
     if (earth.current) earth.current.rotation.y += EARTH.turn * dt;
     if (clouds.current) clouds.current.rotation.y += EARTH.drift * dt;
-  });
+  }, 0.5);
 
   return (
     <group ref={sky}>

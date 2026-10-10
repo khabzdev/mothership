@@ -1,5 +1,6 @@
-// The orbit sky around a deck: Earth below the island's north side, the Moon off to one side and
-// the Sun exactly where the deck's key light comes from. The sky follows the camera (a skybox),
+// The orbit sky around a deck: Earth rising beyond the island's west edge, the Moon low behind
+// the default view's left shoulder and the Sun upper right, exactly where the deck's key light
+// comes from. The sky follows the camera (a skybox),
 // so each body is a direction, a distance from the camera and a radius.
 
 type Vec3 = [number, number, number];
@@ -10,23 +11,25 @@ export const CAMERA_FAR = 400;
 /** How far the camera can be from the deck's centre: a deck corner plus the longest camera boom. */
 export const CAMERA_ROAM = 50;
 
-/** Where the deck's directional light stands (Atmosphere.tsx); the Sun is in this direction. */
-export const SUN_LIGHT: Vec3 = [-8, 18, 10];
-
-const unit = (v: Vec3): Vec3 => {
-  const n = Math.hypot(...v);
-  return [v[0] / n, v[1] / n, v[2] / n];
-};
-
-/** Toward the Sun: the direction the deck's key light comes from (unit vector). */
-export const SUN_DIRECTION: Vec3 = unit(SUN_LIGHT);
-
 /** A unit vector at a compass bearing (degrees from north, -z, toward east, +x) and an elevation. */
 function toward(bearing: number, elevation: number): Vec3 {
   const a = (bearing * Math.PI) / 180;
   const e = (elevation * Math.PI) / 180;
   return [Math.cos(e) * Math.sin(a), Math.sin(e), -Math.cos(e) * Math.cos(a)];
 }
+
+/** Toward the Sun, upper right of the default view: the direction the deck's key light comes from. */
+export const SUN_DIRECTION: Vec3 = toward(50, 40);
+
+/** How far from the deck's centre its directional light stands (its shadow camera is fitted to this). */
+const SUN_LIGHT_DISTANCE = 22;
+
+/** Where the deck's directional light stands (Atmosphere.tsx): toward the Sun. */
+export const SUN_LIGHT: Vec3 = [
+  SUN_DIRECTION[0] * SUN_LIGHT_DISTANCE,
+  SUN_DIRECTION[1] * SUN_LIGHT_DISTANCE,
+  SUN_DIRECTION[2] * SUN_LIGHT_DISTANCE,
+];
 
 /** A sphere this wide (degrees of angular radius) seen from this far away. */
 const radiusFor = (distance: number, degrees: number) =>
@@ -39,10 +42,11 @@ export interface Body {
   radius: number;
 }
 
-// The default camera looks north-west (bearing ≈ -34°) and 24° down: Earth sits a little east of
-// that, low enough that its top limb is a curved horizon at about eye level beyond the island.
+// The default camera looks north-west (bearing ≈ -34°) and 24° down. Earth sits west, left of the
+// north board wall, its top limb a curved horizon 17° up, well above the island's west edge, and
+// its face toward the deck mostly in daylight (the Sun is on the other side of the view).
 export const EARTH = {
-  direction: toward(-25, -32),
+  direction: toward(-80, -14),
   distance: 240,
   radius: radiusFor(240, 31),
   /** The cloud sphere and the atmosphere shell, relative to the radius. */
@@ -53,9 +57,9 @@ export const EARTH = {
   drift: 0.0065,
 } as const satisfies Body & Record<string, unknown>;
 
-/** Left of the default view, just above Earth's limb. */
+/** Low in the south-west, clear of Earth and the Sun. */
 export const MOON: Body = {
-  direction: toward(-63, -3),
+  direction: toward(-140, 4),
   distance: 200,
   radius: radiusFor(200, 2.4),
 };
