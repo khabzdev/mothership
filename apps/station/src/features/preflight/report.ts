@@ -62,12 +62,13 @@ const VERDICT_LABEL = { go: "GO", nogo: "NO-GO", skipped: "Skipped" } as const;
 export function prEvidence(record: PreflightRecord, current?: { hash: string }): string {
   const seconds = Math.round(((record.finishedAt ?? record.startedAt) - record.startedAt) / 1000);
   const mark = record.state === "go" ? "GO ✅" : "NO-GO ❌";
+  const run = record.trigger === "manual" ? "manual run" : `attempt ${record.attempt}`;
   const rows = record.results.map(
     (r) =>
       `| ${r.name.replace(/\|/g, "\\|")} | ${VERDICT_LABEL[r.verdict]} | ${(r.durationMs / 1000).toFixed(1)}s |`,
   );
   return [
-    `### Pre-flight: ${mark}  (attempt ${record.attempt} · ${seconds}s · commit ${record.commit.slice(0, 7)})`,
+    `### Pre-flight: ${mark}  (${run} · ${seconds}s · commit ${record.commit.slice(0, 7)})`,
     ...(current && current.hash !== record.fingerprint
       ? [
           `_Ran on an earlier state of this branch (commit ${record.commit.slice(0, 7)}); the branch has changed since._`,

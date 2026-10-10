@@ -246,7 +246,7 @@ describe("PreflightService", () => {
     expect(second).toEqual(expect.any(String));
     await settled(id);
     expect(service.history(id).map((r) => [r.id, r.trigger, r.attempt])).toEqual([
-      [second, "manual", 2],
+      [second, "manual", 1],
       [expect.any(String), "stop", 1],
     ]);
   });
@@ -838,5 +838,10 @@ describe("PreflightService", () => {
     expect(pastes()[1]![1]).toContain("Pre-flight NO-GO (attempt 3 of 4)");
     await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(1));
     expect(service.info(id)?.attempt).toBe(2);
+    expect(service.history(id).map((r) => [r.trigger, r.attempt])).toEqual([
+      ["stop", 2],
+      ["manual", 1],
+      ["stop", 1],
+    ]);
   });
 });

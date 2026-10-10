@@ -331,18 +331,20 @@ export class PreflightService {
   async #execute(job: Job): Promise<void> {
     const member = this.#crewRow(job.crewId);
     if (!member) return;
-    const attempt =
-      this.#db
-        .select({ n: sql<number>`count(*)` })
-        .from(preflights)
-        .where(
-          and(
-            eq(preflights.crewId, job.crewId),
-            eq(preflights.flight, member.flight),
-            ne(preflights.state, "cancelled"),
-          ),
-        )
-        .get()!.n + 1;
+    // Only stop runs are attempts; a manual run carries the attempt it follows (0 before any).
+    const stops = this.#db
+      .select({ n: sql<number>`count(*)` })
+      .from(preflights)
+      .where(
+        and(
+          eq(preflights.crewId, job.crewId),
+          eq(preflights.flight, member.flight),
+          eq(preflights.trigger, "stop"),
+          ne(preflights.state, "cancelled"),
+        ),
+      )
+      .get()!.n;
+    const attempt = job.trigger === "stop" ? stops + 1 : stops;
     this.#db
       .insert(preflights)
       .values({

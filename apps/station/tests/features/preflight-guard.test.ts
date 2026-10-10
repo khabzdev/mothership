@@ -54,6 +54,12 @@ describe("prEvidence", () => {
     );
   });
 
+  test("a manual run says so instead of an attempt", () => {
+    expect(prEvidence(record({ trigger: "manual" })).split("\n")[0]).toBe(
+      "### Pre-flight: GO ✅  (manual run · 41s · commit abc1234)",
+    );
+  });
+
   test("a NO-GO run reads NO-GO", () => {
     const text = prEvidence(
       record({
