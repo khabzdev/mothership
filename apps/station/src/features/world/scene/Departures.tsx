@@ -1,6 +1,6 @@
 import type { CrewInfo } from "@mothership/protocol";
 import { useEffect, useRef, useState } from "react";
-import { CONSOLES, airlockPath } from "../layout";
+import { CONSOLES, departurePath } from "../layout";
 import { Departing } from "./Departing";
 
 interface Leaving {
@@ -9,7 +9,7 @@ interface Leaving {
 }
 
 /**
- * Whoever leaves the roster (sent home here or by anyone else) walks out through the airlock. A
+ * Whoever leaves the roster (sent home here or by anyone else) walks out through the garage. A
  * new deck's roster is a fresh start: nobody on it is leaving.
  */
 export function Departures({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
@@ -26,7 +26,7 @@ export function Departures({ deckId, crew }: { deckId: string; crew: CrewInfo[] 
       ...list,
       ...gone.flatMap((c) => {
         const def = CONSOLES[c.consoleId];
-        return def ? [{ crew: c, path: airlockPath(def) }] : [];
+        return def ? [{ crew: c, path: departurePath(def) }] : [];
       }),
     ]);
   }, [deckId, crew]);

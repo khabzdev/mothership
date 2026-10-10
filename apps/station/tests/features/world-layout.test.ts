@@ -3,7 +3,7 @@ import {
   CONSOLES,
   DECK,
   SPAWN,
-  AIRLOCK,
+  GARAGE_DOOR,
   COLLIDERS,
   addCollider,
   BOARDS,
@@ -11,7 +11,7 @@ import {
   FLIGHT_CONTROL,
   flightControlInReach,
   boardInReach,
-  airlockPath,
+  departurePath,
   shipInReach,
   partnerOf,
   consoleInReach,
@@ -48,16 +48,18 @@ describe("deck layout", () => {
     expect(moveWithCollisions(8, 9.5, 1, 0).x).toBe(9);
   });
 
-  test("every crew member's way to the airlock stays clear of the consoles", () => {
+  test("every crew member's way to the garage door stays clear of the consoles", () => {
     for (const c of CONSOLES) {
-      const path = airlockPath(c);
-      expect(path.at(-1)).toEqual({ x: AIRLOCK.x - 0.7, z: AIRLOCK.z });
+      const path = departurePath(c);
+      expect(path[0]).toEqual(consoleSeat(c));
+      expect(path.at(-1)).toEqual(GARAGE_DOOR);
       // Skip the first leg: that's getting up out of its own chair.
       for (let i = 1; i < path.length - 1; i++) {
         const [a, b] = [path[i]!, path[i + 1]!];
-        for (let t = 0; t <= 1; t += 0.02) {
-          const x = a.x + (b.x - a.x) * t;
-          const z = a.z + (b.z - a.z) * t;
+        const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.25));
+        for (let s = 0; s <= steps; s++) {
+          const x = a.x + ((b.x - a.x) * s) / steps;
+          const z = a.z + ((b.z - a.z) * s) / steps;
           const inside = COLLIDERS.some(
             (box) => x > box.minX && x < box.maxX && z > box.minZ && z < box.maxZ,
           );
@@ -65,6 +67,11 @@ describe("deck layout", () => {
         }
       }
     }
+  });
+
+  test("the garage door is a spot in the play area", () => {
+    expect(moveWithCollisions(GARAGE_DOOR.x, GARAGE_DOOR.z, 0, 0)).toEqual(GARAGE_DOOR);
+    expect(consoleInReach(GARAGE_DOOR.x, GARAGE_DOOR.z)).toBeNull();
   });
 
   test("every console has one partner back to back across the desk", () => {

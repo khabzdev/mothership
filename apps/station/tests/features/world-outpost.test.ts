@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vite-plus/test";
-import { DECK, DEPARTURE_PAD, LAUNCH_PAD, SHIP_PAD } from "../../src/features/world/layout";
+import { DECK, GARAGE_DOOR, LAUNCH_PAD, SHIP_PAD } from "../../src/features/world/layout";
 import { ISLAND, TILE } from "../../src/features/world/island";
-import { OUTPOST, OUTPOST_SCALE, PAD_CLEARINGS } from "../../src/features/world/outpost";
+import { GARAGE, OUTPOST, OUTPOST_SCALE, PAD_CLEARINGS } from "../../src/features/world/outpost";
 import type { Placement } from "../../src/features/world/placement";
 import { SPACE_PIECES } from "../../src/features/world/scene/models";
 
@@ -60,10 +60,12 @@ function footprint(piece: string, p: Placement): Box {
   return out;
 }
 
-const pieces = () =>
-  Object.entries(OUTPOST).flatMap(([piece, at]) =>
+const pieces = () => [
+  ...Object.entries(OUTPOST).flatMap(([piece, at]) =>
     at.map((placement) => ({ piece, placement, box: footprint(piece, placement) })),
-  );
+  ),
+  { piece: "basemodule_garage", placement: GARAGE, box: footprint("basemodule_garage", GARAGE) },
+];
 const label = (e: { piece: string; placement: Placement }) =>
   `${e.piece} at ${e.placement.position[0]}, ${e.placement.position[2]}`;
 
@@ -108,7 +110,6 @@ describe("the outpost", () => {
     expect(PAD_CLEARINGS).toEqual([
       { ...SHIP_PAD, r: 4 },
       { ...LAUNCH_PAD, r: 4 },
-      { ...DEPARTURE_PAD, r: 3 },
     ]);
     for (const e of pieces())
       for (const c of PAD_CLEARINGS) {
@@ -142,5 +143,19 @@ describe("the outpost", () => {
 
   test("outpost pieces are known assets", () => {
     for (const piece of Object.keys(OUTPOST)) expect(SPACE_PIECES).toContain(piece);
+    expect(SPACE_PIECES).toContain("basemodule_garage");
+  });
+
+  test("the garage stands on its own (its door moves), facing the deck", () => {
+    expect(OUTPOST.basemodule_garage).toBeUndefined();
+    expect(GARAGE.rotY).toBeCloseTo(Math.PI);
+    expect(GARAGE.position[2]).toBeGreaterThan(DECK.maxZ);
+  });
+
+  test("the garage door spot is within 1.5 m of the garage's door side", () => {
+    const front = footprint("basemodule_garage", GARAGE).minZ;
+    expect(front).toBeGreaterThan(GARAGE_DOOR.z);
+    expect(front - GARAGE_DOOR.z).toBeLessThanOrEqual(1.5);
+    expect(GARAGE_DOOR.x).toBeCloseTo(GARAGE.position[0]);
   });
 });

@@ -1,9 +1,9 @@
 import { Stars } from "@react-three/drei";
-import { Airlock } from "./Airlock";
+import { Garage } from "./Garage";
 import { Island } from "./Island";
 import { Outpost } from "./Outpost";
 
-/** The deck: its terrain island, the outpost and the airlock. */
+/** The deck: its terrain island, the outpost and its garage. */
 export function Deck() {
   return (
     <group>
@@ -12,7 +12,7 @@ export function Deck() {
       <Island />
       <Outpost />
 
-      <Airlock />
+      <Garage />
     </group>
   );
 }

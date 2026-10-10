@@ -36,8 +36,6 @@ const SPACE = {
     "basemodule_D",
     "basemodule_E",
     "cargodepot_A",
-    "landingpad_small",
-    "lander_B",
     "rock_B",
     "rocks_B",
     "roofmodule_solarpanels",

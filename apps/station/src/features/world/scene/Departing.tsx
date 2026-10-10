@@ -3,13 +3,20 @@ import { Html, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
-import { CRIES, PLEAS, departure } from "../departure";
-import { airlock } from "./Airlock";
+import { CRIES, PLEAS, departure, nextAtDoor, walkTime } from "../departure";
+import { garage } from "./Garage";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 
 const pick = <T,>(list: readonly T[]) => list[Math.floor(Math.random() * list.length)]!;
 
-/** A crew member on its way out: to the airlock, through it one at a time, and out into space. */
+/** Let go of the garage door (and its place in line), shutting the door if it was going through. */
+function leave(id: string) {
+  if (garage.using === id) Object.assign(garage, { door: 0, using: null });
+  const i = garage.queue.indexOf(id);
+  if (i >= 0) garage.queue.splice(i, 1);
+}
+
+/** A crew member on its way out: to the garage, and through its door one at a time. */
 export function Departing({
   crew,
   path,
@@ -28,28 +35,24 @@ export function Departing({
   const [says, setSays] = useState<"plea" | "cry" | null>(null);
   const lines = useMemo(() => ({ plea: pick(PLEAS), cry: pick(CRIES) }), []);
 
-  useEffect(
-    () => () => {
-      if (airlock.using === crew.id)
-        Object.assign(airlock, { inner: 0, outer: 0, red: false, using: null });
-    },
-    [crew.id],
-  );
+  // Where it waits its turn: the last corner before the door.
+  const queueAt = useMemo(() => walkTime(path.slice(0, -1)), [path]);
+
+  useEffect(() => () => leave(crew.id), [crew.id]);
 
   useFrame((_, delta) => {
-    const dt = Math.min(delta, 0.1);
-    let f = departure(path, clock.current + dt);
-    // One at a time: wait at the door while someone else is going through.
-    if (f.atLock && airlock.using !== crew.id) {
-      if (airlock.using) f = departure(path, clock.current);
-      else airlock.using = crew.id;
+    let t = clock.current + Math.min(delta, 0.1);
+    // One at a time: wait at the corner while someone else is going through.
+    if (garage.using !== crew.id && t >= queueAt) {
+      if (!garage.queue.includes(crew.id)) garage.queue.push(crew.id);
+      if (nextAtDoor(garage.queue, garage.using) === crew.id) {
+        garage.queue.splice(garage.queue.indexOf(crew.id), 1);
+        garage.using = crew.id;
+      } else t = queueAt;
     }
-    if (!f.atLock || airlock.using === crew.id) clock.current += dt;
-    if (airlock.using === crew.id) {
-      airlock.inner = f.inner;
-      airlock.outer = f.outer;
-      airlock.red = f.red;
-    }
+    clock.current = t;
+    const f = departure(path, t);
+    if (garage.using === crew.id) garage.door = f.door;
 
     const wanted = f.walking ? "Walking_A" : f.says === "cry" ? "Jump_Idle" : "Idle";
     if (wanted !== clip.current) {
@@ -58,10 +61,10 @@ export function Departing({
       clip.current = wanted;
     }
     root.current?.position.set(f.x, f.y, f.z);
-    if (root.current) root.current.rotation.set(f.tumble, f.facing, f.tumble * 0.6);
+    if (root.current) root.current.rotation.y = f.facing;
     if (f.says !== says) setSays(f.says);
     if (f.done) {
-      Object.assign(airlock, { inner: 0, outer: 0, red: false, using: null });
+      leave(crew.id);
       onGone();
     }
   });

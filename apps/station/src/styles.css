@@ -281,7 +281,7 @@ kbd {
   color: var(--text-color-kumo-subtle);
 }
 
-/* A speech bubble over a crew member (pleading at the airlock). */
+/* A speech bubble over a crew member (pleading at the garage door). */
 .speech {
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--color-kumo-line);

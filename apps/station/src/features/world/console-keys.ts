@@ -11,7 +11,7 @@ import { gameKeysEnabled, useWorld } from "./store";
 export function sendHomeNow(member: CrewInfo): void {
   const { say } = useWorld.getState();
   sendHomeCrew({ data: { crewId: member.id, worktree: "keep" } }).then(
-    () => say(`${member.name} is heading for the airlock`),
+    () => say(`${member.name} is heading for the garage`),
     (error: Error) => say(error.message, "error"),
   );
 }

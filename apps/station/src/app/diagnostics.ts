@@ -14,7 +14,7 @@ export interface Diagnostics {
   /** Crew can launch: git, claude (signed in) and the PTY host are all ok. */
   crewReady: boolean;
   /** Missions can open PRs: git and gh (signed in) are ok. */
-  airlockReady: boolean;
+  launchReady: boolean;
   checkedAt: number;
 }
 

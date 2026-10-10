@@ -12,6 +12,5 @@ dist-ssr
 __unconfig*
 todos.json
 
-# KayKit models (fetched by `vp run assets`); the Kenney station pieces are small and committed.
+# KayKit models (fetched by `vp run assets`).
 public/models/*
-!public/models/station/

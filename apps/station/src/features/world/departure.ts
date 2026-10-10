@@ -1,20 +1,11 @@
-import { AIRLOCK } from "./layout";
+// A crew member sent home trudges to the garage on the outpost's south row and leaves through it:
+// it pleads while the roll-up door goes up, walks in, and the door comes down on its cry.
 
-// A crew member sent home walks to the airlock and is put out of it (agent-office's space station,
-// features/workers/eject.ts): the inner door goes up, it steps in, the door comes down, the lights
-// go red while it pleads, then the outer hatch parts and it's blown out into space, tumbling.
-
-/** Seconds for each beat once it reaches the inner door. */
-export const EJECT = {
-  open: 0.5,
-  step: 0.6,
-  seal: 0.5,
-  wait: 1.8,
-  part: 0.22,
-  blow: 5.5,
-  shut: 0.8,
-};
-/** Walking pace to the airlock (m/s): a trudge. */
+/** Seconds for each beat once it reaches the garage door. */
+export const GATE = { open: 0.8, step: 1.0, close: 0.8, gone: 0.4 };
+/** How far it walks on from the door spot: 1.8 m to the door, then about 1.5 m into the garage. */
+const IN = 3.3;
+/** Walking pace to the garage (m/s): a trudge. */
 export const TRUDGE = 1.9;
 
 export const PLEAS = [
@@ -34,24 +25,22 @@ export interface DepartureFrame {
   z: number;
   /** Which way it faces (radians about y, 0 = +z). */
   facing: number;
-  /** Tumbling once blown out (radians). */
-  tumble: number;
   walking: boolean;
-  /** Inner door and outer hatch, 0 shut to 1 open; red lights on. */
-  inner: number;
-  outer: number;
-  red: boolean;
+  /** The garage door, 0 shut to 1 open. */
+  door: number;
+  /** In the garage, past the door. */
+  inside: boolean;
   /** What it says over its head, if anything. */
   says: "plea" | "cry" | null;
-  /** Reached the airlock (it's its turn from here on). */
-  atLock: boolean;
+  /** Reached the garage door (it's its turn from here on). */
+  atDoor: boolean;
   done: boolean;
 }
 
 const length = (path: Point[]) =>
   path.slice(1).reduce((n, p, i) => n + Math.hypot(p.x - path[i]!.x, p.z - path[i]!.z), 0);
 
-/** How long the walk to the inner door takes (s). */
+/** How long the walk to the garage door takes (s). */
 export const walkTime = (path: Point[]) => length(path) / TRUDGE;
 
 /** Where along `path` it is after walking `d` metres, and which way it faces. */
@@ -74,74 +63,64 @@ function along(path: Point[], d: number): { x: number; z: number; facing: number
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
-/** The departure `t` seconds after it set off along `path` (ending at the inner door). */
+/** The departure `t` seconds after it set off along `path` (ending at the garage door). */
 export function departure(path: Point[], t: number): DepartureFrame {
   const walk = walkTime(path);
   const door = path.at(-1)!;
-  const inside = { x: AIRLOCK.x + AIRLOCK.depth / 2, z: AIRLOCK.z };
-  const east = Math.PI / 2;
+  const from = path.at(-2) ?? door;
+  // On in the way it came: up the last leg, through the door.
+  const leg = Math.hypot(door.x - from.x, door.z - from.z) || 1;
+  const inside = {
+    x: door.x + ((door.x - from.x) / leg) * IN,
+    z: door.z + ((door.z - from.z) / leg) * IN,
+  };
   const frame: DepartureFrame = {
     ...along(path, t * TRUDGE),
     y: 0,
-    tumble: 0,
     walking: true,
-    inner: 0,
-    outer: 0,
-    red: false,
+    door: 0,
+    inside: false,
     says: null,
-    atLock: false,
+    atDoor: false,
     done: false,
   };
   if (t < walk) return frame;
 
   let a = t - walk;
-  Object.assign(frame, { ...door, facing: east, walking: false, atLock: true });
-  const beats: (keyof typeof EJECT)[] = ["open", "step", "seal", "wait", "part", "blow", "shut"];
+  Object.assign(frame, { ...door, walking: false, atDoor: true });
+  const beats: (keyof typeof GATE)[] = ["open", "step", "close", "gone"];
   for (const beat of beats) {
-    const k = clamp01(a / EJECT[beat]);
+    const k = clamp01(a / GATE[beat]);
     switch (beat) {
       case "open":
-        frame.inner = k;
-        break;
-      case "step":
-        frame.inner = 1;
-        frame.walking = k < 1;
-        frame.x = door.x + (inside.x - door.x) * k;
-        break;
-      case "seal":
-        frame.x = inside.x;
-        frame.inner = 1 - k;
-        frame.facing = east + Math.PI * k;
-        break;
-      case "wait":
-        frame.red = true;
+        frame.door = k;
         frame.says = "plea";
         break;
-      case "part":
-        frame.red = true;
-        frame.outer = k;
+      case "step":
+        frame.door = 1;
+        frame.says = null;
+        frame.walking = k < 1;
+        frame.inside = k >= 1;
+        frame.x = door.x + (inside.x - door.x) * k;
+        frame.z = door.z + (inside.z - door.z) * k;
         break;
-      case "blow": {
-        frame.outer = 1;
-        frame.red = true;
+      case "close":
+        frame.door = 1 - k;
         frame.says = "cry";
-        // Out of the hatch fast, then drifting off and up.
-        const eased = 1 - (1 - k) ** 3;
-        frame.x = inside.x + eased * 28;
-        frame.y = eased * 6;
-        frame.z = inside.z + eased * 4;
-        frame.tumble = a * 3.2;
         break;
-      }
-      case "shut":
-        frame.outer = 1 - k;
-        frame.red = false;
+      case "gone":
+        frame.door = 0;
         frame.says = null;
         frame.done = k >= 1;
         break;
     }
-    if (a < EJECT[beat]) return frame;
-    a -= EJECT[beat];
+    if (a < GATE[beat]) return frame;
+    a -= GATE[beat];
   }
   return frame;
+}
+
+/** Who may be at the garage door: whoever's already going through, else the first in line. */
+export function nextAtDoor(queue: string[], busy: string | null): string | null {
+  return busy ?? queue[0] ?? null;
 }

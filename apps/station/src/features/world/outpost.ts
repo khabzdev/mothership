@@ -1,7 +1,7 @@
 // The outpost around the island: KayKit base modules, a dome, a garage, wind turbines, solar
 // panels, cargo and a truck on the island's outer ring, outside the walkable deck (the DECK clamp
 // in moveWithCollisions keeps the Captain out, so none of it needs colliders).
-import { DEPARTURE_PAD, LAUNCH_PAD, SHIP_PAD } from "./layout";
+import { GARAGE_SPOT, LAUNCH_PAD, SHIP_PAD } from "./layout";
 import { MINING_TILES } from "./island";
 import type { Placement } from "./placement";
 
@@ -12,7 +12,6 @@ export const OUTPOST_SCALE = 2;
 export const PAD_CLEARINGS: { x: number; z: number; r: number }[] = [
   { ...SHIP_PAD, r: 4 },
   { ...LAUNCH_PAD, r: 4 },
-  { ...DEPARTURE_PAD, r: 3 },
 ];
 
 const at = (x: number, z: number, rotY = 0, y = 0, scale = OUTPOST_SCALE): Placement => ({
@@ -38,14 +37,16 @@ const mining = {
   z: MINING_TILES.reduce((sum, t) => sum + t.z, 0) / MINING_TILES.length,
 };
 
+/** The garage, beside the dome: drawn on its own (scene/Garage.tsx) since its door rolls up for crew sent home. */
+export const GARAGE: Placement = at(GARAGE_SPOT.x, GARAGE_SPOT.z, Math.PI);
+
 export const OUTPOST: Record<string, Placement[]> = {
-  // North: modules joined by tunnels. South-west: the dome and garage (facing the deck).
+  // North: modules joined by tunnels. South-west: the dome (the garage is GARAGE, facing the deck).
   basemodule_A: [at(NORTH_ROW[0], NORTH_Z)],
   basemodule_B: [at(NORTH_ROW[1], NORTH_Z)],
   basemodule_C: [at(NORTH_ROW[2], NORTH_Z)],
   basemodule_D: [at(NORTH_ROW[3], NORTH_Z)],
   basemodule_E: [at(-20.1, SOUTH_Z, Math.PI)],
-  basemodule_garage: [at(-14, SOUTH_Z, Math.PI)],
   tunnel_straight_A: [
     tunnel(-16.96, NORTH_Z),
     tunnel(-10.8, NORTH_Z),
@@ -54,7 +55,7 @@ export const OUTPOST: Record<string, Placement[]> = {
   ],
   roofmodule_solarpanels: [at(NORTH_ROW[0], NORTH_Z, 0, 2), at(NORTH_ROW[2], NORTH_Z, 0, 2)],
 
-  // East: the drill over the mining tiles and the wind turbines, the middle left for the departure pad.
+  // East: the drill over the mining tiles and the wind turbines.
   drill_structure: [at(mining.x, mining.z)],
   windturbine_tall: [at(EAST_X, -6), at(EAST_X, -10)],
   windturbine_low: [at(EAST_X, 4.5)],

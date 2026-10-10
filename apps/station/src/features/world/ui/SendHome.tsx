@@ -63,7 +63,7 @@ export function SendHomeWindow({ member }: { member: CrewInfo }) {
             {
               onSuccess: () => {
                 close();
-                say(`${member.name} is heading for the airlock`);
+                say(`${member.name} is heading for the garage`);
               },
             },
           );

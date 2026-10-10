@@ -123,7 +123,7 @@ async function checkPtyhost({ ptyhost }: DiagnosticsDeps): Promise<Check> {
   }
 }
 
-/** Check the tools crew and the airlock depend on. Never throws. */
+/** Check the tools crew and launches depend on. Never throws. */
 export async function runDiagnostics(deps: DiagnosticsDeps): Promise<Diagnostics> {
   const [git, claude, ptyhost, gh] = await Promise.all([
     checkGit(deps),
@@ -135,7 +135,7 @@ export async function runDiagnostics(deps: DiagnosticsDeps): Promise<Diagnostics
   return {
     checks: [git, claude, ptyhost, gh],
     crewReady: ok(git) && ok(claude) && ok(ptyhost),
-    airlockReady: ok(git) && ok(gh),
+    launchReady: ok(git) && ok(gh),
     checkedAt: Date.now(),
   };
 }

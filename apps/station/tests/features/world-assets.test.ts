@@ -6,7 +6,7 @@ const dir = new URL("../../public/models/space-base/", import.meta.url);
 
 describe("space base assets", () => {
   test("every space piece has its gltf, bin and the texture", () => {
-    expect(SPACE_PIECES).toHaveLength(37);
+    expect(SPACE_PIECES).toHaveLength(35);
     for (const name of SPACE_PIECES) {
       const gltf = new URL(`${name}.gltf`, dir);
       expect(existsSync(gltf), `${name}.gltf`).toBe(true);
@@ -15,6 +15,25 @@ describe("space base assets", () => {
     }
     expect(existsSync(new URL("spacebits_texture.png", dir))).toBe(true);
     expect(existsSync(new URL("License.txt", dir))).toBe(true);
+  });
+});
+
+describe("no Kenney station kit", () => {
+  test("its models and loaders are gone", () => {
+    expect(existsSync(new URL("../../public/models/station", import.meta.url))).toBe(false);
+    const models = readFileSync(
+      new URL("../../src/features/world/scene/models.ts", import.meta.url),
+      "utf8",
+    );
+    expect(models).not.toMatch(/station|kenney/i);
+  });
+
+  test("unused landers and pads are not fetched", () => {
+    const script = readFileSync(new URL("../../scripts/fetch-assets.mjs", import.meta.url), "utf8");
+    expect(script).not.toContain('"landingpad_small"');
+    expect(script).not.toContain('"lander_B"');
+    expect(SPACE_PIECES).not.toContain("landingpad_small");
+    expect(SPACE_PIECES).not.toContain("lander_B");
   });
 });
 

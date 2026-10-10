@@ -38,10 +38,10 @@ const byId = async (d: DiagnosticsDeps) => {
 };
 
 describe("runDiagnostics", () => {
-  test("a healthy station is ready for crew and airlock", async () => {
-    const { crewReady, airlockReady, checks } = await byId(deps(healthy));
+  test("a healthy station is ready for crew and launches", async () => {
+    const { crewReady, launchReady, checks } = await byId(deps(healthy));
     expect(crewReady).toBe(true);
-    expect(airlockReady).toBe(true);
+    expect(launchReady).toBe(true);
     expect(checks.map((c) => [c.id, c.status])).toEqual([
       ["git", "ok"],
       ["claude", "ok"],
@@ -58,11 +58,11 @@ describe("runDiagnostics", () => {
   });
 
   test("a missing claude takes crew offline with an install hint", async () => {
-    const { check, crewReady, airlockReady } = await byId(
+    const { check, crewReady, launchReady } = await byId(
       deps({ ...healthy, "claude --version": missing }),
     );
     expect(crewReady).toBe(false);
-    expect(airlockReady).toBe(true);
+    expect(launchReady).toBe(true);
     expect(check("claude")).toMatchObject({
       status: "missing",
       fix: "Install Claude Code: curl -fsSL https://claude.ai/install.sh | bash",
@@ -92,12 +92,12 @@ describe("runDiagnostics", () => {
     expect(check("claude").status).toBe("unauthenticated");
   });
 
-  test("gh problems only block the airlock", async () => {
+  test("gh problems only block launches", async () => {
     const signedOut = await byId(
       deps({ ...healthy, "gh auth status": { code: 1, stdout: "", stderr: "not logged in" } }),
     );
     expect(signedOut.crewReady).toBe(true);
-    expect(signedOut.airlockReady).toBe(false);
+    expect(signedOut.launchReady).toBe(false);
     expect(signedOut.check("gh")).toMatchObject({
       status: "unauthenticated",
       fix: "Run: gh auth login",
@@ -111,11 +111,11 @@ describe("runDiagnostics", () => {
   });
 
   test("a missing git blocks everything", async () => {
-    const { crewReady, airlockReady, check } = await byId(
+    const { crewReady, launchReady, check } = await byId(
       deps({ ...healthy, "git --version": missing }),
     );
     expect(crewReady).toBe(false);
-    expect(airlockReady).toBe(false);
+    expect(launchReady).toBe(false);
     expect(check("git").status).toBe("missing");
   });
 
@@ -175,7 +175,7 @@ describe("crewBlocker", () => {
     );
   });
 
-  test("ignores airlock-only problems", async () => {
+  test("ignores launch-only problems", async () => {
     const { crewBlocker } = await import("../../src/app/diagnostics.ts");
     expect(
       crewBlocker(await runDiagnostics(deps({ ...healthy, "gh --version": missing }))),
