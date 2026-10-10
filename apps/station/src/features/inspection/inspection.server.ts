@@ -50,7 +50,8 @@ export interface InspectionDeps {
   crew: CrewService;
   checks: CheckService;
   briefs: Pick<BriefService, "approvedForTask" | "planning">;
-  preflight: Pick<PreflightService, "latest">;
+  /** The latest pre-flight's verdicts, and its stop count: the two share fuel, so attempts too. */
+  preflight: Pick<PreflightService, "latest" | "stopAttempts">;
   /** Adapters by crew row `provider`; one without `reviewPlan` (a shell) is never inspected. */
   providers: Record<string, ProviderAdapter>;
   broadcast: (msg: ServerMsg) => void;
@@ -252,8 +253,10 @@ export class InspectionService {
       abort: new AbortController(),
       reviewing: false,
     };
-    // Only stop runs are attempts; a manual run carries the attempt it follows (0 before any).
-    const stops = this.#stopAttempts(crewId);
+    // Only stops are attempts; a manual run carries the attempt it follows (0 before any). A stop
+    // that passed pre-flight is already its attempt; one pre-flight didn't run on is a new one.
+    const preflights = this.#preflight.stopAttempts(crewId);
+    const stops = this.#ownStops(crewId);
     this.#db
       .insert(inspections)
       .values({
@@ -261,7 +264,7 @@ export class InspectionService {
         deckId: job.deckId,
         crewId,
         flight: job.flight,
-        attempt: trigger === "stop" ? stops + 1 : stops,
+        attempt: Math.max(preflights, trigger === "stop" ? stops + 1 : stops),
         trigger,
         state: "running",
         fingerprint: print.hash,
@@ -509,8 +512,16 @@ export class InspectionService {
     });
   }
 
-  /** This flight's attempts: stop inspections that weren't cancelled. Manual runs don't count. */
+  /**
+   * This flight's attempts, numbered with pre-flight's (they share the fuel): its stop runs or the
+   * Inspector's stop inspections, whichever counted more. Cancelled and manual runs don't count.
+   */
   #stopAttempts(crewId: string): number {
+    return Math.max(this.#preflight.stopAttempts(crewId), this.#ownStops(crewId));
+  }
+
+  /** This flight's stop inspections that weren't cancelled. */
+  #ownStops(crewId: string): number {
     return this.history(crewId).filter((r) => r.trigger === "stop" && r.state !== "cancelled")
       .length;
   }

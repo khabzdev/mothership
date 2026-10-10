@@ -493,6 +493,11 @@ export class PreflightService {
       .run();
   }
 
+  /** This flight's stop runs that finished, for numbering attempts shared with the Inspector. */
+  stopAttempts(crewId: string): number {
+    return this.#stopAttempts(crewId);
+  }
+
   /** This flight's attempts: stop runs that finished. Manual runs spend no fuel, so don't count. */
   #stopAttempts(crewId: string): number {
     return this.history(crewId).filter((r) => r.trigger === "stop" && r.state !== "cancelled")

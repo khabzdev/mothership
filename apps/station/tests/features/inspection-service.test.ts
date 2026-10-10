@@ -19,6 +19,8 @@ import {
 import type { ReviewRun, RunReview } from "../../src/features/inspection/runner.server.ts";
 import type { ChangedStat } from "../../src/features/inspection/scope.ts";
 import { CheckService } from "../../src/features/preflight/checks.server.ts";
+import { PreflightService } from "../../src/features/preflight/preflight.server.ts";
+import type { RunCheck } from "../../src/features/preflight/runner.server.ts";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
 import {
   briefs as briefsTable,
@@ -88,6 +90,7 @@ function make(overrides: Partial<InspectionDeps> = {}) {
         preflightResults
           ? ({ results: preflightResults } as ReturnType<InspectionDeps["preflight"]["latest"]>)
           : null,
+      stopAttempts: () => 0,
     },
     providers: PROVIDERS,
     broadcast: (msg) => sent.push(msg),
@@ -291,6 +294,55 @@ describe("InspectionService", () => {
       ["manual", 1],
       ["stop", 1],
     ]);
+  });
+
+  test("attempts are numbered with pre-flight's, which shares the fuel", async () => {
+    const { id } = await hire();
+    db.insert(deckChecks)
+      .values({ id: "k", deckId: "deck-1", name: "test", command: "vp test", position: 0 })
+      .run();
+    checks.arm("deck-1", true);
+    const verdicts: ("go" | "nogo")[] = ["nogo", "go"];
+    const check: RunCheck = async (opts) => ({
+      verdict: verdicts.shift() ?? "go",
+      exitCode: 0,
+      timedOut: false,
+      durationMs: 1,
+      output: "",
+      logPath: opts.logPath,
+    });
+    const preflight = new PreflightService({
+      db,
+      crew,
+      checks,
+      broadcast: (msg) => sent.push(msg),
+      home,
+      run: check,
+    });
+    service = make({ preflight });
+    preflight.onGo((crewId, p) => service.afterGo(crewId, p));
+    const cwd = crew.workdir(id).cwd;
+    const stopBoth = () => {
+      crew.handleSignal({ crewId: id, signal: { type: "stopped" } });
+      preflight.handleSignal({ crewId: id, missionId: id, signal: { type: "stopped" } });
+      service.handleSignal({ crewId: id, missionId: id, signal: { type: "stopped" } });
+    };
+
+    // Attempt 1: pre-flight NO-GO, handed back (attempt 2 of 4).
+    writeFileSync(join(cwd, "change.txt"), "one");
+    stopBoth();
+    await vi.waitFor(() => expect(fuelOf(id).fuel).toBe(2));
+    expect(service.latest(id)).toBeNull();
+
+    // Attempt 2: pre-flight GO, then the Inspector flags it.
+    answers = [ran([BLOCKER])];
+    writeFileSync(join(cwd, "change.txt"), "two");
+    stopBoth();
+    await settled(id);
+    expect(service.latest(id)).toMatchObject({ state: "flagged", attempt: 2 });
+    await vi.waitFor(() => expect(pastes()).toHaveLength(2));
+    expect(pastes()[1]![1]).toContain("Inspector flagged your change (attempt 3 of 4):");
+    await vi.waitFor(() => expect(fuelOf(id).fuel).toBe(1));
   });
 
   test("an empty tank raises needs you instead", async () => {
