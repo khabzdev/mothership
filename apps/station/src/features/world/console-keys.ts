@@ -83,7 +83,8 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!gameKeysEnabled(e)) return;
-      const { consoleId, atLift, atBoard, open, carrying, carry, say } = useWorld.getState();
+      const { consoleId, atLift, atFlightControl, atBoard, open, carrying, carry, say } =
+        useWorld.getState();
       // / searches every terminal on the deck, wherever you are.
       if (e.key === "/") {
         e.preventDefault();
@@ -102,6 +103,10 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
       if (atLift && e.code === "KeyE") {
         e.preventDefault();
         return open({ kind: "lift", fromLift: true });
+      }
+      if (atFlightControl && consoleId === null && e.code === "KeyE") {
+        e.preventDefault();
+        return open({ kind: "flightControl" });
       }
       if (consoleId === null) return;
       const member = crew.find((c) => c.consoleId === consoleId);

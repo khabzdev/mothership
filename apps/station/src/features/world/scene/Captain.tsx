@@ -9,6 +9,7 @@ import {
   boardInReach,
   consoleInReach,
   consoleSeat,
+  flightControlInReach,
   liftInReach,
   moveWithCollisions,
 } from "../layout";
@@ -112,6 +113,7 @@ export function Captain() {
   const clip = useRef("Idle");
   const setConsole = useWorld((s) => s.setConsole);
   const setAtLift = useWorld((s) => s.setAtLift);
+  const setAtFlightControl = useWorld((s) => s.setAtFlightControl);
   const setAtBoard = useWorld((s) => s.setAtBoard);
   const carrying = useWorld((s) => s.carrying);
 
@@ -228,6 +230,7 @@ export function Captain() {
 
     setConsole(consoleInReach(captain.x, captain.z)?.id ?? null);
     setAtLift(liftInReach(captain.x, captain.z));
+    setAtFlightControl(flightControlInReach(captain.x, captain.z));
     setAtBoard(boardInReach(captain.x, captain.z));
   });
 

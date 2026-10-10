@@ -1691,3 +1691,89 @@ kbd {
   gap: 0.6rem;
   font-size: var(--text-sm);
 }
+
+/* ---------- Flight Control ---------- */
+
+/* The one question about a deck's checks: above the hint bar, until it's answered. */
+.arm-card {
+  position: absolute;
+  bottom: 4.25rem;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  gap: 0.75rem;
+  width: min(36rem, calc(100% - 2rem));
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+  animation: fade-in 0.2s ease-out;
+}
+
+.arm-card__text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-kumo-default);
+}
+
+.arm-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.arm-card kbd {
+  margin-right: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  opacity: 0.75;
+}
+
+.flight-control__deck {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.flight-control__deck > :last-child {
+  margin-left: auto;
+}
+
+.flight-control__checks {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flight-control__check {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-kumo-recessed);
+}
+
+.flight-control__check > .error-note {
+  grid-column: 1 / -1;
+}
+
+.flight-control__command {
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 640px) {
+  .flight-control__check {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .flight-control__command {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

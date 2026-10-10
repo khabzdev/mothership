@@ -389,6 +389,32 @@ describe("PreflightService", () => {
     expect(service.deckHistory("deck-1", 1)).toHaveLength(1);
   });
 
+  test("arming runs the crew that already stopped", async () => {
+    const signal = (crewId: string, type: "stopped" | "working") =>
+      crew.handleSignal({ crewId, signal: { type } });
+    // Ran once while armed and hasn't changed since: arming doesn't run it again.
+    const unchanged = await hireWithChange(0);
+    signal(unchanged.id, "stopped");
+    stop(unchanged.id);
+    await settled(unchanged.id);
+    db.update(decks).set({ checksArmed: null }).run();
+
+    const stopped = await hireWithChange(1);
+    const working = await hireWithChange(2);
+    signal(stopped.id, "stopped");
+    signal(working.id, "working");
+    stop(stopped.id);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(service.latest(stopped.id)).toBeNull();
+
+    await service.arm("deck-1");
+    expect(checks.armed("deck-1")).toBe(true);
+    await settled(stopped.id);
+    expect(service.latest(stopped.id)).toMatchObject({ trigger: "stop", state: "go" });
+    expect(service.latest(working.id)).toBeNull();
+    expect(service.history(unchanged.id)).toHaveLength(1);
+  });
+
   /** Each run's checks wait here until released, or resolve as skipped when aborted. */
   function holdChecks() {
     const held: (() => void)[] = [];

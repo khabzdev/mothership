@@ -14,6 +14,7 @@ import {
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { FlightControlWindow } from "../../preflight/ui/FlightControl";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
@@ -260,6 +261,17 @@ export function Overlays({
       );
     case "lift":
       return <Lift fromLift={overlay.fromLift} />;
+    case "flightControl":
+      return (
+        <Modal
+          wide
+          icon={AirplaneTakeOff01Icon}
+          title="Flight Control"
+          subtitle="The checks that run in a crew member's worktree each time it stops."
+        >
+          <FlightControlWindow deckId={deckId} crew={crew} />
+        </Modal>
+      );
     case "search":
       return (
         <Modal

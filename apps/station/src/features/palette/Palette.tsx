@@ -21,7 +21,7 @@ import { decksQuery } from "../decks/queries";
 import { boardQuery } from "../github/queries";
 import { issueColumn } from "../github/model";
 import { useDeckChoice } from "../world/deck-choice";
-import { BOARDS, CONSOLES, type BoardId } from "../world/layout";
+import { BOARDS, CONSOLES, FLIGHT_CONTROL, type BoardId } from "../world/layout";
 import { captain, jumpTo } from "../world/scene/Captain";
 import { useWorld } from "../world/store";
 import { waitingInOrder } from "../world/waiting";
@@ -46,6 +46,11 @@ interface Group {
 function goToBoard(board: BoardId): void {
   const b = BOARDS[board];
   Object.assign(captain, { x: b.x, z: b.z + 1.6, facing: Math.PI, snap: true });
+}
+
+/** Stand at the Flight Control desk, facing it. */
+function goToFlightControl(): void {
+  Object.assign(captain, { x: FLIGHT_CONTROL.x, z: FLIGHT_CONTROL.z - 1.4, facing: 0, snap: true });
 }
 
 /**
@@ -178,7 +183,7 @@ export function Palette({
         ["launch", "Launch board", "Pull requests", Rocket01Icon],
         ["queue", "Task queue", "Tasks waiting for crew", TaskDaily01Icon],
       ] as const
-    ).map(([board, title, subtitle, icon]) => ({
+    ).map(([board, title, subtitle, icon]): Entry => ({
       id: `b:${board}`,
       title,
       subtitle,
@@ -188,6 +193,16 @@ export function Palette({
         openOverlay({ kind: "board", board });
       },
     }));
+    boards.push({
+      id: "b:flightControl",
+      title: "Flight Control",
+      subtitle: "The deck's pre-flight checks",
+      icon: AirplaneTakeOff01Icon,
+      run: (walk) => {
+        if (walk) goToFlightControl();
+        openOverlay({ kind: "flightControl" });
+      },
+    });
 
     const people: Entry[] = crew.map((m) => ({
       id: `c:${m.id}`,

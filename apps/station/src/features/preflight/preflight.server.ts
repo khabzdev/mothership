@@ -126,7 +126,10 @@ export class PreflightService {
     const row = this.#crewRow(crewId);
     if (!row || row.provider === "shell") return null;
     const { cwd, ownWorktree } = this.#crew.workdir(crewId);
-    if (!ownWorktree || this.#checks.armed(row.deckId) !== true) return null;
+    if (!ownWorktree) return null;
+    const armed = this.#checks.armed(row.deckId);
+    if (armed === null && trigger === "stop") this.#detectFor(row.deckId);
+    if (armed !== true) return null;
     const checks = this.#checks.enabled(row.deckId);
     if (checks.length === 0) return null;
 
@@ -169,6 +172,29 @@ export class PreflightService {
     this.#queue.push(job);
     this.#pump();
     return job.id;
+  }
+
+  /**
+   * You said yes to the deck's checks: arm them, then run them for the agents that already
+   * stopped, as if they'd just stopped (so one with no change since its last run is skipped).
+   */
+  async arm(deckId: string): Promise<void> {
+    this.#checks.arm(deckId, true);
+    const stopped = this.#crew
+      .roster(deckId)
+      .filter((member) => member.kind === "agent" && member.status === "done");
+    await Promise.all(stopped.map((member) => this.run(member.id, "stop")));
+  }
+
+  /** A deck nobody has been asked about: find its checks, so the arm card has a list to show. */
+  #detectFor(deckId: string): void {
+    this.#checks
+      .ensureDetected(deckId)
+      .catch((error: unknown) =>
+        console.warn(
+          `[preflight] couldn't detect checks for ${deckId}: ${(error as Error).message}`,
+        ),
+      );
   }
 
   /** Stop a crew member's pre-flight: a queued one is dropped, a running one is cancelled. */

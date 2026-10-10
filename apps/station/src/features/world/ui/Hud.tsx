@@ -1,6 +1,7 @@
 import { Badge, Banner, Surface } from "@cloudflare/kumo";
 import {
   Alert02Icon,
+  AirplaneTakeOff01Icon,
   ArrowUpDownIcon,
   CheckmarkCircle02Icon,
   HandGrabIcon,
@@ -39,6 +40,7 @@ const BOARD_HINTS = {
 export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
   const consoleId = useWorld((s) => s.consoleId);
   const atLift = useWorld((s) => s.atLift);
+  const atFlightControl = useWorld((s) => s.atFlightControl);
   const atBoard = useWorld((s) => s.atBoard);
   const carrying = useWorld((s) => s.carrying);
   if (carrying) {
@@ -73,6 +75,16 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
           <Icon icon={ArrowUpDownIcon} /> Lift
         </span>
         <Key k="E" label="Ride to another deck" />
+      </div>
+    );
+  }
+  if (atFlightControl && consoleId === null) {
+    return (
+      <div className="hint" data-active>
+        <span className="hint__what with-icon">
+          <Icon icon={AirplaneTakeOff01Icon} /> Flight Control
+        </span>
+        <Key k="E" label="Set the pre-flight checks" />
       </div>
     );
   }

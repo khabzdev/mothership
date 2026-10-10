@@ -7,6 +7,8 @@ import {
   addCollider,
   BOARDS,
   LIFT_STOP,
+  FLIGHT_CONTROL,
+  flightControlInReach,
   boardInReach,
   airlockPath,
   liftInReach,
@@ -86,5 +88,15 @@ describe("deck layout", () => {
       const seat = consoleSeat(c, 1.25);
       expect(boardInReach(seat.x, seat.z)).toBeNull();
     }
+  });
+
+  test("you use Flight Control from in front of its desk, and can't walk into the desk", () => {
+    const stand = { x: FLIGHT_CONTROL.x, z: FLIGHT_CONTROL.z - 1.4 };
+    expect(flightControlInReach(stand.x, stand.z)).toBe(true);
+    expect(flightControlInReach(SPAWN.x, SPAWN.z)).toBe(false);
+    expect(consoleInReach(stand.x, stand.z)).toBeNull();
+    expect(moveWithCollisions(stand.x, stand.z, 0, 0)).toEqual(stand);
+    const pushed = moveWithCollisions(stand.x, stand.z, 0, 1);
+    expect(pushed.z).toBe(stand.z);
   });
 });

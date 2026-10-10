@@ -1,9 +1,11 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo, DeckCheck } from "@mothership/protocol";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { rosterQuery } from "../crew/queries";
+import { checksQuery } from "../preflight/queries";
+import { ArmCard } from "../preflight/ui/ArmCard";
 import { launchCards, missionCards } from "../github/cards";
 import { boardQuery } from "../github/queries";
 import { labelsQuery } from "../labels/queries";
@@ -23,6 +25,7 @@ import { CrewMember } from "./scene/CrewMember";
 import { Deck as DeckScene } from "./scene/Deck";
 import { Departures } from "./scene/Departures";
 import { Board } from "./scene/Board";
+import { FlightControl } from "./scene/FlightControl";
 import { LaunchShow } from "./scene/LaunchShow";
 import { LiftDoors } from "./scene/LiftDoors";
 import { Sign } from "./scene/Sign";
@@ -34,6 +37,8 @@ import { NeedsYouBanner, useCloneNews, useLaunchNews, useOtherDecksHeadsUp } fro
 import { Overlays } from "./ui/Overlays";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
+
+const NO_CHECKS: DeckCheck[] = [];
 
 /** Over to a crew member's console, behind it, with any window closed. */
 function goToCrew(member: CrewInfo): void {
@@ -116,6 +121,7 @@ export function Game({ deck }: { deck: Deck }) {
   const launch = useMemo(() => launchCards(github), [github]);
   const { data: queue } = useQuery(queueQuery(deck.id));
   const queued = useMemo(() => queueCards(queue?.tasks, queue?.limit ?? 3), [queue]);
+  const { data: checks } = useQuery(checksQuery(deck.id));
   const consoleId = useWorld((s) => s.consoleId);
   const [loaded, setLoaded] = useState(false);
   const ready = useCallback(() => setLoaded(true), []);
@@ -143,6 +149,7 @@ export function Game({ deck }: { deck: Deck }) {
             <Board board="mission" trim={paint.trim} {...mission} />
             <Board board="launch" trim={paint.trim} {...launch} />
             <Board board="queue" trim={paint.trim} {...queued} />
+            <FlightControl armed={checks?.armed ?? null} checks={checks?.checks ?? NO_CHECKS} />
             {CONSOLES.map((def) => (
               <Console
                 key={def.id}
@@ -185,6 +192,7 @@ export function Game({ deck }: { deck: Deck }) {
           }}
         />
         <HintBar crew={crew} labels={labels} />
+        <ArmCard deckId={deck.id} deckName={deck.name} crew={crew} />
         <Overlays deckId={deck.id} crew={crew} labels={labels} />
         <Palette deckId={deck.id} crew={crew} labels={labels} />
       </div>

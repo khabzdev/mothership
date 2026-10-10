@@ -13,13 +13,16 @@ export type Overlay =
   | { kind: "label"; consoleId: number }
   | { kind: "board"; board: BoardId; open?: number }
   | { kind: "lift"; fromLift?: boolean }
-  | { kind: "search" };
+  | { kind: "search" }
+  | { kind: "flightControl" };
 
 interface WorldState {
   /** Console the Captain is standing at. */
   consoleId: number | null;
   /** Standing at the lift doors. */
   atLift: boolean;
+  /** Standing at the Flight Control desk. */
+  atFlightControl: boolean;
   /** The last pull request launched on this deck, for the klaxon, rocket and confetti. */
   launch: { number: number; title: string; crewId?: string; at: number } | null;
   /** Everyone's on their feet cheering a launch. */
@@ -33,6 +36,7 @@ interface WorldState {
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
   setAtLift: (atLift: boolean) => void;
+  setAtFlightControl: (atFlightControl: boolean) => void;
   setAtBoard: (atBoard: BoardId | null) => void;
   setPalette: (open: boolean) => void;
   carry: (card: { number: number; title: string } | null) => void;
@@ -50,6 +54,7 @@ export const CHEER_MS = 6000;
 export const useWorld = create<WorldState>((set) => ({
   consoleId: null,
   atLift: false,
+  atFlightControl: false,
   atBoard: null,
   launch: null,
   cheering: false,
@@ -58,6 +63,8 @@ export const useWorld = create<WorldState>((set) => ({
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtLift: (atLift) => set((s) => (s.atLift === atLift ? s : { atLift })),
+  setAtFlightControl: (atFlightControl) =>
+    set((s) => (s.atFlightControl === atFlightControl ? s : { atFlightControl })),
   setAtBoard: (atBoard) => set((s) => (s.atBoard === atBoard ? s : { atBoard })),
   carry: (carrying) => set({ carrying }),
   setPalette: (paletteOpen) => set({ paletteOpen }),

@@ -56,13 +56,32 @@ export interface Box {
   maxZ: number;
 }
 
+/** Flight Control: a desk against the south bulkhead, where a deck's pre-flight checks are set. */
+export const FLIGHT_CONTROL = { x: -4.5, z: DECK.maxZ } as const;
+/** The desk's footprint, its back to the bulkhead's inner face. */
+export const FLIGHT_CONTROL_DESK = { width: 2.4, depth: 0.8, height: 0.9 } as const;
+const BULKHEAD_FACE = DECK.maxZ - 0.15;
+
+/** Standing in front of the Flight Control desk. */
+export function flightControlInReach(x: number, z: number, reach = 1.6): boolean {
+  return Math.hypot(x - FLIGHT_CONTROL.x, z - (FLIGHT_CONTROL.z - 1.4)) < reach;
+}
+
 /** Solid footprints the Captain can't walk through. */
-export const COLLIDERS: Box[] = CONSOLES.map((c) => ({
-  minX: c.x - CONSOLE_SIZE.width / 2,
-  maxX: c.x + CONSOLE_SIZE.width / 2,
-  minZ: c.z - CONSOLE_SIZE.depth / 2,
-  maxZ: c.z + CONSOLE_SIZE.depth / 2,
-}));
+export const COLLIDERS: Box[] = [
+  ...CONSOLES.map((c) => ({
+    minX: c.x - CONSOLE_SIZE.width / 2,
+    maxX: c.x + CONSOLE_SIZE.width / 2,
+    minZ: c.z - CONSOLE_SIZE.depth / 2,
+    maxZ: c.z + CONSOLE_SIZE.depth / 2,
+  })),
+  {
+    minX: FLIGHT_CONTROL.x - FLIGHT_CONTROL_DESK.width / 2,
+    maxX: FLIGHT_CONTROL.x + FLIGHT_CONTROL_DESK.width / 2,
+    minZ: BULKHEAD_FACE - FLIGHT_CONTROL_DESK.depth,
+    maxZ: BULKHEAD_FACE,
+  },
+];
 
 /** Furniture footprints, added as the pieces are placed (see useSolid). */
 const placed = new Set<Box>();

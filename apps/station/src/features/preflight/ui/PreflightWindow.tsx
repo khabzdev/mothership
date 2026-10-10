@@ -14,7 +14,7 @@ const VERDICT: Record<CheckVerdict, { label: string; tone: "success" | "error" |
   skipped: { label: "Skipped", tone: "neutral" },
 };
 
-const RUN_TONE = {
+export const RUN_TONE = {
   running: { label: "Running", tone: "warning" },
   go: { label: "GO", tone: "success" },
   nogo: { label: "NO-GO", tone: "error" },
