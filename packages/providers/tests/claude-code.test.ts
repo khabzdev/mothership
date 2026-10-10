@@ -283,3 +283,52 @@ describe("shell", () => {
     expect(shell.parseHook({ hook_event_name: "Stop" })).toBeNull();
   });
 });
+
+describe("reviewPlan", () => {
+  const READ_ONLY_ARGS = [
+    "-p",
+    "--output-format",
+    "json",
+    "--permission-mode",
+    "default",
+    "--allowedTools",
+    "Read",
+    "Grep",
+    "Glob",
+    "--disallowedTools",
+    "Edit",
+    "Write",
+    "MultiEdit",
+    "NotebookEdit",
+    "Bash",
+  ];
+
+  test("runs claude -p read-only in the given directory", () => {
+    const plan = claudeCode.reviewPlan!({ cwd: "/w" });
+    expect(plan.command).toBe("claude");
+    expect(plan.args).toEqual(READ_ONLY_ARGS);
+    expect(plan.cwd).toBe("/w");
+  });
+
+  test("carries no hooks and no station environment", () => {
+    const plan = claudeCode.reviewPlan!({ cwd: "/w" });
+    expect(plan.args).not.toContain("--settings");
+    expect(Object.keys(plan.env).filter((k) => k.startsWith("MOTHERSHIP_"))).toEqual([]);
+  });
+
+  test("edit tools appear only in the disallowed list", () => {
+    const { args } = claudeCode.reviewPlan!({ cwd: "/w" });
+    expect(args.indexOf("Edit")).toBeGreaterThan(args.indexOf("--disallowedTools"));
+    expect(args.indexOf("Bash")).toBeGreaterThan(args.indexOf("--disallowedTools"));
+  });
+
+  test("a model goes first", () => {
+    const { args } = claudeCode.reviewPlan!({ cwd: "/w", model: "opus" });
+    expect(args.slice(0, 2)).toEqual(["--model", "opus"]);
+    expect(args.slice(2)).toEqual(READ_ONLY_ARGS);
+  });
+
+  test("the shell provider has no review", () => {
+    expect("reviewPlan" in shell).toBe(false);
+  });
+});

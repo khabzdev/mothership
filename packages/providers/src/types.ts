@@ -27,6 +27,12 @@ export interface LaunchOptions {
   plan?: { instructions: string };
 }
 
+/** A read-only review run: the prompt goes on stdin. */
+export interface ReviewOptions {
+  cwd: string;
+  model?: string;
+}
+
 export interface LaunchPlan {
   command: string;
   args: string[];
@@ -40,6 +46,8 @@ export interface ProviderAdapter {
   id: string;
   launchPlan(options: LaunchOptions): LaunchPlan;
   /** Map a raw hook payload to a crew signal; null for events that don't change status. */
+  /** How to run a read-only, non-interactive review of the working tree; absent if unsupported. */
+  reviewPlan?(options: ReviewOptions): LaunchPlan;
   parseHook(payload: unknown): CrewSignal | null;
   /** The agent's own session id in a hook payload, for resuming it later. */
   sessionOf?(payload: unknown): string | undefined;

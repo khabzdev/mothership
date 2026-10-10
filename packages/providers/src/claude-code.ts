@@ -1,5 +1,11 @@
 import type { CrewActivity } from "@mothership/protocol";
-import type { CrewSignal, LaunchOptions, LaunchPlan, ProviderAdapter } from "./types.ts";
+import type {
+  CrewSignal,
+  LaunchOptions,
+  LaunchPlan,
+  ProviderAdapter,
+  ReviewOptions,
+} from "./types.ts";
 
 export const HOOK_EVENTS = [
   "SessionStart",
@@ -58,6 +64,33 @@ function launchPlan(options: LaunchOptions): LaunchPlan {
       MOTHERSHIP_HOOK_URL: options.hookUrl,
       MOTHERSHIP_HOOK_TOKEN: options.hookToken,
     },
+  };
+}
+
+/** A read-only `claude -p` run: it may read and search, never edit or run commands. */
+function reviewPlan(options: ReviewOptions): LaunchPlan {
+  return {
+    command: "claude",
+    args: [
+      ...(options.model ? ["--model", options.model] : []),
+      "-p",
+      "--output-format",
+      "json",
+      "--permission-mode",
+      "default",
+      "--allowedTools",
+      "Read",
+      "Grep",
+      "Glob",
+      "--disallowedTools",
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "NotebookEdit",
+      "Bash",
+    ],
+    cwd: options.cwd,
+    env: {},
   };
 }
 
@@ -133,6 +166,7 @@ function sessionOf(payload: unknown): string | undefined {
 export const claudeCode: ProviderAdapter = {
   id: "claude-code",
   launchPlan,
+  reviewPlan,
   parseHook,
   sessionOf,
 };
