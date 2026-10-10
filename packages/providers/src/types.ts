@@ -45,9 +45,9 @@ export interface LaunchPlan {
 export interface ProviderAdapter {
   id: string;
   launchPlan(options: LaunchOptions): LaunchPlan;
-  /** Map a raw hook payload to a crew signal; null for events that don't change status. */
   /** How to run a read-only, non-interactive review of the working tree; absent if unsupported. */
   reviewPlan?(options: ReviewOptions): LaunchPlan;
+  /** Map a raw hook payload to a crew signal; null for events that don't change status. */
   parseHook(payload: unknown): CrewSignal | null;
   /** The agent's own session id in a hook payload, for resuming it later. */
   sessionOf?(payload: unknown): string | undefined;
