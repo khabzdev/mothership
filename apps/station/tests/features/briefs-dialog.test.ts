@@ -99,3 +99,83 @@ describe("only the last dialog's own options count", () => {
     expect(findOption(lines, "revise")).toBe("2");
   });
 });
+
+describe("a narrow terminal (40 columns): wrapped lines", () => {
+  // Recorded at 40 columns, as /lite's terminal shrinks the PTY.
+  const WRAPPED_OPTION_1 = [
+    " Would you like to proceed?",
+    "",
+    " ❯ 1. Yes, clear context and auto-accept",
+    "    edits (shift+tab)",
+    "   2. Yes, and auto-accept edits",
+    "   3. Yes, manually approve edits",
+    "   4. No, keep planning",
+  ];
+  const WRAPPED_OPTION_2 = [
+    " Would you like to proceed?",
+    "",
+    " ❯ 1. Yes, clear context and auto-accept",
+    "    edits (shift+tab)",
+    "   2. Yes, and auto-accept edits (shift",
+    "    +tab to approve next time)",
+    "   3. Yes, manually approve edits",
+    "   4. No, keep planning",
+  ];
+  const WRAPPED_HEADER = [
+    " Claude has written up a plan and is",
+    " ready to execute. Would you like to",
+    " proceed?",
+    "",
+    " ❯ 1. Yes, clear context and auto-accept",
+    "    edits (shift+tab)",
+    "   2. Yes, and auto-accept edits",
+    "   3. Yes, manually approve edits",
+    "   4. No, keep",
+    "    planning",
+  ];
+
+  test.each([
+    ["a wrapped option 1", WRAPPED_OPTION_1],
+    ["a wrapped option 2", WRAPPED_OPTION_2],
+    ["a wrapped header", WRAPPED_HEADER],
+  ])("%s: approve picks 2, revise picks 4", (_name, lines) => {
+    expect(dialogShown(lines)).toBe(true);
+    expect(findOption(lines, "approve")).toBe("2");
+    expect(findOption(lines, "revise")).toBe("4");
+  });
+
+  test("a wrapped header split mid-phrase is still the dialog", () => {
+    expect(dialogShown([" Would you like", " to proceed?"])).toBe(true);
+    expect(dialogShown([" Would you like", "", " to proceed?"])).toBe(false);
+  });
+
+  test("never the clear-context option: with only that, nothing is picked", () => {
+    const lines = [
+      " Would you like to proceed?",
+      " ❯ 1. Yes, clear context and auto-accept",
+      "    edits (shift+tab)",
+      "   3. No, keep planning",
+    ];
+    expect(findOption(lines, "approve")).toBeNull();
+    expect(findOption(lines, "revise")).toBe("3");
+  });
+
+  test("a continuation cut off by an unindented line ends the block there", () => {
+    const lines = [
+      " Would you like to proceed?",
+      " ❯ 1. Yes, clear context and auto-accept",
+      "edits (shift+tab)",
+      "   2. Yes, and auto-accept edits",
+    ];
+    expect(findOption(lines, "approve")).toBeNull();
+  });
+
+  test("an indented line straight under the header is no option", () => {
+    const lines = [
+      " Would you like to proceed?",
+      "    and more",
+      "   2. Yes, and auto-accept edits",
+    ];
+    expect(findOption(lines, "approve")).toBeNull();
+  });
+});
