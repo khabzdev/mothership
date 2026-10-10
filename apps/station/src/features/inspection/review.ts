@@ -1,0 +1,103 @@
+import { MAX_FINDINGS, TITLE_MAX, type Finding } from "./model";
+
+/** The most diff, in bytes, that goes into the review prompt. */
+export const DIFF_CAP_BYTES = 60_000;
+
+const UNREADABLE: Finding = {
+  severity: "note",
+  source: "review",
+  title: "Inspector's report was unreadable",
+  why: "The review ran but its answer couldn't be parsed, so nothing was checked.",
+};
+
+/** The diff cut to DIFF_CAP_BYTES, and whether anything was cut. */
+function clipDiff(diff: string): { text: string; clipped: boolean } {
+  const bytes = Buffer.from(diff);
+  if (bytes.length <= DIFF_CAP_BYTES) return { text: diff, clipped: false };
+  const text = bytes.subarray(0, DIFF_CAP_BYTES).toString().replace(/�+$/, "");
+  return { text, clipped: true };
+}
+
+/** The prompt for the Inspector's review of one change. */
+export function reviewPrompt(input: {
+  brief: string | null;
+  task: string;
+  checks: { name: string; verdict: string }[];
+  scope: Finding[];
+  diff: string;
+}): string {
+  const { text, clipped } = clipDiff(input.diff);
+  const parts = [
+    "You are the Inspector: review another engineer's change; you did not write it. You may read files with your tools but must not change anything.",
+    input.brief !== null
+      ? `Approved brief:\n\n${input.brief.trim()}`
+      : `Task (no approved brief):\n\n${input.task.trim()}`,
+    "Pre-flight results:\n" +
+      (input.checks.length
+        ? input.checks.map((c) => `- ${c.name}: ${c.verdict}`).join("\n")
+        : "- none ran"),
+    "Scope findings:\n" +
+      (input.scope.length
+        ? input.scope.map((f) => `- ${f.severity}: ${f.title}`).join("\n")
+        : "- none"),
+    "Report a blocker only when: the change doesn't do what the brief's Goal says; something under the brief's Not doing was done; there is a likely bug or breakage elsewhere; or it contains secrets or destructive operations. Everything else is a note.",
+    `Answer with one fenced json block and nothing after it, shaped like this. At most ${MAX_FINDINGS} findings, titles under ${TITLE_MAX} characters; an empty list is fine.\n\n\`\`\`json\n{"findings":[{"severity":"blocker or note","file":"path","line":12,"title":"...","why":"..."}]}\n\`\`\``,
+    `Diff:\n\n${text}` +
+      (clipped
+        ? `\n\n[The diff was clipped to ${DIFF_CAP_BYTES} bytes; read the full files with your tools if you need more.]`
+        : ""),
+  ];
+  return parts.join("\n\n");
+}
+
+/** The first value that parses from the model's text: last fenced block first, else the whole text. */
+function extractJson(text: string): unknown {
+  const blocks = [...text.matchAll(/```(?:json)?[ \t]*\r?\n([\s\S]*?)```/gi)].map((m) => m[1]!);
+  for (const body of [...blocks.reverse(), text]) {
+    try {
+      return JSON.parse(body.trim());
+    } catch {
+      // try the next candidate
+    }
+  }
+  return undefined;
+}
+
+function toFinding(raw: unknown): Finding | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  if (o.severity !== "blocker" && o.severity !== "note") return null;
+  const title = typeof o.title === "string" ? o.title.trim() : "";
+  if (!title) return null;
+  const finding: Finding = {
+    severity: o.severity,
+    source: "review",
+    title: title.length > TITLE_MAX ? `${title.slice(0, TITLE_MAX - 1)}…` : title,
+    why: typeof o.why === "string" ? o.why.trim() : "",
+  };
+  if (typeof o.file === "string" && o.file.trim()) finding.file = o.file.trim();
+  if (finding.file && typeof o.line === "number" && Number.isInteger(o.line) && o.line > 0) {
+    finding.line = o.line;
+  }
+  return finding;
+}
+
+/** The findings in `claude -p --output-format json` output; unreadable output is one note. */
+export function parseReview(stdout: string): Finding[] {
+  let result: unknown;
+  try {
+    result = (JSON.parse(stdout) as { result?: unknown }).result;
+  } catch {
+    return [{ ...UNREADABLE }];
+  }
+  if (typeof result !== "string") return [{ ...UNREADABLE }];
+  const parsed = extractJson(result);
+  const list = Array.isArray(parsed)
+    ? parsed
+    : (parsed as { findings?: unknown } | undefined)?.findings;
+  if (!Array.isArray(list)) return [{ ...UNREADABLE }];
+  return list
+    .map(toFinding)
+    .filter((f): f is Finding => f !== null)
+    .slice(0, MAX_FINDINGS);
+}
