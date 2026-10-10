@@ -1,4 +1,5 @@
 import type { CrewInfo } from "@mothership/protocol";
+import { Badge } from "@cloudflare/kumo";
 import { useEffect, useState, type CSSProperties } from "react";
 import {
   ArrowDown01Icon,
@@ -9,6 +10,7 @@ import {
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { Icon } from "../../../shared/ui/Icon";
+import { inspectionChip } from "../../inspection/model";
 import { StatusBadge } from "./StatusBadge";
 import { needyFirst, waited } from "../waiting";
 
@@ -88,6 +90,7 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                     )}
                   </span>
                   <StatusBadge crew={c} />
+                  <InspectionChip info={c.inspection} />
                   {needs && (
                     <span className="crew-panel__ask">
                       <Icon icon={Notification03Icon} size={12} />
@@ -107,5 +110,16 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
         </ul>
       )}
     </aside>
+  );
+}
+
+function InspectionChip({ info }: { info?: CrewInfo["inspection"] }) {
+  const chip = inspectionChip(info);
+  return (
+    chip && (
+      <Badge variant={chip.tone} appearance="dot">
+        {chip.label}
+      </Badge>
+    )
   );
 }
