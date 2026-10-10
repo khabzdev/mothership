@@ -27,7 +27,8 @@ export const openCrewPr = createServerFn({ method: "POST" })
     const latest = preflight.latest(data.crewId);
     // This flight only: history is scoped to the current flight, newest first.
     const inspected = inspections.history(data.crewId)[0] ?? null;
-    const inspectorOn = inspections.enabled(member.deckId);
+    // Shells are never inspected, so the Inspector has nothing to say about theirs.
+    const inspectorOn = member.kind === "agent" && inspections.enabled(member.deckId);
     const approved = briefs.approved(data.crewId);
     try {
       // What the worktree holds now: O's guard asks about it, and stale evidence says so.
