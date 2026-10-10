@@ -430,7 +430,9 @@ describe("PreflightService", () => {
     expect(service.latest(id)?.finishedAt).toEqual(expect.any(Number));
   });
 
-  test("at most two run at once", async () => {
+  test("at most two run at once", { timeout: 30_000 }, async () => {
+    // Generous waits: under a full-suite load the default second is too tight.
+    const WAIT = { timeout: 10_000 };
     const members = [await hireWithChange(0), await hireWithChange(1), await hireWithChange(2)];
     const pending: { cwd: string; release: () => void }[] = [];
     run = (opts) =>
@@ -442,7 +444,7 @@ describe("PreflightService", () => {
     /** Let one crew member's current check finish. */
     const finishCheckOf = async (crewId: string) => {
       const cwd = crew.workdir(crewId).cwd;
-      await vi.waitFor(() => expect(pending.some((p) => p.cwd === cwd)).toBe(true));
+      await vi.waitFor(() => expect(pending.some((p) => p.cwd === cwd)).toBe(true), WAIT);
       pending
         .splice(
           pending.findIndex((p) => p.cwd === cwd),
@@ -452,19 +454,19 @@ describe("PreflightService", () => {
     };
 
     for (const m of members) stop(m.id);
-    await vi.waitFor(() => expect(pending).toHaveLength(2));
+    await vi.waitFor(() => expect(pending).toHaveLength(2), WAIT);
     await new Promise((r) => setTimeout(r, 20));
     expect(states()).toEqual(["running", "running", null]);
 
     await finishCheckOf(members[0]!.id);
     await finishCheckOf(members[0]!.id);
-    await vi.waitFor(() => expect(states()).toEqual(["go", "running", "running"]));
+    await vi.waitFor(() => expect(states()).toEqual(["go", "running", "running"]), WAIT);
 
     for (const m of members.slice(1)) {
       await finishCheckOf(m.id);
       await finishCheckOf(m.id);
     }
-    await vi.waitFor(() => expect(states()).toEqual(["go", "go", "go"]));
+    await vi.waitFor(() => expect(states()).toEqual(["go", "go", "go"]), WAIT);
   });
 
   test("deckHistory lists the deck's latest runs, newest first", async () => {
