@@ -10,7 +10,7 @@ export function toastOf(text: string, tone: Tone = "default") {
   return { title: text, variant: tone, timeout: tone === "error" ? 6000 : 3500 };
 }
 
-/** Show a short message. */
-export function notify(text: string, tone?: Tone): void {
-  toasts.add(toastOf(text, tone));
+/** Show a short message; its id closes it early (`toasts.close(id)`). */
+export function notify(text: string, tone?: Tone): string {
+  return toasts.add(toastOf(text, tone));
 }

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { openShell, resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { giveIssue, handIssue } from "../github/github.functions";
 import { openCrewPr } from "../pr/pr.functions";
+import { notify, toasts } from "../../shared/ui/toasts";
 import { gameKeysEnabled, useWorld } from "./store";
 
 /** Send a crew member without a worktree of its own home at once (agent-office's X). */
@@ -37,16 +38,21 @@ function pullRequest(member: CrewInfo): void {
   if (member.prUrl) return open({ kind: "pr", crewId: member.id });
   if (!member.branch)
     return say(`${member.name} has no branch of its own: hire it with its own worktree`);
-  say(`Pushing ${member.branch} and opening a pull request…`);
+  const pushing = notify(`Checking pre-flight, then pushing ${member.branch}…`);
   openCrewPr({ data: { crewId: member.id } }).then(
     (result) => {
+      // Whatever happened, "pushing" is over; with the launch check asking, nothing was pushed.
+      toasts.close(pushing);
       if ("needsConfirm" in result) {
         return open({ kind: "launchCheck", crewId: member.id, reason: result.needsConfirm });
       }
       say(`${member.name}'s pull request is open`, "success");
       open({ kind: "pr", crewId: member.id });
     },
-    (error: Error) => say(error.message, "error"),
+    (error: Error) => {
+      toasts.close(pushing);
+      say(error.message, "error");
+    },
   );
 }
 
