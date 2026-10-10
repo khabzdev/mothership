@@ -1,20 +1,19 @@
 import type { CheckVerdict, DeckCheck, PreflightInfo, ServerMsg } from "@mothership/protocol";
 import { and, asc, desc, eq, inArray, ne, notInArray, sql, type SQL } from "drizzle-orm";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Db } from "../../shared/db/client.server";
 import { crew as crewTable, preflightResults, preflights } from "../../shared/db/schema";
 import type { CrewSignalEvent } from "../crew/hooks.server";
-import type { CrewService } from "../crew/service.server";
+import type { CrewService, PromptFrom } from "../crew/service.server";
 import type { CheckService } from "./checks.server";
 import { fingerprint as worktreeFingerprint } from "./fingerprint.server";
-import { DEFAULT_FUEL } from "./model";
+import { afterPreflight, DEFAULT_FUEL } from "./flight";
+import { handBackMessage, outOfFuelDetail, tailOf, type CheckFailure } from "./report";
 import { runCheck, type CheckRun, type RunCheck } from "./runner.server";
 
 /** At most this many pre-flights run at once, station-wide; the rest wait their turn. */
 export const MAX_RUNNING = 2;
-
-/** Interim: Task 4 replaces this with a plain-text tail (`tailOf`). */
-const TAIL_CHARS = 8192;
 
 export type PreflightTrigger = "stop" | "manual";
 
@@ -76,7 +75,8 @@ type Row = typeof preflights.$inferSelect;
 
 /**
  * Pre-flight: when a crew member in a worktree of its own stops, run the deck's armed checks
- * there, one after another, and remember how each came out.
+ * there, one after another, and remember how each came out. A NO-GO is typed back to the agent
+ * while the flight has fuel; then it needs you. Your next prompt starts a new flight, refuelled.
  */
 export class PreflightService {
   readonly #db: Db;
@@ -99,9 +99,16 @@ export class PreflightService {
     this.#home = deps.home;
     this.#run = deps.run ?? runCheck;
     this.#fingerprint = deps.fingerprint ?? worktreeFingerprint;
+    this.#crew.onPrompt((e) => this.#prompted(e));
+    this.#crew.onGone((crewId) => this.cancel(crewId));
   }
 
+  /** A stop starts a pre-flight; going back to work cancels one, spending no fuel. */
   handleSignal(e: CrewSignalEvent): void {
+    if (e.signal.type === "working") {
+      this.cancel(e.crewId);
+      return;
+    }
     if (e.signal.type !== "stopped") return;
     this.run(e.crewId, "stop").catch((error: unknown) =>
       console.error("[preflight] couldn't start a pre-flight", error),
@@ -184,11 +191,14 @@ export class PreflightService {
     this.#crew.refresh(entry.deckId);
   }
 
-  /** The roster's summary: this flight's latest pre-flight, with the fuel left. */
+  /** The roster's summary: the latest pre-flight, with this flight's attempts and fuel left. */
   info(crewId: string): PreflightInfo | undefined {
-    const row = this.#crewRow(crewId);
-    const record = row ? this.history(crewId)[0] : this.latest(crewId);
+    const record = this.latest(crewId);
     if (!record) return undefined;
+    const row = this.#crewRow(crewId);
+    const attempt = row
+      ? this.history(crewId).filter((r) => r.state !== "cancelled").length
+      : record.attempt;
     const job = this.#active.get(record.id);
     const checks = job
       ? job.checks.map((check, i) => {
@@ -199,7 +209,7 @@ export class PreflightService {
     return {
       state: record.state,
       checks,
-      attempt: record.attempt,
+      attempt,
       fuel: row?.fuel ?? DEFAULT_FUEL,
       maxFuel: DEFAULT_FUEL,
     };
@@ -291,11 +301,23 @@ export class PreflightService {
     this.#crew.refresh(job.deckId);
 
     const verdicts: CheckVerdict[] = [];
+    const failures: CheckFailure[] = [];
     for (const [position, check] of job.checks.entries()) {
       if (job.abort.signal.aborted) return;
       const run = await this.#check(job, check);
       if (job.abort.signal.aborted) return;
+      if (!existsSync(job.cwd)) {
+        // The worktree went away under the run: nothing to report, no fuel spent.
+        this.cancel(job.crewId);
+        return;
+      }
+      const tail = tailOf(run.output);
       verdicts.push(run.verdict);
+      if (run.verdict === "nogo") {
+        const { name, command, timeoutMs } = check;
+        const { exitCode, timedOut, durationMs } = run;
+        failures.push({ name, command, exitCode, timedOut, timeoutMs, durationMs, tail });
+      }
       const done = position === job.checks.length - 1;
       this.#db.transaction((tx) => {
         tx.insert(preflightResults)
@@ -309,7 +331,7 @@ export class PreflightService {
             exitCode: run.exitCode,
             timedOut: run.timedOut,
             durationMs: run.durationMs,
-            tail: run.output.slice(-TAIL_CHARS),
+            tail,
           })
           .run();
         if (done) {
@@ -333,6 +355,57 @@ export class PreflightService {
       });
       this.#crew.refresh(job.deckId);
     }
+    await this.#handBack(job, member.flight, attempt, verdicts, failures);
+  }
+
+  /**
+   * After a stop's NO-GO: type the failures into the agent and spend one fuel, or, with the tank
+   * empty (or the agent unreachable), raise "needs you". A manual run spends no fuel.
+   */
+  async #handBack(
+    job: Job,
+    flight: number,
+    attempt: number,
+    verdicts: CheckVerdict[],
+    failures: CheckFailure[],
+  ): Promise<void> {
+    if (job.trigger !== "stop" || job.abort.signal.aborted) return;
+    const member = this.#crewRow(job.crewId);
+    if (!member || member.flight !== flight) return;
+    const outcome = afterPreflight(verdicts, member.fuel, attempt);
+    if (outcome.kind === "go") return;
+    const names = failures.map((f) => f.name);
+    if (outcome.kind === "outOfFuel") {
+      this.#crew.alert(job.crewId, outOfFuelDetail(names, outcome.attempts));
+      return;
+    }
+    const message = handBackMessage(failures, outcome.attempt, outcome.maxAttempts);
+    try {
+      await this.#crew.prompt(job.crewId, message, "station");
+    } catch (error) {
+      console.warn(`[preflight] couldn't hand back to ${job.crewId}: ${(error as Error).message}`);
+      this.#crew.alert(job.crewId, `${outOfFuelDetail(names, attempt)} (couldn't reach the agent)`);
+      return;
+    }
+    this.#db
+      .update(crewTable)
+      .set({ fuel: sql`max(${crewTable.fuel} - 1, 0)` })
+      .where(and(eq(crewTable.id, job.crewId), eq(crewTable.flight, flight)))
+      .run();
+  }
+
+  /** Your prompt starts a new flight with a full tank, and cancels a pre-flight under way. */
+  #prompted({ crewId, from }: { crewId: string; from: PromptFrom }): void {
+    if (from !== "you") return;
+    this.cancel(crewId);
+    const row = this.#crewRow(crewId);
+    if (!row) return;
+    this.#db
+      .update(crewTable)
+      .set({ flight: sql`${crewTable.flight} + 1`, fuel: DEFAULT_FUEL })
+      .where(eq(crewTable.id, crewId))
+      .run();
+    this.#crew.refresh(row.deckId);
   }
 
   /** Run one check; one that can't even start (no log folder) is NO-GO with the reason. */

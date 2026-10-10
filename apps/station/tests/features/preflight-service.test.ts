@@ -10,13 +10,16 @@ import { CrewService } from "../../src/features/crew/service.server.ts";
 import { CheckService } from "../../src/features/preflight/checks.server.ts";
 import { PreflightService } from "../../src/features/preflight/preflight.server.ts";
 import type { CheckRun, RunCheck } from "../../src/features/preflight/runner.server.ts";
+import { eq } from "drizzle-orm";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
-import { deckChecks, decks, preflights } from "../../src/shared/db/schema.ts";
+import { crew as crewTable, deckChecks, decks, preflights } from "../../src/shared/db/schema.ts";
 
 class FakeLauncher implements CrewLauncher {
   writes: [string, string][] = [];
+  fail = false;
   async launch() {}
   async write(crewId: string, data: string) {
+    if (this.fail) throw new Error("pty closed");
     this.writes.push([crewId, data]);
   }
   async stop() {}
@@ -29,6 +32,7 @@ let home: string;
 let repo: string;
 let db: Db;
 let sent: ServerMsg[];
+let launcher: FakeLauncher;
 let crew: CrewService;
 let checks: CheckService;
 let calls: RunOpts[];
@@ -75,7 +79,8 @@ beforeEach(() => {
     .run();
   sent = [];
   const broadcast = (msg: ServerMsg) => void sent.push(msg);
-  crew = new CrewService({ db, launcher: new FakeLauncher(), broadcast, home });
+  launcher = new FakeLauncher();
+  crew = new CrewService({ db, launcher, broadcast, home });
   checks = new CheckService({ db, broadcast });
   checks.arm("deck-1", true);
   calls = [];
@@ -139,7 +144,7 @@ describe("PreflightService", () => {
         exitCode: 0,
         timedOut: false,
         durationMs: 5,
-        tail: "ran vp check\n",
+        tail: "ran vp check",
       },
       expect.objectContaining({ checkId: "k-test", name: "test", verdict: "go" }),
     ]);
@@ -382,5 +387,201 @@ describe("PreflightService", () => {
     await settled(b.id);
     expect(service.deckHistory("deck-1").map((r) => r.crewId)).toEqual([b.id, a.id]);
     expect(service.deckHistory("deck-1", 1)).toHaveLength(1);
+  });
+
+  /** Each run's checks wait here until released, or resolve as skipped when aborted. */
+  function holdChecks() {
+    const held: (() => void)[] = [];
+    run = (opts) =>
+      new Promise((resolve) => {
+        calls.push(opts);
+        held.push(() => resolve(result(opts, "go")));
+        opts.signal?.addEventListener("abort", () => resolve(result(opts, "skipped")));
+      });
+    return held;
+  }
+
+  const fuelOf = (crewId: string) =>
+    db.select().from(crewTable).where(eq(crewTable.id, crewId)).get();
+
+  const pastes = () => launcher.writes.filter(([, data]) => data.startsWith("\x1b[200~"));
+
+  test("NO-GO types the hand-back and spends fuel", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["go", "nogo"];
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(pastes()).toHaveLength(1));
+    const [crewId, data] = pastes()[0]!;
+    expect(crewId).toBe(id);
+    expect(data).toContain("Pre-flight NO-GO (attempt 2 of 4)");
+    expect(data).toContain("✗ test  (`vp test`, exit 1, 0.0s)\nran vp test");
+    expect(data).not.toContain("✗ check");
+    await vi.waitFor(() => expect(service.info(id)?.fuel).toBe(2));
+    expect(service.info(id)).toMatchObject({ state: "nogo", attempt: 1, maxFuel: 3 });
+  });
+
+  test("GO types nothing and spends no fuel", async () => {
+    const { id } = await hireWithChange();
+    stop(id);
+    await settled(id);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(launcher.writes).toEqual([]);
+    expect(service.info(id)?.fuel).toBe(3);
+  });
+
+  test("fourth NO-GO raises needs you", async () => {
+    const { id } = await hireWithChange();
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      verdicts = ["go", "nogo"];
+      writeFileSync(join(crew.workdir(id).cwd, "change.txt"), `try ${attempt}`);
+      stop(id);
+      await vi.waitFor(() => expect(service.history(id)).toHaveLength(attempt));
+      await settled(id);
+      await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(Math.max(0, 3 - attempt)));
+      if (attempt < 4) await vi.waitFor(() => expect(pastes()).toHaveLength(attempt));
+    }
+    await vi.waitFor(() => expect(crew.member(id).status).toBe("needs_input"));
+    expect(crew.member(id).detail).toBe("Out of fuel: test still NO-GO after 4 attempts");
+    expect(pastes()).toHaveLength(3);
+    expect(pastes().map(([, d]) => d.match(/attempt \d of \d/)?.[0])).toEqual([
+      "attempt 2 of 4",
+      "attempt 3 of 4",
+      "attempt 4 of 4",
+    ]);
+  });
+
+  test("your prompt refuels", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["nogo"];
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(service.info(id)?.fuel).toBe(2));
+    await crew.prompt(id, "try again");
+    expect(service.info(id)?.fuel).toBe(3);
+    expect(fuelOf(id)?.flight).toBe(2);
+    expect(service.info(id)?.attempt).toBe(0);
+  });
+
+  test("the station's own hand-back doesn't refuel", async () => {
+    const { id } = await hireWithChange();
+    await crew.prompt(id, "fix it", "station");
+    expect(fuelOf(id)).toMatchObject({ flight: 1, fuel: 3 });
+  });
+
+  test("a second stop during a run doesn't start another", async () => {
+    const { id } = await hireWithChange();
+    const held = holdChecks();
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    writeFileSync(join(crew.workdir(id).cwd, "change.txt"), "more");
+    expect(await service.run(id, "stop")).toBeNull();
+    stop(id);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    held.shift()!();
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    held.shift()!();
+    await settled(id);
+    expect(service.history(id)).toHaveLength(1);
+  });
+
+  test("working mid-run cancels without spending fuel", async () => {
+    const { id } = await hireWithChange();
+    holdChecks();
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    service.handleSignal({ crewId: id, missionId: id, signal: { type: "working" } });
+    expect(service.latest(id)?.state).toBe("cancelled");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    expect(service.info(id)?.fuel).toBe(3);
+    expect(launcher.writes).toEqual([]);
+  });
+
+  test("your prompt mid-run cancels without spending fuel", async () => {
+    const { id } = await hireWithChange();
+    holdChecks();
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await crew.prompt(id, "actually, do this");
+    expect(service.latest(id)?.state).toBe("cancelled");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    expect(service.info(id)?.fuel).toBe(3);
+    expect(pastes()).toHaveLength(1);
+  });
+
+  test("send home mid-run cancels without spending fuel", async () => {
+    const { id } = await hireWithChange();
+    holdChecks();
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    await crew.sendHome(id, "remove");
+    expect(service.latest(id)?.state).toBe("cancelled");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    expect(service.info(id)?.fuel).toBe(3);
+    expect(launcher.writes).toEqual([]);
+  });
+
+  test("a worktree gone mid-run cancels without a hand-back", async () => {
+    const { id } = await hireWithChange();
+    const held = holdChecks();
+    verdicts = ["nogo", "nogo"];
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    rmSync(crew.workdir(id).cwd, { recursive: true, force: true });
+    held.shift()!();
+    await vi.waitFor(() => expect(service.latest(id)?.state).toBe("cancelled"));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    expect(fuelOf(id)?.fuel).toBe(3);
+    expect(launcher.writes).toEqual([]);
+  });
+
+  test("no checks, no pre-flight", async () => {
+    db.update(deckChecks).set({ enabled: false }).run();
+    const { id } = await hireWithChange();
+    expect(await service.run(id, "stop")).toBeNull();
+    expect(await service.run(id, "manual")).toBeNull();
+    expect(service.info(id)).toBeUndefined();
+    expect(calls).toEqual([]);
+  });
+
+  test("agent exit mid-run cancels", async () => {
+    const { id } = await hireWithChange();
+    holdChecks();
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    service.cancel(id);
+    expect(service.latest(id)?.state).toBe("cancelled");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(launcher.writes).toEqual([]);
+    expect(service.info(id)?.fuel).toBe(3);
+  });
+
+  test("a manual run NO-GO spends no fuel and types nothing", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["nogo", "nogo"];
+    await service.run(id, "manual");
+    await settled(id);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(service.latest(id)?.state).toBe("nogo");
+    expect(launcher.writes).toEqual([]);
+    expect(service.info(id)?.fuel).toBe(3);
+  });
+
+  test("a failed hand-back write is treated as out of fuel", async () => {
+    const { id } = await hireWithChange();
+    launcher.fail = true;
+    verdicts = ["go", "nogo"];
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(crew.member(id).status).toBe("needs_input"));
+    expect(crew.member(id).detail).toBe(
+      "Out of fuel: test still NO-GO after 1 attempts (couldn't reach the agent)",
+    );
+    expect(fuelOf(id)?.fuel).toBe(3);
   });
 });
