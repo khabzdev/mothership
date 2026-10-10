@@ -3,8 +3,10 @@ import type { CrewActivity } from "@mothership/protocol";
 /** What a crew member's hooks tell the station. */
 export type CrewSignal =
   | { type: "idle" }
+  /** No `activity`: a prompt was just submitted. With one: it's using a tool. */
   | { type: "working"; activity?: CrewActivity }
-  | { type: "needsInput"; detail: string }
+  /** `idle`: only waiting at its prompt (Claude's idle_prompt), not asking for anything. */
+  | { type: "needsInput"; detail: string; idle?: boolean }
   | { type: "stopped" }
   | { type: "ended"; reason: string };
 

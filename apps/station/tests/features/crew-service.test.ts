@@ -224,6 +224,35 @@ describe("prompt", () => {
     ]);
   });
 
+  test("a prompt typed in the terminal counts as yours", async () => {
+    const { id } = await hire(0);
+    const heard: { crewId: string; from: string }[] = [];
+    service.onPrompt((e) => heard.push(e));
+    // UserPromptSubmit: working with no tool.
+    service.handleSignal({ crewId: id, signal: { type: "working" } });
+    // PreToolUse: working with a tool, not a prompt.
+    service.handleSignal({ crewId: id, signal: { type: "working", activity: { tool: "Read" } } });
+    expect(heard).toEqual([{ crewId: id, from: "you" }]);
+  });
+
+  test("the submit after a station or app prompt isn't heard twice", async () => {
+    const { id } = await hire(0);
+    const heard: { crewId: string; from: string }[] = [];
+    service.onPrompt((e) => heard.push(e));
+    await service.prompt(id, "Pre-flight NO-GO", "station");
+    service.handleSignal({ crewId: id, signal: { type: "working" } });
+    await service.prompt(id, "Also add tests");
+    service.handleSignal({ crewId: id, signal: { type: "working" } });
+    expect(heard).toEqual([
+      { crewId: id, from: "station" },
+      { crewId: id, from: "you" },
+    ]);
+    // The next one typed in the terminal is yours again.
+    service.handleSignal({ crewId: id, signal: { type: "working" } });
+    expect(heard.at(-1)).toEqual({ crewId: id, from: "you" });
+    expect(heard).toHaveLength(3);
+  });
+
   test("a failed write tells nobody", async () => {
     const { id } = await hire(0);
     const heard: unknown[] = [];
@@ -266,6 +295,51 @@ describe("pre-flight hooks", () => {
       status: "needs_input",
       detail: "Out of fuel: test still NO-GO after 4 attempts",
     });
+  });
+});
+
+describe("idle notifications", () => {
+  const idle = {
+    type: "needsInput",
+    detail: "Claude is waiting for your input",
+    idle: true,
+  } as const;
+
+  test("an idle notification raises needs you when nothing else is going on", async () => {
+    const { id } = await hire(0);
+    service.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    service.handleSignal({ crewId: id, signal: idle });
+    expect(service.member(id)).toMatchObject({ status: "needs_input", detail: idle.detail });
+  });
+
+  test("ignored while a pre-flight is busy with the crew member", async () => {
+    const { id } = await hire(0);
+    let busy = true;
+    service.busyWith((crewId) => crewId === id && busy);
+    service.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    service.handleSignal({ crewId: id, signal: idle });
+    expect(service.member(id).status).toBe("done");
+    busy = false;
+    service.handleSignal({ crewId: id, signal: idle });
+    expect(service.member(id).status).toBe("needs_input");
+  });
+
+  test("a station alert stands until the crew member works again", async () => {
+    const { id } = await hire(0);
+    service.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    service.alert(id, "Out of fuel: test still NO-GO after 4 attempts");
+    service.handleSignal({ crewId: id, signal: idle });
+    service.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    expect(service.member(id)).toMatchObject({
+      status: "needs_input",
+      detail: "Out of fuel: test still NO-GO after 4 attempts",
+    });
+    service.handleSignal({ crewId: id, signal: { type: "working" } });
+    expect(service.member(id).status).toBe("working");
+    expect(service.member(id).detail).toBeUndefined();
+    service.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    service.handleSignal({ crewId: id, signal: idle });
+    expect(service.member(id)).toMatchObject({ status: "needs_input", detail: idle.detail });
   });
 });
 

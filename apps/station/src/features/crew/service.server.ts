@@ -47,6 +47,7 @@ const SUBMIT_DELAY_MS = 120;
 export type PromptFrom = "you" | "station";
 
 type Describe = (crewId: string) => PreflightInfo | undefined;
+type Busy = (crewId: string) => boolean;
 
 function toInfo(row: Row, describe?: Describe): CrewInfo {
   const preflight = describe?.(row.id);
@@ -75,6 +76,11 @@ export class CrewService {
   readonly #goneListeners = new Set<(crewId: string) => void>();
   readonly #promptListeners = new Set<(e: { crewId: string; from: PromptFrom }) => void>();
   #describe: Describe | undefined;
+  #busy: Busy = () => false;
+  /** Crew with a prompt typed by the station or the app, whose submit hook is still to come. */
+  readonly #submitting = new Set<string>();
+  /** Crew under a station alert, which stands until they work again. */
+  readonly #alerted = new Set<string>();
 
   constructor(deps: CrewServiceDeps) {
     this.#deps = deps;
@@ -95,13 +101,20 @@ export class CrewService {
     this.#describe = fn;
   }
 
+  /** Ask whether a pre-flight is busy with a crew member, so Claude's idle nudge doesn't count. */
+  busyWith(fn: Busy): void {
+    this.#busy = fn;
+  }
+
   /** Send the deck's roster again, after something it describes has changed. */
   refresh(deckId: string): void {
     this.#broadcast(deckId);
   }
 
-  /** Raise "needs you" over a crew member, saying why. */
+  /** Raise "needs you" over a crew member, saying why; it stands until the crew member works again. */
   alert(crewId: string, detail: string): void {
+    if (!this.#row(crewId)) return;
+    this.#alerted.add(crewId);
     this.#update(crewId, "needs_input", { action: null, detail });
   }
 
@@ -222,11 +235,16 @@ export class CrewService {
   async prompt(crewId: string, text: string, from: PromptFrom = "you"): Promise<void> {
     if (!this.#row(crewId)) throw new Error(`No such crew member: ${crewId}`);
     await this.#deps.launcher.write(crewId, `\x1b[200~${text}\x1b[201~`);
+    // Its submit hook (working, no tool) is this prompt, not another one typed in the terminal.
+    this.#submitting.add(crewId);
     setTimeout(() => void this.#deps.launcher.write(crewId, "\r"), SUBMIT_DELAY_MS);
     for (const listener of this.#promptListeners) listener({ crewId, from });
   }
 
-  /** Called after a prompt is typed into a crew member's input box. */
+  /**
+   * Called after a prompt is typed into a crew member's input box: by the app or the station
+   * (prompt), or by you in its terminal (seen as its submit hook).
+   */
   onPrompt(listener: (e: { crewId: string; from: PromptFrom }) => void): () => void {
     this.#promptListeners.add(listener);
     return () => this.#promptListeners.delete(listener);
@@ -249,6 +267,8 @@ export class CrewService {
     const row = this.#row(crewId);
     if (!row) throw new Error(`No such crew member: ${crewId}`);
     const deck = this.#deck(row.deckId);
+    this.#submitting.delete(crewId);
+    this.#alerted.delete(crewId);
     this.#deps.db.delete(crew).where(eq(crew.id, crewId)).run();
     this.#broadcast(row.deckId);
     for (const listener of this.#goneListeners) listener(crewId);
@@ -281,6 +301,13 @@ export class CrewService {
     if (sessionId) {
       this.#deps.db.update(crew).set({ sessionId }).where(eq(crew.id, crewId)).run();
     }
+    if (!this.#row(crewId)) return;
+    if (signal.type === "working") this.#alerted.delete(crewId);
+    else if (signal.type === "ended") this.#alerted.delete(crewId);
+    // A station alert stands until the crew member works again.
+    else if (this.#alerted.has(crewId)) return;
+    // Claude only waiting at its prompt while a pre-flight decides what's next: not yet you.
+    else if (signal.type === "needsInput" && signal.idle && this.#busy(crewId)) return;
     const action =
       signal.type === "working" && signal.activity
         ? (toolAction(signal.activity.tool, signal.activity.command) ?? null)
@@ -289,9 +316,15 @@ export class CrewService {
       action,
       detail: signal.type === "needsInput" ? signal.detail : null,
     });
+    // Its submit hook: a prompt typed in the terminal is yours, unless prompt() typed it.
+    if (signal.type === "working" && !signal.activity && !this.#submitting.delete(crewId)) {
+      for (const listener of this.#promptListeners) listener({ crewId, from: "you" });
+    }
   }
 
   handleExit(crewId: string): void {
+    this.#alerted.delete(crewId);
+    this.#submitting.delete(crewId);
     this.#update(crewId, "asleep", { action: null, detail: null });
   }
 

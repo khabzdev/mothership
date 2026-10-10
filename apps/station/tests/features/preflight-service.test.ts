@@ -489,6 +489,27 @@ describe("PreflightService", () => {
     expect(service.info(id)).toBeUndefined();
   });
 
+  /** Both listeners, in the station's order: the crew's status, then pre-flight. */
+  const signal = (crewId: string, sig: Parameters<CrewService["handleSignal"]>[0]["signal"]) => {
+    crew.handleSignal({ crewId, signal: sig });
+    service.handleSignal({ crewId, missionId: crewId, signal: sig });
+  };
+
+  test("a prompt typed in the terminal refuels and starts a new flight", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["nogo"];
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(2));
+    // The station's hand-back is submitted: its hook is not your prompt.
+    signal(id, { type: "working" });
+    expect(fuelOf(id)).toMatchObject({ flight: 1, fuel: 2 });
+    // Then you type in its terminal.
+    signal(id, { type: "working" });
+    expect(fuelOf(id)).toMatchObject({ flight: 2, fuel: 3 });
+    expect(service.info(id)).toBeUndefined();
+  });
+
   test("a manual run alone in a flight shows in info()", async () => {
     const { id } = await hireWithChange();
     verdicts = ["go", "go"];

@@ -140,7 +140,7 @@ describe("parseHook", () => {
         notification_type: "idle_prompt",
         message: "Claude is waiting for your input",
       },
-      { type: "needsInput", detail: "Claude is waiting for your input" },
+      { type: "needsInput", detail: "Claude is waiting for your input", idle: true },
     ],
     [{ hook_event_name: "Notification", notification_type: "auth_success", message: "ok" }, null],
     [{ hook_event_name: "Stop", stop_hook_active: false }, { type: "stopped" }],

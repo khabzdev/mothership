@@ -85,6 +85,8 @@ function parseHook(payload: unknown): CrewSignal | null {
         ? {
             type: "needsInput",
             detail: clip(typeof p.message === "string" ? p.message : "Crew needs input"),
+            // Claude waiting at its prompt, not asking anything: the station may know better.
+            ...(p.notification_type === "idle_prompt" && { idle: true }),
           }
         : null;
     case "Stop":
