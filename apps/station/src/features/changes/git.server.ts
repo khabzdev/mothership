@@ -19,7 +19,7 @@ const MAX_DIFF = 200_000;
  */
 export async function readChanges(cwd: string, homeRef: string | null): Promise<ChangesState> {
   const branch = (await git(cwd, ["branch", "--show-current"])).trim() || "HEAD";
-  const base = homeRef ? (await git(cwd, ["merge-base", "HEAD", homeRef])).trim() : "HEAD";
+  const base = await diffBase(cwd, homeRef);
   const ahead = homeRef
     ? Number((await git(cwd, ["rev-list", "--count", `${base}..HEAD`])).trim())
     : 0;
@@ -91,11 +91,17 @@ function countLines(file: string): { additions: number; deletions: 0; binary: bo
   }
 }
 
-/** One changed file's unified diff against the same base as readChanges. */
+/** The commit readChanges and readDiff measure against: where HEAD left `homeRef`, else HEAD. */
+export async function diffBase(cwd: string, homeRef: string | null): Promise<string> {
+  return homeRef ? (await git(cwd, ["merge-base", "HEAD", homeRef])).trim() : "HEAD";
+}
+
+/** One changed file's unified diff against the same base as readChanges (`base`, when already known). */
 export async function readDiff(
   cwd: string,
   homeRef: string | null,
   file: ChangedFile,
+  base?: string,
 ): Promise<{ diff: string; truncated: boolean }> {
   let diff: string;
   if (file.status === "?") {
@@ -107,9 +113,9 @@ export async function readDiff(
       (error: { stdout?: string }) => error.stdout ?? "",
     );
   } else {
-    const base = homeRef ? (await git(cwd, ["merge-base", "HEAD", homeRef])).trim() : "HEAD";
+    const from = base ?? (await diffBase(cwd, homeRef));
     const paths = file.from ? [file.from, file.path] : [file.path];
-    diff = await git(cwd, ["diff", "-M", base, "--", ...paths]);
+    diff = await git(cwd, ["diff", "-M", from, "--", ...paths]);
   }
   return diff.length > MAX_DIFF
     ? { diff: diff.slice(0, MAX_DIFF), truncated: true }
