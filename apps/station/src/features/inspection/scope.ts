@@ -19,11 +19,16 @@ export const IGNORED_FILES = ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"
 const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.\w+$/;
 const MENTIONS_TESTS = /test|spec/i;
 
-// Any line that starts a section: `# X`, `**X**`, or `X:` on its own.
+// The headings a brief is asked for (see briefs/model.ts); these start a section even with text after them.
+const BRIEF_HEADINGS = "Goal|Approach|Files|Proof|Not doing";
+
+// Any line that starts a section: `# X`, `**X**` / `**X:**` / `**X**:` (alone or with text), or `X:` on its own.
 const HEADING_LINES = [
   /^\s*#{1,6}\s*\S/,
   /^\s*\*\*[^*]+\*\*\s*:?\s*$/,
+  /^\s*\*\*[^*]+(?::\*\*|\*\*\s*:)/,
   /^\s*[A-Za-z][A-Za-z ]{0,30}:\s*$/,
+  new RegExp(`^\\s*(?:${BRIEF_HEADINGS})\\s*:`, "i"),
 ];
 
 function isHeading(line: string): boolean {
@@ -34,7 +39,7 @@ function isHeading(line: string): boolean {
 function namedHeading(line: string, name: string): string | null {
   const patterns = [
     new RegExp(`^\\s*#{1,6}\\s*${name}\\b\\s*:?\\s*(.*)$`, "i"),
-    new RegExp(`^\\s*\\*\\*${name}\\*\\*\\s*:?\\s*(.*)$`, "i"),
+    new RegExp(`^\\s*\\*\\*${name}\\s*:?\\s*\\*\\*\\s*:?\\s*(.*)$`, "i"),
     new RegExp(`^\\s*${name}\\s*:\\s*(.*)$`, "i"),
   ];
   for (const re of patterns) {
@@ -42,6 +47,11 @@ function namedHeading(line: string, name: string): string | null {
     if (m) return (m[1] ?? "").trim();
   }
   return null;
+}
+
+/** Whether the brief has the heading at all. */
+function hasSection(text: string, heading: "Files" | "Proof"): boolean {
+  return text.split("\n").some((line) => namedHeading(line, heading) !== null);
 }
 
 /** The lines under a brief heading up to the next heading; "" when the heading is absent. */
@@ -61,36 +71,52 @@ export function briefSection(text: string, heading: "Files" | "Proof"): string {
 
 const looksLikePath = (token: string) => token.includes("/") || token.includes(".");
 
-/** The paths and directories in a brief's Files section. */
+// Quotes, brackets and sentence punctuation around a path.
+const clean = (token: string) => token.replace(/^[`'"([]+/, "").replace(/[`'")\],;:.]+$/, "");
+
+/** The paths, directories and globs in a brief's Files section. */
 export function briefPaths(text: string): string[] {
   const paths: string[] = [];
   for (const line of briefSection(text, "Files").split("\n")) {
     const ticked = [...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]!.trim());
     if (ticked.length) {
       paths.push(...ticked.filter(Boolean));
-    } else if (/^\s*(?:[-*+]|\d+[.)])\s/.test(line)) {
-      const tokens = line
-        .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "")
-        .split(/\s+/)
-        .map((t) => t.replace(/[,;:.]+$/, ""))
-        .filter((t) => t && looksLikePath(t));
-      paths.push(...tokens);
+      continue;
     }
+    const tokens = line
+      .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "")
+      .split(/[\s,;]+/)
+      .map(clean)
+      .filter((t) => t && looksLikePath(t));
+    paths.push(...tokens);
   }
   return paths;
 }
 
-function isIgnored(path: string): boolean {
+/** Whether a path is a lockfile, which the Inspector leaves out of counts and the review diff. */
+export function isIgnored(path: string): boolean {
   const base = path.split("/").pop() ?? path;
   return IGNORED_FILES.some((p) =>
     p.endsWith("*") ? base.startsWith(p.slice(0, -1)) : base === p,
   );
 }
 
+// A glob as a regex: `**` crosses directories, `*` doesn't.
+function globRegex(glob: string): RegExp {
+  const body = glob
+    .split(/(\*\*|\*)/)
+    .map((part) =>
+      part === "**" ? ".*" : part === "*" ? "[^/]*" : part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"),
+    )
+    .join("");
+  return new RegExp(`^${body}$`);
+}
+
 function covered(path: string, listed: string[]): boolean {
   return listed.some((p) => {
-    const bare = p.replace(/^\.\//, "");
+    const bare = p.replace(/^\.\//, "").replace(/\/\*\*?$/, "/");
     if (bare.endsWith("/")) return path.startsWith(bare);
+    if (bare.includes("*")) return globRegex(bare).test(path);
     return path === bare || path.startsWith(`${bare}/`);
   });
 }
@@ -102,7 +128,9 @@ export function scopeCheck(files: ChangedStat[], brief: string | null): Finding[
   const findings: Finding[] = [];
 
   const listed = briefPaths(brief);
-  const outside = counted.filter((f) => !covered(f.path, listed));
+  // A Files section we can't read any paths out of says nothing about what's outside it.
+  const unreadable = listed.length === 0 && hasSection(brief, "Files");
+  const outside = unreadable ? [] : counted.filter((f) => !covered(f.path, listed));
   for (const f of outside) {
     findings.push({
       severity: "note",

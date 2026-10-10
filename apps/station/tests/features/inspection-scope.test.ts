@@ -88,3 +88,60 @@ describe("scopeCheck", () => {
     );
   });
 });
+
+describe("brief formats", () => {
+  const changed = [stat("src/a.ts"), stat("src/b.ts"), stat("src/c.ts")];
+  const formats: [string, string][] = [
+    [
+      "colon inside the bold",
+      "**Goal:** x\n**Files:** `src/a.ts`, `src/b.ts`, `src/c.ts`\n**Proof:** run it",
+    ],
+    [
+      "colon after the bold",
+      "**Goal**: x\n**Files**: `src/a.ts`, `src/b.ts`, `src/c.ts`\n**Proof**: run it",
+    ],
+    [
+      "plain lines under a heading",
+      "## Goal\nx\n## Files\nsrc/a.ts\nsrc/b.ts\nsrc/c.ts\n## Proof\nrun it",
+    ],
+    ["same line, no backticks", "Goal: x\nFiles: src/a.ts, src/b.ts, src/c.ts\nProof: run it"],
+    ["a glob", "## Files\n- `src/*`\n## Proof\nrun it"],
+    ["a deep glob", "## Files\n- src/**\n## Proof\nrun it"],
+  ];
+  for (const [name, text] of formats) {
+    test(`listed files are fine: ${name}`, () => {
+      expect(scopeCheck(changed, text)).toEqual([]);
+    });
+  }
+
+  test("paths come out of each format", () => {
+    expect(briefPaths(formats[0]![1])).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
+    expect(briefPaths(formats[2]![1])).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
+    expect(briefPaths(formats[3]![1])).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
+    expect(briefPaths("**Files:** \"src/a.ts\"; 'src/b.ts'.")).toEqual(["src/a.ts", "src/b.ts"]);
+  });
+
+  test("Proof stops a same-line Files section", () => {
+    expect(briefSection(formats[3]![1], "Files")).toBe("src/a.ts, src/b.ts, src/c.ts");
+    expect(briefSection(formats[0]![1], "Proof")).toBe("run it");
+  });
+
+  test("a simple glob covers its own directory only", () => {
+    const text = "## Files\n- src/*.ts\n";
+    expect(scopeCheck([stat("src/a.ts")], text)).toEqual([]);
+    expect(scopeCheck([stat("src/deep/a.ts")], text).map((f) => f.title)).toEqual([
+      "Outside the brief: src/deep/a.ts",
+    ]);
+  });
+
+  test("a Files section with no readable paths skips the outside-the-brief rule", () => {
+    const text = "## Files\nthe login screen and its helpers\n## Proof\nrun it";
+    expect(briefPaths(text)).toEqual([]);
+    expect(scopeCheck(changed, text)).toEqual([]);
+  });
+
+  test("no Files section at all still counts every file as outside", () => {
+    const text = "## Goal\nx\n## Proof\nrun it";
+    expect(scopeCheck(changed, text).filter((f) => f.severity === "blocker")).toHaveLength(1);
+  });
+});
