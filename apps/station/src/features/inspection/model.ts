@@ -115,6 +115,11 @@ export function inspectionChip(
   return null;
 }
 
+/** The toast when the Inspector couldn't run for a crew member: the spec's copy, then who and why. */
+export function inspectionFailedToast(name: string, reason: string): string {
+  return `Inspector couldn't run for ${name}: ${reason}`;
+}
+
 /** What the Inspection window shows from a crew member's history (newest first). */
 export function windowSections(records: InspectionRecord[]): {
   current: InspectionRecord | null;

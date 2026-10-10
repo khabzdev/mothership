@@ -3,6 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   flaggedDetail,
   inspectionChip,
+  inspectionFailedToast,
   inspectionHandBack,
   parseCrewInspectInput,
   parseInspectorInput,
@@ -147,5 +148,13 @@ describe("windowSections", () => {
     expect(s.earlier).toEqual([older]);
     expect(s.outside).toBe(1);
     expect(s.lines).toBe(512);
+  });
+});
+
+describe("inspectionFailedToast", () => {
+  test("starts with the spec copy, then who and why", () => {
+    const text = inspectionFailedToast("Ada", "failed: fake review failure");
+    expect(text.startsWith("Inspector couldn't run")).toBe(true);
+    expect(text).toBe("Inspector couldn't run for Ada: failed: fake review failure");
   });
 });
