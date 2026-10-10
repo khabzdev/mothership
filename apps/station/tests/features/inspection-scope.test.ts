@@ -20,11 +20,7 @@ describe("briefSection", () => {
       "Goal: x\nFiles:\n- a.ts\n- b.ts\nProof:\nt",
     ];
     for (const text of styles) {
-      const section = briefSection(text, "Files");
-      expect(section).toContain("a.ts");
-      expect(section).toContain("b.ts");
-      expect(section).not.toContain("t\n");
-      expect(section).not.toMatch(/Proof/);
+      expect(briefSection(text, "Files")).toBe("- a.ts\n- b.ts");
     }
   });
 

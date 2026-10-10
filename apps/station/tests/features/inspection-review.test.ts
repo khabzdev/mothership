@@ -46,6 +46,16 @@ describe("reviewPrompt", () => {
     ).toBeLessThanOrEqual(DIFF_CAP_BYTES);
   });
 
+  test("clips on a character boundary, never mid-character", () => {
+    for (const wide of ["é", "€", "😀"]) {
+      // The cap falls inside `wide`'s bytes: the whole character goes, not half of it.
+      const kept = "a".repeat(DIFF_CAP_BYTES - 1);
+      const p = reviewPrompt({ ...input, diff: `${kept}${wide}${"b".repeat(100)}` });
+      expect(p).toContain(`${kept}\n\n[The diff was clipped`);
+      expect(p).not.toContain("\uFFFD");
+    }
+  });
+
   test("asks for one fenced json block with findings", () => {
     const p = reviewPrompt(input);
     expect(p).toContain("```json");
@@ -99,6 +109,14 @@ describe("parseReview", () => {
     expect(out).toHaveLength(1);
     expect(out[0]!.title).toHaveLength(80);
     expect(out[0]!.title.endsWith("…")).toBe(true);
+  });
+
+  test("truncating a title never splits a surrogate pair", () => {
+    // The 79th character is an emoji (two UTF-16 units): it's kept whole, not halved.
+    const title = `${"y".repeat(78)}😀${"z".repeat(20)}`;
+    const [f] = parseReview(envelope(block({ findings: [{ severity: "note", title, why: "w" }] })));
+    expect(f!.title).toBe(`${"y".repeat(78)}😀…`);
+    expect(f!.title).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
   });
 });
 

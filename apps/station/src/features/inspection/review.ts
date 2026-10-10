@@ -73,6 +73,12 @@ const text = (value: unknown, lines = false): string => {
   return (lines ? clean : clean.replace(/\s+/g, " ")).trim();
 };
 
+/** `value` cut to `max` characters, ellipsis included; counts code points so an emoji isn't halved. */
+function clip(value: string, max: number): string {
+  const chars = Array.from(value);
+  return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : value;
+}
+
 function toFinding(raw: unknown): Finding | null {
   if (typeof raw !== "object" || raw === null) return null;
   const o = raw as Record<string, unknown>;
@@ -82,7 +88,7 @@ function toFinding(raw: unknown): Finding | null {
   const finding: Finding = {
     severity: o.severity,
     source: "review",
-    title: title.length > TITLE_MAX ? `${title.slice(0, TITLE_MAX - 1)}…` : title,
+    title: clip(title, TITLE_MAX),
     why: text(o.why, true),
   };
   const file = text(o.file);
@@ -114,7 +120,7 @@ export function reviewFailure(stdout: string): string | null {
     (typeof envelope.result === "string" && envelope.result.trim()) ||
     (subtype !== "success" && subtype) ||
     "the review reported an error";
-  return text.length > FAILURE_MAX ? `${text.slice(0, FAILURE_MAX - 1)}…` : text;
+  return clip(text, FAILURE_MAX);
 }
 
 /** The findings in `claude -p --output-format json` output; unreadable output is one note. */
