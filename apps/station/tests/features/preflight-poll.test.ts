@@ -1,6 +1,6 @@
 import type { PreflightInfo, ServerMsg } from "@mothership/protocol";
 import { describe, expect, test } from "vite-plus/test";
-import { forDeck, isGo, pollLine } from "../../src/features/preflight/poll.ts";
+import { forDeck, isGo, isNoGo, pollLine } from "../../src/features/preflight/poll.ts";
 
 const base = { done: false, allGo: false, deck: "Orion", crew: "Nova" };
 
@@ -53,5 +53,16 @@ describe("isGo", () => {
   test("no info or NO-GO is not", () => {
     expect(isGo(undefined)).toBe(false);
     expect(isGo({ ...base, state: "nogo" })).toBe(false);
+  });
+});
+
+describe("isNoGo", () => {
+  const base: PreflightInfo = { state: "nogo", checks: [], attempt: 0, fuel: 3, maxFuel: 3 };
+  test("a manual-only NO-GO (attempt 0) counts", () => {
+    expect(isNoGo(base)).toBe(true);
+  });
+  test("no info or GO does not", () => {
+    expect(isNoGo(undefined)).toBe(false);
+    expect(isNoGo({ ...base, state: "go" })).toBe(false);
   });
 });

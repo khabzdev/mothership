@@ -23,6 +23,10 @@ export function pollLine(e: {
 }
 
 /** A GO light: the latest run this flight is GO. */
+export function isNoGo(info: PreflightInfo | undefined): boolean {
+  return info?.state === "nogo";
+}
+
 export function isGo(info: PreflightInfo | undefined): boolean {
   return info?.state === "go";
 }
