@@ -5,8 +5,9 @@ import { useEffect, useRef } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { notify } from "../../../shared/ui/toasts";
 import type { InspectionRecord } from "../inspection.server";
-import { windowSections, type Finding } from "../model";
+import { windowSections } from "../model";
 import { inspectionQuery, reinspectMutation } from "../queries";
+import { FindingList } from "./FindingList";
 
 const STATE: Record<
   InspectionRecord["state"],
@@ -31,34 +32,6 @@ function stateLine(member: CrewInfo, record: InspectionRecord): string {
   );
   if (preflight) parts.push(`fuel ${preflight.fuel}`);
   return parts.join(" · ");
-}
-
-function FindingRow({ finding }: { finding: Finding }) {
-  return (
-    <li className="inspection__finding">
-      {finding.file && (
-        <code className="inspection__place">
-          {finding.line ? `${finding.file}:${finding.line}` : finding.file}
-        </code>
-      )}
-      <span className="inspection__title">{finding.title}</span>
-      <span className="inspection__why">{finding.why}</span>
-    </li>
-  );
-}
-
-function Group({ heading, findings }: { heading: string; findings: Finding[] }) {
-  if (!findings.length) return null;
-  return (
-    <section>
-      <h3 className="inspection__heading">{heading}</h3>
-      <ul className="inspection__list">
-        {findings.map((f, i) => (
-          <FindingRow key={i} finding={f} />
-        ))}
-      </ul>
-    </section>
-  );
 }
 
 function scopeLine(outside: number, lines: number): string {
@@ -116,8 +89,8 @@ export function InspectionWindow({ member }: { member: CrewInfo }) {
           </div>
           {running && <p className="inspection__note">Scanning…</p>}
           {current.reason && <p className="inspection__note">{current.reason}</p>}
-          <Group heading="Blockers" findings={blockers} />
-          <Group heading="Notes" findings={notes} />
+          <FindingList heading="Blockers" findings={blockers} />
+          <FindingList heading="Notes" findings={notes} />
           {!running && <p className="inspection__note">{scopeLine(outside, lines)}</p>}
           {!running && (
             <footer className="inspection__foot">

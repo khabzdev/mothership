@@ -1592,6 +1592,33 @@ kbd {
   color: var(--text-color-kumo-subtle);
 }
 
+.lite-inspection,
+.lite-inspection__sheet,
+.lite-deck {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lite-inspection__chip {
+  justify-self: start;
+}
+
+.lite-inspection__sheet {
+  overflow-wrap: anywhere;
+}
+
+.lite-inspection__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lite-inspection__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-kumo-subtle);
+}
+
 .lite-list__who,
 .lite-crew__who {
   display: grid;

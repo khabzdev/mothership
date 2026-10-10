@@ -23,6 +23,10 @@ import { decksQuery } from "../decks/queries";
 import { REASON_MAX } from "../briefs/model";
 import { approveBriefMutation, briefQuery, reviseBriefMutation } from "../briefs/queries";
 import { BriefText } from "../briefs/ui/BriefText";
+import { inspectionChip, windowSections } from "../inspection/model";
+import { inspectionQuery, reinspectMutation } from "../inspection/queries";
+import { FindingList } from "../inspection/ui/FindingList";
+import { InspectorSwitch } from "../inspection/ui/InspectorSwitch";
 import { preflightChip } from "../preflight/model";
 import { preflightQuery, runPreflightMutation } from "../preflight/queries";
 import { useDeckChoice } from "../world/deck-choice";
@@ -190,6 +194,54 @@ function LiteBrief({ member, brief }: { member: CrewInfo; brief: NonNullable<Cre
   );
 }
 
+/** The latest inspection as a chip that opens its findings, with Re-inspect once it's done. */
+function LiteInspection({ member }: { member: CrewInfo }) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery(inspectionQuery(member.id));
+  const again = useMutation(reinspectMutation(queryClient, member.id));
+  const [open, setOpen] = useState(false);
+  const chip = inspectionChip(member.inspection);
+  const { current, blockers, notes } = windowSections(data ?? []);
+  const running = member.inspection?.state === "running" || current?.state === "running";
+  if (!chip) return null;
+  return (
+    <section className="lite-inspection" aria-label="Inspection">
+      <Button
+        variant="ghost"
+        className="lite-inspection__chip"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <Badge variant={chip.tone} appearance="dot">
+          {chip.label}
+        </Badge>
+      </Button>
+      {open && (
+        <div className="lite-inspection__sheet">
+          {!data && <p className="muted">Loading…</p>}
+          {current?.reason && <p className="lite-inspection__note">{current.reason}</p>}
+          <FindingList heading="Blockers" findings={blockers} />
+          <FindingList heading="Notes" findings={notes} />
+          {data && current && !running && !blockers.length && !notes.length && (
+            <p className="lite-inspection__note">Nothing found.</p>
+          )}
+          <div className="lite-inspection__actions">
+            <Button
+              variant="secondary"
+              loading={again.isPending}
+              disabled={running}
+              onClick={() => again.mutate()}
+            >
+              Re-inspect
+            </Button>
+          </div>
+          <ErrorNote error={again.error} />
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) {
   const { client } = useRealtime();
   const prompt = useMutation(promptMutation());
@@ -235,6 +287,7 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
         <TerminalPanel crewId={member.id} />
       </div>
       {member.brief && <LiteBrief member={member} brief={member.brief} />}
+      {member.inspection && <LiteInspection member={member} />}
       {member.kind === "agent" && <LitePreflight member={member} />}
       <div className="lite-keys" role="toolbar" aria-label="Terminal keys">
         {KEYS.map(([label, data]) => (
@@ -307,6 +360,17 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
 
 function PreflightChip({ info }: { info?: CrewInfo["preflight"] }) {
   const chip = preflightChip(info);
+  return (
+    chip && (
+      <Badge variant={chip.tone} appearance="dot">
+        {chip.label}
+      </Badge>
+    )
+  );
+}
+
+function InspectionChip({ info }: { info?: CrewInfo["inspection"] }) {
+  const chip = inspectionChip(info);
   return (
     chip && (
       <Badge variant={chip.tone} appearance="dot">
@@ -445,6 +509,7 @@ function LiteDeck({
                       </Badge>
                     )}
                     <PreflightChip info={c.preflight} />
+                    <InspectionChip info={c.inspection} />
                   </span>
                 </button>
               </li>
@@ -459,6 +524,9 @@ function LiteDeck({
               </li>
             )}
           </ul>
+          <section className="lite-deck" aria-label="Deck settings">
+            <InspectorSwitch deckId={deckId} />
+          </section>
           <HireForm deckId={deckId} crew={crew} />
         </>
       )}
