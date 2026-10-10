@@ -63,6 +63,8 @@ export class BriefService {
     this.#broadcast = deps.broadcast;
     this.#write = deps.write;
     this.#crew.onGone((crewId) => this.#supersedeWaiting(crewId));
+    // Its dialog went with its process: a resume must not inherit an answer it never got.
+    this.#crew.onExit((crewId) => this.#supersedeWaiting(crewId));
   }
 
   /** A plan is a new waiting revision; an edit while one waits is its approval in the terminal. */
@@ -109,6 +111,17 @@ export class BriefService {
     const latest = this.latest(crewId);
     if (!latest) return undefined;
     return { revision: latest.revision, state: latest.state, goal: goalOf(latest.text) };
+  }
+
+  /** Whether the crew member's latest brief waits on its approval dialog. */
+  waiting(crewId: string): boolean {
+    return this.latest(crewId)?.state === "waiting";
+  }
+
+  /** Whether it has a brief and that brief isn't approved yet: it is still planning. */
+  planning(crewId: string): boolean {
+    const latest = this.latest(crewId);
+    return !!latest && latest.state !== "approved";
   }
 
   latest(crewId: string): BriefRecord | null {

@@ -71,6 +71,8 @@ function parseHook(payload: unknown): CrewSignal | null {
       return { type: "working" };
     case "PreToolUse": {
       if (typeof p.tool_name !== "string") return null;
+      // Hooks post async: this can land after the plan's PermissionRequest and hide "Brief ready".
+      if (p.tool_name === "ExitPlanMode") return null;
       return { type: "working", activity: activityOf(p.tool_name, p.tool_input) };
     }
     case "PermissionRequest": {

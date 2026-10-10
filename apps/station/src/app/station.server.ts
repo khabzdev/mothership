@@ -82,6 +82,8 @@ export function getStation(): Station {
       preflight: preflight.info(crewId),
       brief: briefs.info(crewId),
     }));
+    crew.briefWaitingWith((crewId) => briefs.waiting(crewId));
+    crew.briefApprovedWith((crewId) => briefs.approved(crewId) !== null);
 
     onCrewSignal((event) => crew.handleSignal(event));
     onCrewSignal((event) => preflight.handleSignal(event));
@@ -104,7 +106,10 @@ export function getStation(): Station {
         .catch((error: unknown) => console.error("[station] reconcile failed", error));
     launcher.onHostLost(() => {
       console.warn("[station] PTY host connection lost; reconnecting");
-      void reconcile();
+      // A brief whose dialog didn't survive the reconnect waits for nothing: superseded.
+      void reconcile()
+        .then(() => briefs.reconcile())
+        .catch((error: unknown) => console.error("[station] brief reconcile failed", error));
     });
     // Briefs left waiting by a station that stopped are checked once the sessions are known.
     void reconcile()

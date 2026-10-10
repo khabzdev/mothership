@@ -109,6 +109,8 @@ beforeEach(() => {
     },
   });
   crew.describeWith((id) => ({ brief: service.info(id) }));
+  crew.briefWaitingWith((id) => service.waiting(id));
+  crew.briefApprovedWith((id) => service.approved(id) !== null);
 });
 
 afterEach(() => {
@@ -351,11 +353,49 @@ describe("BriefService", () => {
     await crew.openShell({ deckId: "deck-1", consoleId: 2 });
     expect(launcher.launches[1]!.plan).toBeUndefined();
     expect(launcher.launches[2]!.plan).toBeUndefined();
+  });
+
+  test("resume plans again until a brief is approved", async () => {
     const { id } = await hire(3);
+    plan(id);
     crew.handleExit(id);
     db.update(crewTable).set({ sessionId: "s-1" }).where(eq(crewTable.id, id)).run();
     await crew.resume(id);
+    expect(launcher.launches.at(-1)).toMatchObject({
+      resume: "s-1",
+      plan: { instructions: BRIEF_INSTRUCTIONS },
+    });
+    plan(id, "## Goal\nAgain.");
+    expect(await service.approve(id)).toEqual({ ok: true });
+    crew.handleExit(id);
+    await crew.resume(id);
     expect(launcher.launches.at(-1)).toMatchObject({ resume: "s-1" });
     expect(launcher.launches.at(-1)!.plan).toBeUndefined();
+  });
+
+  test("a crew process exiting supersedes its waiting brief", async () => {
+    const { id } = await hire();
+    plan(id);
+    crew.handleExit(id);
+    expect(service.info(id)?.state).toBe("superseded");
+  });
+
+  test("a session found gone on reconcile supersedes its waiting brief", async () => {
+    const { id } = await hire();
+    plan(id);
+    crew.reconcile([]);
+    expect(service.info(id)?.state).toBe("superseded");
+  });
+
+  test("your prompt is refused while a brief waits, and goes through once it's approved", async () => {
+    const { id } = await hire();
+    plan(id);
+    await expect(crew.prompt(id, "Also add tests")).rejects.toThrow(
+      "Nova has a brief waiting: Y to approve, N to revise",
+    );
+    expect(writes).toEqual([]);
+    expect(await service.approve(id)).toEqual({ ok: true });
+    await crew.prompt(id, "Also add tests");
+    expect(writes.at(-1)).toBe("\x1b[200~Also add tests\x1b[201~");
   });
 });

@@ -345,6 +345,78 @@ describe("idle notifications", () => {
   });
 });
 
+describe("a brief waiting", () => {
+  test("your prompts are refused while it waits; the station's still go through", async () => {
+    const { id } = await hire(0);
+    let waiting = true;
+    service.briefWaitingWith((crewId) => crewId === id && waiting);
+    await expect(service.prompt(id, "Also add tests")).rejects.toThrow(
+      "Nova has a brief waiting: Y to approve, N to revise",
+    );
+    expect(launcher.writes).toEqual([]);
+    await service.prompt(id, "Keep the light theme too", "station");
+    expect(launcher.writes).toEqual([[id, "\x1b[200~Keep the light theme too\x1b[201~"]]);
+    waiting = false;
+    await service.prompt(id, "Also add tests");
+    expect(launcher.writes.at(-1)).toEqual([id, "\x1b[200~Also add tests\x1b[201~"]);
+  });
+
+  test("a later needs-you keeps Brief ready", async () => {
+    const { id } = await hire(0);
+    service.briefWaitingWith((crewId) => crewId === id);
+    service.handleSignal({ crewId: id, signal: { type: "plan", plan: "## Goal\nX." } });
+    service.handleSignal({
+      crewId: id,
+      signal: { type: "needsInput", detail: "Claude needs your permission to use ExitPlanMode" },
+    });
+    expect(service.member(id)).toMatchObject({ status: "needs_input", detail: "Brief ready" });
+    service.handleSignal({
+      crewId: id,
+      signal: { type: "needsInput", detail: "Claude is waiting for your input", idle: true },
+    });
+    expect(service.member(id)).toMatchObject({ status: "needs_input", detail: "Brief ready" });
+    // Not Claude idling at its prompt: nothing may be typed there.
+    expect(service.waitingIdle(id)).toBe(false);
+  });
+
+  test("resume relaunches in plan mode until a brief is approved", async () => {
+    const nova = await hire(1);
+    let approved = false;
+    service.briefApprovedWith((crewId) => crewId === nova.id && approved);
+    service.handleSignal({ crewId: nova.id, signal: { type: "idle" }, sessionId: "sess-1" });
+    service.handleExit(nova.id);
+    await service.resume(nova.id);
+    expect(launcher.launches.at(-1)).toMatchObject({
+      resume: "sess-1",
+      plan: { instructions: BRIEF_INSTRUCTIONS },
+    });
+    service.handleExit(nova.id);
+    approved = true;
+    await service.resume(nova.id);
+    expect(launcher.launches.at(-1)).toMatchObject({ resume: "sess-1" });
+    expect(launcher.launches.at(-1)).not.toHaveProperty("plan");
+  });
+
+  test("resume never plans without a task, or for a shell", async () => {
+    const blank = await hire(1, "  ");
+    service.handleExit(blank.id);
+    await service.resume(blank.id);
+    expect(launcher.launches.at(-1)).not.toHaveProperty("plan");
+    const shell = await service.openShell({ deckId: "deck-1", consoleId: 6 });
+    service.handleExit(shell.id);
+    await service.resume(shell.id);
+    expect(launcher.launches.at(-1)).not.toHaveProperty("plan");
+  });
+
+  test("exit listeners hear a crew process exit", async () => {
+    const { id } = await hire(0);
+    const heard: string[] = [];
+    service.onExit((crewId) => heard.push(crewId));
+    service.handleExit(id);
+    expect(heard).toEqual([id]);
+  });
+});
+
 describe("input parsing", () => {
   test("hire input", () => {
     expect(parseHireInput({ deckId: "d", consoleId: 4, task: "  go  ", worktree: true })).toEqual({

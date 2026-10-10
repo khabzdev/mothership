@@ -57,6 +57,7 @@ export type PromptFrom = "you" | "station";
 /** What other services add to a crew member's roster entry. */
 type Describe = (crewId: string) => { preflight?: PreflightInfo; brief?: BriefInfo };
 type Busy = (crewId: string) => boolean;
+type Briefed = (crewId: string) => boolean;
 
 function toInfo(row: Row, describe?: Describe): CrewInfo {
   const { preflight, brief } = describe?.(row.id) ?? {};
@@ -85,9 +86,12 @@ function toInfo(row: Row, describe?: Describe): CrewInfo {
 export class CrewService {
   readonly #deps: CrewServiceDeps;
   readonly #goneListeners = new Set<(crewId: string) => void>();
+  readonly #exitListeners = new Set<(crewId: string) => void>();
   readonly #promptListeners = new Set<(e: { crewId: string; from: PromptFrom }) => void>();
   #describe: Describe | undefined;
   #busy: Busy = () => false;
+  #briefWaiting: Briefed = () => false;
+  #briefApproved: Briefed = () => false;
   /** Crew with a prompt typed by the station or the app, whose submit hook is still to come. */
   readonly #submitting = new Set<string>();
   /** Crew under a station alert, which stands until they work again. */
@@ -117,6 +121,16 @@ export class CrewService {
   /** Ask whether a pre-flight is busy with a crew member, so Claude's idle nudge doesn't count. */
   busyWith(fn: Busy): void {
     this.#busy = fn;
+  }
+
+  /** Ask whether a crew member's brief waits on its approval dialog, where Enter would answer it. */
+  briefWaitingWith(fn: Briefed): void {
+    this.#briefWaiting = fn;
+  }
+
+  /** Ask whether a crew member has had a brief approved, so a resume needn't plan again. */
+  briefApprovedWith(fn: Briefed): void {
+    this.#briefApproved = fn;
   }
 
   /** Whether a crew member's "needs you" is only Claude idling at its prompt (safe to type into). */
@@ -178,6 +192,9 @@ export class CrewService {
     if (row.status !== "asleep") throw new Error(`${row.name} is still running`);
     if (!existsSync(row.cwd)) throw new Error(`${row.name}'s worktree is gone: ${row.cwd}`);
     const shell = row.provider === "shell";
+    // Not yet approved, it resumes planning: started without plan mode, its first edit would land.
+    const plan =
+      row.provider === "claude-code" && !!row.task.trim() && !this.#briefApproved(crewId);
     this.#update(crewId, shell ? "idle" : "starting", { action: null, detail: null });
     try {
       await this.#deps.launcher.launch({
@@ -187,6 +204,7 @@ export class CrewService {
         prompt: "",
         cwd: row.cwd,
         ...(row.sessionId && !shell && { resume: row.sessionId }),
+        ...(plan && { plan: { instructions: BRIEF_INSTRUCTIONS } }),
       });
     } catch (error) {
       this.#update(crewId, "asleep", { action: null, detail: null });
@@ -261,7 +279,13 @@ export class CrewService {
 
   /** Paste a prompt into the crew member's input box, then submit it. */
   async prompt(crewId: string, text: string, from: PromptFrom = "you"): Promise<void> {
-    if (!this.#row(crewId)) throw new Error(`No such crew member: ${crewId}`);
+    const row = this.#row(crewId);
+    if (!row) throw new Error(`No such crew member: ${crewId}`);
+    // Its Enter would answer the plan dialog (option 1 approves). The station's revise reason
+    // is typed once the dialog has closed.
+    if (from === "you" && this.#briefWaiting(crewId)) {
+      throw new Error(`${row.name} has a brief waiting: Y to approve, N to revise`);
+    }
     await this.#deps.launcher.write(crewId, `\x1b[200~${text}\x1b[201~`);
     // Its submit hook (working, no tool) is this prompt, not another one typed in the terminal.
     this.#submitting.add(crewId);
@@ -337,7 +361,9 @@ export class CrewService {
     else if (this.#alerted.has(crewId)) return;
     // Claude only waiting at its prompt while a pre-flight decides what's next: not yet you.
     else if (signal.type === "needsInput" && signal.idle && this.#busy(crewId)) return;
-    if (signal.type === "needsInput" && signal.idle) this.#idleWaiting.add(crewId);
+    // Hooks post async: a later needs-you (Claude's permission notice) mustn't hide the brief.
+    const brief = signal.type === "needsInput" && this.#briefWaiting(crewId);
+    if (signal.type === "needsInput" && signal.idle && !brief) this.#idleWaiting.add(crewId);
     else this.#idleWaiting.delete(crewId);
     const action =
       signal.type === "working" && signal.activity
@@ -346,9 +372,9 @@ export class CrewService {
     this.#update(crewId, STATUS_FOR_SIGNAL[signal.type], {
       action,
       detail:
-        signal.type === "needsInput"
+        signal.type === "needsInput" && !brief
           ? signal.detail
-          : signal.type === "plan"
+          : signal.type === "plan" || brief
             ? "Brief ready"
             : null,
     });
@@ -363,6 +389,13 @@ export class CrewService {
     this.#idleWaiting.delete(crewId);
     this.#submitting.delete(crewId);
     this.#update(crewId, "asleep", { action: null, detail: null });
+    for (const listener of this.#exitListeners) listener(crewId);
+  }
+
+  /** Called when a crew member's process has exited (or its session was found gone). */
+  onExit(listener: (crewId: string) => void): () => void {
+    this.#exitListeners.add(listener);
+    return () => this.#exitListeners.delete(listener);
   }
 
   /** On startup: crew whose PTY session is gone or exited are asleep. */

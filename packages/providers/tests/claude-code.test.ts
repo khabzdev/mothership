@@ -55,6 +55,16 @@ describe("launchPlan", () => {
     ).toEqual({ type: "plan", plan: "" });
   });
 
+  test("ExitPlanMode's PreToolUse is no signal: it would race the plan to Working", () => {
+    expect(
+      claudeCode.parseHook({
+        hook_event_name: "PreToolUse",
+        tool_name: "ExitPlanMode",
+        tool_input: { plan: "## Goal\nx" },
+      }),
+    ).toBeNull();
+  });
+
   test("runs claude with inline hook settings and the brief as the prompt", () => {
     const plan = claudeCode.launchPlan(options);
     expect(plan.command).toBe("claude");
