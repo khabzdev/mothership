@@ -1,10 +1,12 @@
-// Downloads the KayKit (CC0, by Kay Lousberg) models Mothership uses into public/models.
+// Downloads the KayKit (CC0, by Kay Lousberg) models Mothership uses into public/models, and the
+// three.js (MIT) planet maps for the orbit sky into public/textures/planets.
 // Pinned to exact commits so builds are reproducible. Run: vp run assets
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "models");
+const publicDir = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
+const root = join(publicDir, "models");
 const raw = (repo, sha, path) =>
   `https://raw.githubusercontent.com/KayKit-Game-Assets/${repo}/${sha}/${path}`;
 
@@ -61,6 +63,19 @@ const CREW = {
   out: "crew",
 };
 
+/** three.js tag r160: NASA-derived Earth and Moon maps from its examples. */
+const PLANETS = {
+  sha: "d04539a76736ff500cae883d6a38b3dd8643c548",
+  dir: "examples/textures/planets",
+  files: [
+    "earth_atmos_2048.jpg",
+    "earth_lights_2048.png",
+    "earth_clouds_1024.png",
+    "moon_1024.jpg",
+  ],
+  out: "textures/planets",
+};
+
 async function exists(path) {
   try {
     await access(path);
@@ -110,11 +125,17 @@ for (const file of FURNITURE.files) {
 }
 for (const file of CREW.files)
   jobs.push([raw(CREW.repo, CREW.sha, `${CREW.dir}/${file}`), join(root, CREW.out, file)]);
+for (const file of PLANETS.files) {
+  jobs.push([
+    `https://raw.githubusercontent.com/mrdoob/three.js/${PLANETS.sha}/${PLANETS.dir}/${file}`,
+    join(publicDir, PLANETS.out, file),
+  ]);
+}
 
 let fetched = 0;
 await Promise.all(
   jobs.map(async ([url, path]) => (fetched += (await download(url, path)) ? 1 : 0)),
 );
 console.log(
-  `KayKit assets ready in public/models (${fetched} downloaded, ${jobs.length - fetched} cached)`,
+  `Assets ready in public/models and public/textures (${fetched} downloaded, ${jobs.length - fetched} cached)`,
 );

@@ -14,3 +14,5 @@ todos.json
 
 # KayKit models (fetched by `vp run assets`).
 public/models/*
+# three.js planet maps (fetched by `vp run assets`).
+public/textures/*

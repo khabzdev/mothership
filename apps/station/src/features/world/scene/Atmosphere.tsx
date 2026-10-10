@@ -3,6 +3,7 @@ import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing"
 import { ToneMappingMode } from "postprocessing";
 import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
+import { SUN_LIGHT } from "../sky";
 
 /** Dev only: the renderer and scene on window.__mothership.three, for profiling from the console. */
 function DevHandle() {
@@ -16,8 +17,9 @@ function DevHandle() {
 }
 
 /**
- * The deck's light: a warm key light with shadows, soft image-based fill from a few local light
- * panels (no downloaded HDR), and post-processing so lamps, screens and status lights glow.
+ * The deck's light: a warm key light with shadows (shining from the sky's Sun), soft image-based
+ * fill from a few local light panels (no downloaded HDR), and post-processing so lamps, screens and
+ * status lights glow.
  * Only emissive surfaces brighter than 1 bloom (see materials.ts GLOW).
  *
  * Kept deliberately cheap: one fixed composer (swapping effects recompiles shaders and stalls), no
@@ -31,7 +33,7 @@ export function Atmosphere() {
       <color attach="background" args={["#05060c"]} />
       <hemisphereLight args={["#ffe2c4", "#1a1f33", 0.55]} />
       <directionalLight
-        position={[-8, 18, 10]}
+        position={SUN_LIGHT}
         intensity={2.2}
         color="#ffd9b0"
         castShadow

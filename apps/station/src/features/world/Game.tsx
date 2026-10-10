@@ -36,6 +36,7 @@ import { CrewPanel } from "./ui/CrewPanel";
 import { usePreflightPoll } from "./usePreflightPoll";
 import { NeedsYouBanner, useCloneNews, useLaunchNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
+import { CAMERA_FAR } from "./sky";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
 
@@ -141,7 +142,7 @@ export function Game({ deck }: { deck: Deck }) {
           shadows
           dpr={[1, 1.5]}
           gl={{ antialias: false }}
-          camera={{ fov: 55, near: 0.1, far: 400, position: [12, 8, 14] }}
+          camera={{ fov: 55, near: 0.1, far: CAMERA_FAR, position: [12, 8, 14] }}
           className="game__canvas"
         >
           <Atmosphere />

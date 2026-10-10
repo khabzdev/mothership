@@ -20,3 +20,5 @@ vp run dev     # start the station
 ## Credits
 
 3D models: [KayKit](https://kaylousberg.com) Space Base Bits, Adventurers Character Pack and Furniture Bits (the console chair and desk) by Kay Lousberg (CC0).
+
+Planet textures: Earth (day, night lights, clouds) and Moon maps from the [three.js](https://github.com/mrdoob/three.js) examples (r160, MIT), derived from NASA imagery.
