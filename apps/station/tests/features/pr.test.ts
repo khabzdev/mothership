@@ -30,6 +30,12 @@ describe("PR title and body", () => {
     expect(prTitle("x".repeat(100), request.branch)).toHaveLength(72);
   });
 
+  test("prBody puts evidence before the sign-off", () => {
+    const body = prBody({ ...request, evidence: "### Pre-flight: GO" }, ["Add toggle"]);
+    expect(body.indexOf("### Pre-flight: GO")).toBeGreaterThan(body.indexOf("- Add toggle"));
+    expect(body.indexOf("### Pre-flight: GO")).toBeLessThan(body.indexOf("Opened from Mothership"));
+  });
+
   test("the body quotes the task and lists the commits", () => {
     const body = prBody(request, ["Add toggle", "Add tests"]);
     expect(body).toContain("> Add dark mode\n> with a toggle in the header");

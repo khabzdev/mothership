@@ -1,3 +1,4 @@
+import type { PreflightRecord } from "./preflight.server";
 import { plainLines } from "../search/model";
 
 /** A check's output tail keeps at most this many lines… */
@@ -50,4 +51,22 @@ export function handBackMessage(
 /** The "needs you" detail once a flight's fuel is spent. */
 export function outOfFuelDetail(names: string[], attempts: number): string {
   return `Out of fuel: ${names.join(", ")} still NO-GO after ${attempts} attempts`;
+}
+
+const VERDICT_LABEL = { go: "GO", nogo: "NO-GO", skipped: "Skipped" } as const;
+
+/** A pre-flight as the pull request's evidence: a heading and one table row per check. */
+export function prEvidence(record: PreflightRecord): string {
+  const seconds = Math.round(((record.finishedAt ?? record.startedAt) - record.startedAt) / 1000);
+  const mark = record.state === "go" ? "GO ✅" : "NO-GO ❌";
+  const rows = record.results.map(
+    (r) =>
+      `| ${r.name.replace(/\|/g, "\\|")} | ${VERDICT_LABEL[r.verdict]} | ${(r.durationMs / 1000).toFixed(1)}s |`,
+  );
+  return [
+    `### Pre-flight: ${mark}  (attempt ${record.attempt} · ${seconds}s · commit ${record.commit.slice(0, 7)})`,
+    "| Check | Verdict | Time |",
+    "|---|---|---|",
+    ...rows,
+  ].join("\n");
 }

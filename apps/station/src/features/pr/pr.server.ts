@@ -16,6 +16,8 @@ export interface PrRequest {
   task: string;
   name: string;
   console: string;
+  /** The latest pre-flight, as markdown (`prEvidence`). */
+  evidence?: string;
 }
 
 const MAX_TITLE = 72;
@@ -37,6 +39,7 @@ export function prBody(request: PrRequest, commits: string[]): string {
   return [
     task ? `## Task\n\n${task.replace(/^/gm, "> ")}` : "",
     commits.length ? `## Commits\n\n${commits.map((c) => `- ${c}`).join("\n")}` : "",
+    request.evidence ?? "",
     `Opened from Mothership by ${request.name} at ${request.console}.`,
   ]
     .filter(Boolean)

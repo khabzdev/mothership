@@ -83,6 +83,17 @@ export function parseCrewIdInput(input: unknown): { crewId: string } {
   return { crewId };
 }
 
+export interface PrInput {
+  crewId: string;
+  /** Open the pull request even though there's no GO on record. */
+  force: boolean;
+}
+
+export function parsePrInput(input: unknown): PrInput {
+  const { crewId } = parseCrewIdInput(input);
+  return { crewId, force: isObject(input) && input.force === true };
+}
+
 export const WORKTREE_CHOICES = ["keep", "remove", "delete"] as const;
 /** What to do with a crew member's own worktree when it goes home. */
 export type WorktreeChoice = (typeof WORKTREE_CHOICES)[number];

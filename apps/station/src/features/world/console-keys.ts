@@ -39,7 +39,10 @@ function pullRequest(member: CrewInfo): void {
     return say(`${member.name} has no branch of its own: hire it with its own worktree`);
   say(`Pushing ${member.branch} and opening a pull request…`);
   openCrewPr({ data: { crewId: member.id } }).then(
-    () => {
+    (result) => {
+      if ("needsConfirm" in result) {
+        return open({ kind: "launchCheck", crewId: member.id, reason: result.needsConfirm });
+      }
       say(`${member.name}'s pull request is open`, "success");
       open({ kind: "pr", crewId: member.id });
     },

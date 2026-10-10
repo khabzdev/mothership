@@ -15,6 +15,7 @@ import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { FlightControlWindow } from "../../preflight/ui/FlightControl";
+import { LaunchCheck } from "../../preflight/ui/LaunchCheck";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
@@ -215,6 +216,10 @@ export function Overlays({
     case "preflight": {
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <PreflightOverlay member={member} /> : null;
+    }
+    case "launchCheck": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <LaunchCheck member={member} reason={overlay.reason} /> : null;
     }
     case "pr": {
       const member = crew.find((c) => c.id === overlay.crewId);
