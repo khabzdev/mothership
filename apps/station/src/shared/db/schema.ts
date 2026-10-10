@@ -3,6 +3,7 @@ import {
   CHECK_VERDICTS,
   CREW_ACTIONS,
   CREW_STATUSES,
+  INSPECTION_STATES,
   PREFLIGHT_STATES,
 } from "@mothership/protocol";
 import { sql } from "drizzle-orm";
@@ -188,7 +189,6 @@ export const briefs = sqliteTable(
 );
 
 export const INSPECTION_TRIGGERS = ["stop", "manual"] as const;
-export const INSPECTION_STATES = ["running", "cleared", "flagged", "cancelled"] as const;
 
 /**
  * One inspection: the Inspector's review of a crew member's change. Kept after the crew member

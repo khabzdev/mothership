@@ -41,13 +41,18 @@ export const getCheckLog = createServerFn()
 export interface DeckChecks {
   armed: boolean | null;
   checks: DeckCheck[];
+  inspector: boolean;
 }
 
 export const getChecks = createServerFn()
   .validator(parseDeckInput)
   .handler(({ data }): DeckChecks => {
     const { checks } = getStation();
-    return { armed: checks.armed(data.deckId), checks: checks.list(data.deckId) };
+    return {
+      armed: checks.armed(data.deckId),
+      checks: checks.list(data.deckId),
+      inspector: checks.inspector(data.deckId),
+    };
   });
 
 /** Arming runs the checks for the crew that already stopped; disarming just stops them running. */

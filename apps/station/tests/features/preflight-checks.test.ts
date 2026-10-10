@@ -1,4 +1,5 @@
 import type { ServerMsg } from "@mothership/protocol";
+import { eq } from "drizzle-orm";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,6 +52,14 @@ describe("CheckService", () => {
       checks: service.list("deck-1"),
       inspector: true,
     });
+  });
+
+  test("inspector is on by default and follows the deck row", async () => {
+    expect(service.inspector("deck-1")).toBe(true);
+    expect(service.inspector("nope")).toBe(true);
+    db.update(decks).set({ inspector: false }).where(eq(decks.id, "deck-1")).run();
+    expect(service.inspector("deck-1")).toBe(false);
+    expect(service.message("deck-1")).toMatchObject({ inspector: false });
   });
 
   test("update toggles a check and edits its command", async () => {

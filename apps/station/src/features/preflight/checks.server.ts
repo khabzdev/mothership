@@ -59,6 +59,14 @@ export class CheckService {
     );
   }
 
+  /** Whether the Inspector reviews this deck's stops (on unless the deck says otherwise). */
+  inspector(deckId: string): boolean {
+    return (
+      this.#db.select({ on: decks.inspector }).from(decks).where(eq(decks.id, deckId)).get()?.on ??
+      true
+    );
+  }
+
   enabled(deckId: string): DeckCheck[] {
     return this.list(deckId).filter((c) => c.enabled);
   }
@@ -115,13 +123,12 @@ export class CheckService {
   }
 
   message(deckId: string): ServerMsg {
-    const deck = this.#db.select().from(decks).where(eq(decks.id, deckId)).get();
     return {
       type: "deck.checks",
       deckId,
       armed: this.armed(deckId),
       checks: this.list(deckId),
-      inspector: deck?.inspector ?? true,
+      inspector: this.inspector(deckId),
     };
   }
 }
