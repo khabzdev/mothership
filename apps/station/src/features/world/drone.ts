@@ -100,9 +100,9 @@ export function eyeColor(beat: DroneBeat): "cyan" | "green" | "red" | "amber" | 
 }
 
 /**
- * The drone's offset from where it hovers, in its own frame (x is its side): the idle bob (`t` is
- * the clock), a "shake no" for flagged and a slow drop-and-return for failed (`t` since the beat
- * began). Written into `out`.
+ * The drone's offset from where it hovers, in its own frame (x is its side), `t` seconds into the
+ * beat: the idle bob (level at 0), a "shake no" for flagged and a slow drop-and-return for
+ * failed. Written into `out`.
  */
 export function beatOffset(beat: DroneBeat, t: number, out: Vec3): Vec3 {
   out.x = 0;
@@ -238,7 +238,11 @@ export function droneStep(s: DroneState, now: number, next: DroneSpot | null): D
   } else if (s.beat === "flying" && elapsed >= FLY_S) {
     s.beat = "scanning";
   } else if (s.beat === "returning" && elapsed >= FLY_S) {
+    // Landed: idle from now, so the bob (phased from `since`) starts level instead of popping.
     s.beat = "idle";
+    s.since = now;
+    setVec(s.from, s.to.x, s.to.y, s.to.z);
+    s.fromFacing = s.toFacing;
   }
 
   const t = (now - s.since) / FLY_S;

@@ -273,6 +273,19 @@ describe("droneStep", () => {
     expect(Math.cos(s.facing - DOCK_FACING)).toBeCloseTo(1);
   });
 
+  test("goes idle from the moment it lands, so the bob starts level", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    hearVerdict(s, "nova", "cleared");
+    droneStep(s, t, null);
+    droneStep(s, t + VERDICT_S, null);
+    const landed = t + VERDICT_S + FLY_S + 0.37;
+    droneStep(s, landed, null);
+    expect(s.beat).toBe("idle");
+    expect(s.since).toBe(landed);
+    expect(beatOffset(s.beat, landed - s.since, v()).y).toBe(0);
+  });
+
   test("a new review takes it off a scan of one that's gone", () => {
     const s = restingDrone();
     const t = scanning(s);

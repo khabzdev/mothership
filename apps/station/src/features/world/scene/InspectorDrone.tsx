@@ -123,7 +123,7 @@ export function InspectorDrone({ deckId, crew }: { deckId: string; crew: CrewInf
     const now = clock.elapsedTime;
     const f = droneStep(flight, now, targetRef.current);
     const { at } = f;
-    beatOffset(f.beat, f.beat === "idle" ? now : now - f.since, shake);
+    beatOffset(f.beat, now - f.since, shake);
 
     const group = root.current;
     if (group) {
