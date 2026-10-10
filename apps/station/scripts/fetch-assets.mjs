@@ -33,6 +33,24 @@ const SPACE = {
     "structure_tall",
     "spacetruck",
     "drill_structure",
+    "basemodule_D",
+    "basemodule_E",
+    "cargodepot_A",
+    "landingpad_small",
+    "lander_B",
+    "rock_B",
+    "rocks_B",
+    "roofmodule_solarpanels",
+    "spacetruck_trailer",
+    "terrain_low",
+    "terrain_tall",
+    "terrain_slope",
+    "terrain_slope_inner_corner",
+    "terrain_slope_outer_corner",
+    "terrain_mining",
+    "tunnel_straight_A",
+    "windturbine_low",
+    "windturbine_tall",
   ],
   out: "space-base",
 };
@@ -114,6 +132,10 @@ for (const name of SPACE.models) {
 }
 for (const file of SPACE.files)
   jobs.push([raw(SPACE.repo, SPACE.sha, `${SPACE.dir}/${file}`), join(root, SPACE.out, file)]);
+jobs.push([
+  raw(SPACE.repo, SPACE.sha, "addons/kaykit_space_base_bits/Assets/LICENSE.txt"),
+  join(root, SPACE.out, "License.txt"),
+]);
 for (const name of FURNITURE.models) {
   for (const ext of [".gltf", ".bin"]) {
     jobs.push([

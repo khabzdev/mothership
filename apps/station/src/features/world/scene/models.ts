@@ -65,6 +65,52 @@ export function useFurniture(name: string) {
   return useStatic(FURNITURE_URL(name));
 }
 
+/** Every KayKit Space Base piece the app references, each preloaded. */
+export const SPACE_PIECES: readonly string[] = [
+  "basemodule_A",
+  "basemodule_B",
+  "basemodule_C",
+  "basemodule_garage",
+  "cargo_A",
+  "cargo_A_stacked",
+  "cargo_B",
+  "containers_A",
+  "containers_B",
+  "drill_structure",
+  "lander_A",
+  "landingpad_large",
+  "lights",
+  "rock_A",
+  "rocks_A",
+  "solarpanel",
+  "spacetruck",
+  "structure_low",
+  "structure_tall",
+  "basemodule_D",
+  "basemodule_E",
+  "cargodepot_A",
+  "landingpad_small",
+  "lander_B",
+  "rock_B",
+  "rocks_B",
+  "roofmodule_solarpanels",
+  "spacetruck_trailer",
+  "terrain_low",
+  "terrain_tall",
+  "terrain_slope",
+  "terrain_slope_inner_corner",
+  "terrain_slope_outer_corner",
+  "terrain_mining",
+  "tunnel_straight_A",
+  "windturbine_low",
+  "windturbine_tall",
+];
+
+/** The cached glTF scene of a space-base piece, for instancing (shared geometry and materials). */
+export function usePropScene(name: string) {
+  return useGLTF(PROP_URL(name)).scene;
+}
+
 function useStatic(url: string) {
   const gltf = useGLTF(url);
   return useMemo(() => {
@@ -87,3 +133,4 @@ for (const name of [
   "floor-panel",
 ] satisfies StationPiece[])
   useGLTF.preload(STATION_URL(name));
+for (const name of SPACE_PIECES) useGLTF.preload(PROP_URL(name));
