@@ -188,6 +188,16 @@ describe("PreflightService", () => {
     expect(service.history(id)).toHaveLength(1);
   });
 
+  test("editing a new, untracked file again counts as a change", async () => {
+    const { id } = await hireWithChange();
+    stop(id);
+    await settled(id);
+    writeFileSync(join(crew.workdir(id).cwd, "change.txt"), "fixed");
+    stop(id);
+    await vi.waitFor(() => expect(service.history(id)).toHaveLength(2));
+    await settled(id);
+  });
+
   test("a manual run goes even without changes", async () => {
     const { id } = await hireWithChange();
     stop(id);
