@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/tes
 import type { CrewLauncher } from "../../src/features/crew/launcher.server.ts";
 import { CrewService } from "../../src/features/crew/service.server.ts";
 import { CheckService } from "../../src/features/preflight/checks.server.ts";
+import { launchGuard } from "../../src/features/preflight/guard.ts";
+import { fingerprint } from "../../src/features/preflight/fingerprint.server.ts";
 import { PreflightService } from "../../src/features/preflight/preflight.server.ts";
 import type { CheckRun, RunCheck } from "../../src/features/preflight/runner.server.ts";
 import { eq } from "drizzle-orm";
@@ -39,6 +41,8 @@ let calls: RunOpts[];
 let verdicts: CheckRun["verdict"][];
 let run: RunCheck;
 let service: PreflightService;
+/** Throw from broadcast, to crash a run part-way. */
+let crash = false;
 
 const result = (opts: RunOpts, verdict: CheckRun["verdict"]): CheckRun => ({
   verdict,
@@ -78,7 +82,11 @@ beforeEach(() => {
     ])
     .run();
   sent = [];
-  const broadcast = (msg: ServerMsg) => void sent.push(msg);
+  crash = false;
+  const broadcast = (msg: ServerMsg) => {
+    if (crash && msg.type === "crew.preflight") throw new Error("boom");
+    sent.push(msg);
+  };
   launcher = new FakeLauncher();
   crew = new CrewService({ db, launcher, broadcast, home });
   checks = new CheckService({ db, broadcast });
@@ -201,6 +209,33 @@ describe("PreflightService", () => {
     stop(id);
     await vi.waitFor(() => expect(service.history(id)).toHaveLength(2));
     await settled(id);
+  });
+
+  test("a run that crashes part-way is cancelled, not a NO-GO with nothing to show", async () => {
+    const { id } = await hireWithChange();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    crash = true;
+    stop(id);
+    await settled(id);
+    expect(service.latest(id)?.state).toBe("cancelled");
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  test("files the checks write themselves don't make the run stale", async () => {
+    const { id } = await hireWithChange();
+    run = async (opts) => {
+      calls.push(opts);
+      writeFileSync(join(opts.cwd, "coverage.json"), `{"run":${calls.length}}`);
+      return result(opts, "go");
+    };
+    stop(id);
+    await settled(id);
+    expect(calls).toHaveLength(2);
+    const cwd = crew.workdir(id).cwd;
+    expect(launchGuard(service.latest(id), await fingerprint(cwd), true)).toBeNull();
+    expect(await service.run(id, "stop")).toBeNull();
+    expect(calls).toHaveLength(2);
   });
 
   test("a manual run goes even without changes", async () => {
@@ -576,6 +611,22 @@ describe("PreflightService", () => {
     await settled(id);
     await vi.waitFor(() => expect(crew.member(id).status).toBe("needs_input"));
     expect(service.busy(id)).toBe(false);
+  });
+
+  test("stopping again without changes after a NO-GO raises needs you, spending nothing", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["nogo", "nogo"];
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(2));
+    expect(await service.run(id, "stop")).toBeNull();
+    expect(crew.member(id)).toMatchObject({
+      status: "needs_input",
+      detail: `check, test still NO-GO; ${crew.member(id).name} stopped without changes`,
+    });
+    expect(service.history(id)).toHaveLength(1);
+    expect(fuelOf(id)?.fuel).toBe(2);
+    expect(pastes()).toHaveLength(1);
   });
 
   test("a manual run alone in a flight shows in info()", async () => {

@@ -153,6 +153,14 @@ export class PreflightService {
       last.fingerprint === print.hash
     ) {
       this.#busy.delete(crewId);
+      // Handed a NO-GO back, it stopped without touching anything: that needs you, not more fuel.
+      if (last.trigger === "stop" && last.state === "nogo" && last.flight === row.flight) {
+        const names = last.results.filter((r) => r.verdict === "nogo").map((r) => r.name);
+        this.#crew.alert(
+          crewId,
+          `${names.join(", ")} still NO-GO; ${row.name} stopped without changes`,
+        );
+      }
       return null;
     }
 
@@ -295,10 +303,11 @@ export class PreflightService {
       this.#active.set(job.id, job);
       void this.#execute(job)
         .catch((error: unknown) => {
+          // Not a verdict on the work: nothing to hand back, nothing to show as NO-GO.
           console.error("[preflight] run failed", error);
           this.#db
             .update(preflights)
-            .set({ state: "nogo", finishedAt: Date.now() })
+            .set({ state: "cancelled", finishedAt: Date.now() })
             .where(and(eq(preflights.id, job.id), eq(preflights.state, "running")))
             .run();
         })
@@ -363,6 +372,10 @@ export class PreflightService {
         failures.push({ name, command, exitCode, timedOut, timeoutMs, durationMs, tail });
       }
       const done = position === job.checks.length - 1;
+      // What the worktree holds once the checks are through, files they wrote included (snapshots,
+      // coverage, --fix), so the next unchanged stop and O's guard both see a match.
+      const hash = done ? await this.#refingerprint(job) : job.hash;
+      if (job.abort.signal.aborted) return;
       this.#db.transaction((tx) => {
         tx.insert(preflightResults)
           .values({
@@ -382,6 +395,7 @@ export class PreflightService {
           tx.update(preflights)
             .set({
               state: verdicts.every((v) => v === "go") ? "go" : "nogo",
+              fingerprint: hash,
               finishedAt: Date.now(),
             })
             .where(eq(preflights.id, job.id))
@@ -456,6 +470,16 @@ export class PreflightService {
       .where(eq(crewTable.id, crewId))
       .run();
     this.#crew.refresh(row.deckId);
+  }
+
+  /** The worktree's fingerprint after the run; the one taken before it if it can't be read. */
+  async #refingerprint(job: Job): Promise<string> {
+    try {
+      return (await this.#fingerprint(job.cwd)).hash;
+    } catch (error) {
+      console.warn(`[preflight] can't read ${job.cwd}: ${(error as Error).message}`);
+      return job.hash;
+    }
   }
 
   /** Run one check; one that can't even start (no log folder) is NO-GO with the reason. */
