@@ -1,6 +1,7 @@
 import { Badge } from "@cloudflare/kumo";
 import { useEffect, useRef, useState } from "react";
 import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
+import { sizeChanged, type TerminalSize } from "../terminal-size";
 
 /** xterm's colours, read from the Kumo theme so the terminal matches the windows around it. */
 function themeOf(element: HTMLElement) {
@@ -82,11 +83,15 @@ export function TerminalPanel({
       const input = term.onData((data) => client.send({ type: "terminal.input", crewId, data }));
 
       let frame = 0;
+      let sent: TerminalSize | null = null;
       const fitToPanel = () => {
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
           fit.fit();
-          client.send({ type: "terminal.resize", crewId, cols: term.cols, rows: term.rows });
+          const size = { cols: term.cols, rows: term.rows };
+          if (!sizeChanged(sent, size)) return;
+          sent = size;
+          client.send({ type: "terminal.resize", crewId, ...size });
         });
       };
       const observer = new ResizeObserver(fitToPanel);

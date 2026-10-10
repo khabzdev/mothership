@@ -480,6 +480,7 @@ kbd {
   position: relative;
   display: flex;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   background: var(--color-kumo-recessed);
 }
@@ -1474,6 +1475,8 @@ kbd {
 /* /lite: the station as a plain list, phone first. */
 .lite {
   display: grid;
+  /* One column that never grows with its content: xterm sizes itself to its container. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 0.75rem;
   width: min(48rem, 100%);
@@ -1644,7 +1647,9 @@ kbd {
 .lite-hire,
 .lite-crew {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .lite-hire__row,
@@ -1665,6 +1670,8 @@ kbd {
 
 .lite-crew__term {
   display: flex;
+  width: 100%;
+  min-width: 0;
   height: min(55dvh, 30rem);
   overflow: hidden;
   border: 1px solid var(--color-kumo-line);
