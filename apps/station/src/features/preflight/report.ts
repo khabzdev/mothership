@@ -55,8 +55,11 @@ export function outOfFuelDetail(names: string[], attempts: number): string {
 
 const VERDICT_LABEL = { go: "GO", nogo: "NO-GO", skipped: "Skipped" } as const;
 
-/** A pre-flight as the pull request's evidence: a heading and one table row per check. */
-export function prEvidence(record: PreflightRecord): string {
+/**
+ * A pre-flight as the pull request's evidence: a heading and one table row per check. Given what
+ * the worktree holds now, evidence from an earlier state of the branch says so under its heading.
+ */
+export function prEvidence(record: PreflightRecord, current?: { hash: string }): string {
   const seconds = Math.round(((record.finishedAt ?? record.startedAt) - record.startedAt) / 1000);
   const mark = record.state === "go" ? "GO ✅" : "NO-GO ❌";
   const rows = record.results.map(
@@ -65,6 +68,11 @@ export function prEvidence(record: PreflightRecord): string {
   );
   return [
     `### Pre-flight: ${mark}  (attempt ${record.attempt} · ${seconds}s · commit ${record.commit.slice(0, 7)})`,
+    ...(current && current.hash !== record.fingerprint
+      ? [
+          `_Ran on an earlier state of this branch (commit ${record.commit.slice(0, 7)}); the branch has changed since._`,
+        ]
+      : []),
     "| Check | Verdict | Time |",
     "|---|---|---|",
     ...rows,

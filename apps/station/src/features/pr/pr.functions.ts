@@ -24,12 +24,14 @@ export const openCrewPr = createServerFn({ method: "POST" })
     }
     const latest = preflight.latest(data.crewId);
     try {
-      if (!data.force) {
-        const reason = launchGuard(
-          latest,
-          await fingerprint(cwd),
-          checks.armed(member.deckId) === true,
-        );
+      // What the worktree holds now: O's guard asks about it, and stale evidence says so.
+      let current: { hash: string } | undefined;
+      if (data.force) {
+        // Launching anyway, a worktree we can't read just leaves the evidence unmarked.
+        current = await fingerprint(cwd).catch(() => undefined);
+      } else {
+        current = await fingerprint(cwd);
+        const reason = launchGuard(latest, current, checks.armed(member.deckId) === true);
         if (reason) return { needsConfirm: reason };
       }
       const url = await openPullRequest({
@@ -39,7 +41,7 @@ export const openCrewPr = createServerFn({ method: "POST" })
         task: member.task,
         evidence:
           latest && latest.state !== "running" && latest.state !== "cancelled"
-            ? prEvidence(latest)
+            ? prEvidence(latest, current)
             : undefined,
         name: member.name,
         console: CONSOLES[member.consoleId]?.label ?? `Console ${member.consoleId + 1}`,

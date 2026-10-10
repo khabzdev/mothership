@@ -64,4 +64,16 @@ describe("prEvidence", () => {
     expect(text).toContain("### Pre-flight: NO-GO ❌");
     expect(text).toContain("| check | NO-GO | 6.1s |");
   });
+
+  test("evidence from an earlier state of the branch says so", () => {
+    const stale =
+      "_Ran on an earlier state of this branch (commit abc1234); the branch has changed since._";
+    expect(prEvidence(record(), { hash: "changed" }).split("\n").slice(0, 3)).toEqual([
+      "### Pre-flight: GO ✅  (attempt 2 · 41s · commit abc1234)",
+      stale,
+      "| Check | Verdict | Time |",
+    ]);
+    expect(prEvidence(record(), { hash: "same" })).not.toContain(stale);
+    expect(prEvidence(record())).not.toContain(stale);
+  });
 });
