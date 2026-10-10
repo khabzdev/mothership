@@ -30,8 +30,11 @@ describe("preflightChip", () => {
     expect(preflightChip(undefined)).toBeNull();
   });
 
-  test("shows nothing for attempt 0, which counts as not run", () => {
-    expect(preflightChip(info({ attempt: 0, state: "nogo" }))).toBeNull();
+  test("shows a manual-only run (attempt 0)", () => {
+    expect(preflightChip(info({ attempt: 0, state: "go" }))).toEqual({
+      label: "GO",
+      tone: "success",
+    });
   });
 
   test("warns while running", () => {

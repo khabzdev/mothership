@@ -484,9 +484,17 @@ describe("PreflightService", () => {
     await settled(id);
     await vi.waitFor(() => expect(service.info(id)?.fuel).toBe(2));
     await crew.prompt(id, "try again");
-    expect(service.info(id)?.fuel).toBe(3);
+    expect(fuelOf(id)?.fuel).toBe(3);
     expect(fuelOf(id)?.flight).toBe(2);
-    expect(service.info(id)?.attempt).toBe(0);
+    expect(service.info(id)).toBeUndefined();
+  });
+
+  test("a manual run alone in a flight shows in info()", async () => {
+    const { id } = await hireWithChange();
+    verdicts = ["go", "go"];
+    await service.run(id, "manual");
+    await settled(id);
+    expect(service.info(id)).toMatchObject({ state: "go", attempt: 0 });
   });
 
   test("the station's own hand-back doesn't refuel", async () => {
@@ -534,7 +542,7 @@ describe("PreflightService", () => {
     expect(service.latest(id)?.state).toBe("cancelled");
     await new Promise((r) => setTimeout(r, 20));
     expect(calls).toHaveLength(1);
-    expect(service.info(id)?.fuel).toBe(3);
+    expect(fuelOf(id)?.fuel).toBe(3);
     expect(pastes()).toHaveLength(1);
   });
 

@@ -222,6 +222,8 @@ export class PreflightService {
     const record = this.latest(crewId);
     if (!record) return undefined;
     const row = this.#crewRow(crewId);
+    // A new flight (your prompt) with nothing run yet has nothing to show.
+    if (row && record.flight < row.flight) return undefined;
     const attempt = row ? this.#stopAttempts(crewId) : record.attempt;
     const job = this.#active.get(record.id);
     const checks = job

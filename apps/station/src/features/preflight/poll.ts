@@ -22,7 +22,7 @@ export function pollLine(e: {
   return e.done && e.allGo ? `${line} ${e.deck}, ${e.crew}: all stations GO.` : line;
 }
 
-/** A GO light: the run is GO and has actually run (`attempt === 0` counts as not run). */
+/** A GO light: the latest run this flight is GO. */
 export function isGo(info: PreflightInfo | undefined): boolean {
-  return info?.state === "go" && info.attempt > 0;
+  return info?.state === "go";
 }

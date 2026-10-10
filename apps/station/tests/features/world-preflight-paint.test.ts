@@ -46,8 +46,13 @@ describe("lampStates", () => {
     expect(lampStates(i, 4)).toEqual(["go", "go", "off", "off"]);
   });
 
-  test("attempt 0 (new flight, no stop run yet) → all off", () => {
-    expect(lampStates(info({ attempt: 0 }), 3)).toEqual(["off", "off", "off"]);
+  test("no info → all off", () => {
+    expect(lampStates(undefined, 3)).toEqual(["off", "off", "off"]);
+  });
+
+  test("a manual-only run (attempt 0) still lights the lamps", () => {
+    const i = info({ attempt: 0, state: "go", checks: [{ name: "lint", verdict: "go" }] });
+    expect(lampStates(i, 2)).toEqual(["go", "off"]);
   });
 });
 
@@ -59,10 +64,12 @@ describe("showsPreflightPanel", () => {
     expect(showsPreflightPanel(info({ state: "nogo" }), "working")).toBe(false);
     expect(showsPreflightPanel(info({ state: "nogo" }), "idle")).toBe(true);
   });
-  test("go, cancelled, attempt 0 and no info show the terminal", () => {
+  test("a manual-only running run (attempt 0) shows the panel", () => {
+    expect(showsPreflightPanel(info({ attempt: 0 }), "idle")).toBe(true);
+  });
+  test("go, cancelled and no info show the terminal", () => {
     expect(showsPreflightPanel(info({ state: "go" }), "idle")).toBe(false);
     expect(showsPreflightPanel(info({ state: "cancelled" }), "idle")).toBe(false);
-    expect(showsPreflightPanel(info({ attempt: 0 }), "idle")).toBe(false);
     expect(showsPreflightPanel(undefined, "idle")).toBe(false);
   });
 });

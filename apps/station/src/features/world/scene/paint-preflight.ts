@@ -5,12 +5,12 @@ import type { CrewInfo, PreflightInfo } from "@mothership/protocol";
 export type LampState = "off" | "running" | "go" | "nogo";
 
 /**
- * One lamp per check slot. The first check without a verdict is `running` while the run is;
- * a PreflightInfo with `attempt === 0` (a new flight, no stop run yet) counts as "not run".
+ * One lamp per check slot. The first check without a verdict is `running` while the run is.
+ * No info means "not run".
  */
 export function lampStates(info: PreflightInfo | undefined, count: number): LampState[] {
   const lamps: LampState[] = Array.from({ length: count }, () => "off");
-  if (!info || info.attempt === 0) return lamps;
+  if (!info) return lamps;
   let runningTaken = false;
   info.checks.slice(0, count).forEach((check, i) => {
     if (check.verdict === "go") lamps[i] = "go";
@@ -28,7 +28,7 @@ export function showsPreflightPanel(
   info: PreflightInfo | undefined,
   status: CrewInfo["status"] | undefined,
 ): boolean {
-  if (!info || info.attempt === 0) return false;
+  if (!info) return false;
   return info.state === "running" || (info.state === "nogo" && status !== "working");
 }
 

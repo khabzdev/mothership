@@ -72,11 +72,11 @@ export function parseLogInput(input: unknown): { preflightId: string; checkId: s
   return { preflightId: pathSafeId(o, "preflightId"), checkId: pathSafeId(o, "checkId") };
 }
 
-/** The chip on a crew row: nothing until a pre-flight has actually run (attempt 0 counts as not run). */
+/** The chip on a crew row: nothing until a pre-flight has run this flight. */
 export function preflightChip(
   info?: PreflightInfo,
 ): { label: string; tone: "warning" | "success" | "error" } | null {
-  if (!info || info.attempt === 0) return null;
+  if (!info) return null;
   if (info.state === "running") return { label: "Pre-flight…", tone: "warning" };
   if (info.state === "go") return { label: "GO", tone: "success" };
   if (info.state === "nogo") {

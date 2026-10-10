@@ -1,6 +1,6 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { PreflightInfo, ServerMsg } from "@mothership/protocol";
 import { describe, expect, test } from "vite-plus/test";
-import { forDeck, pollLine } from "../../src/features/preflight/poll.ts";
+import { forDeck, isGo, pollLine } from "../../src/features/preflight/poll.ts";
 
 const base = { done: false, allGo: false, deck: "Orion", crew: "Nova" };
 
@@ -42,5 +42,16 @@ describe("forDeck", () => {
   });
   test("this deck's pre-flight messages pass", () => {
     expect(forDeck(msg("d1"), "d1")?.check).toBe("lint");
+  });
+});
+
+describe("isGo", () => {
+  const base: PreflightInfo = { state: "go", checks: [], attempt: 0, fuel: 3, maxFuel: 3 };
+  test("a manual-only GO run (attempt 0) is a GO light", () => {
+    expect(isGo(base)).toBe(true);
+  });
+  test("no info or NO-GO is not", () => {
+    expect(isGo(undefined)).toBe(false);
+    expect(isGo({ ...base, state: "nogo" })).toBe(false);
   });
 });
