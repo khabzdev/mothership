@@ -112,6 +112,26 @@ describe("scopeCheck", () => {
   });
 });
 
+describe("Proof mentions tests", () => {
+  const promised = (proof: string) =>
+    scopeCheck([stat("src/api.ts")], `## Files\n- src/api.ts\n## Proof\n${proof}\n`).some(
+      (f) => f.title === "Brief promised tests; none changed",
+    );
+
+  test("words that only contain test or spec don't count", () => {
+    expect(promised("Check the specific behaviour by hand")).toBe(false);
+    expect(promised("Run the latest build")).toBe(false);
+    expect(promised("Win the contest")).toBe(false);
+  });
+
+  test("tests, testing and specs do", () => {
+    expect(promised("Add a unit test")).toBe(true);
+    expect(promised("Update the spec")).toBe(true);
+    expect(promised("Testing by hand plus the existing tests")).toBe(true);
+    expect(promised("New specs for login")).toBe(true);
+  });
+});
+
 describe("brief formats", () => {
   const changed = [stat("src/a.ts"), stat("src/b.ts"), stat("src/c.ts")];
   const formats: [string, string][] = [

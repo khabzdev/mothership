@@ -17,7 +17,8 @@ export const OUTSIDE_BLOCKER = 3;
 export const IGNORED_FILES = ["pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lock*"];
 
 const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.\w+$/;
-const MENTIONS_TESTS = /test|spec/i;
+// Whole words only: "specific", "latest" and "contest" aren't a promise of tests.
+const MENTIONS_TESTS = /\b(tests?|testing|specs?)\b/i;
 
 // The headings a brief is asked for (see briefs/model.ts).
 const BRIEF_HEADINGS = ["Goal", "Approach", "Files", "Proof", "Not doing"];
