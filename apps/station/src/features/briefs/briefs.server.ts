@@ -1,5 +1,6 @@
 import type { BriefInfo, BriefState, ServerMsg } from "@mothership/protocol";
 import { and, desc, eq, sql } from "drizzle-orm";
+import { resolve, sep } from "node:path";
 import type { Db } from "../../shared/db/client.server";
 import { briefs, crew as crewTable } from "../../shared/db/schema";
 import type { CrewSignalEvent } from "../crew/hooks.server";
@@ -72,9 +73,25 @@ export class BriefService {
       return;
     }
     if (signal.type !== "working" || !signal.activity) return;
-    if (!EDIT_TOOLS.has(signal.activity.tool)) return;
+    const { tool, filePath } = signal.activity;
+    if (!EDIT_TOOLS.has(tool) || !filePath || !this.#inWorkdir(crewId, filePath)) return;
     const latest = this.latest(crewId);
     if (latest?.state === "waiting") this.#approve(latest, "terminal");
+  }
+
+  /**
+   * Whether a file is in the crew member's own working directory. Claude edits its plan file
+   * (under ~/.claude) while still planning: only an edit to the work itself means you approved.
+   */
+  #inWorkdir(crewId: string, filePath: string): boolean {
+    let cwd: string;
+    try {
+      cwd = resolve(this.#crew.workdir(crewId).cwd);
+    } catch {
+      return false;
+    }
+    const file = resolve(cwd, filePath);
+    return file.startsWith(cwd.endsWith(sep) ? cwd : cwd + sep);
   }
 
   /** Y: choose the dialog's auto-accept option. */
@@ -178,22 +195,33 @@ export class BriefService {
     const now = this.latest(crewId);
     if (now?.id !== brief.id || now.state !== "waiting")
       return already(brief.id === now?.id ? now.state : "superseded");
+    const missing: BriefAnswer = {
+      ok: false,
+      message: `Couldn't find ${name}'s approval dialog: opened its terminal`,
+      openTerminal: true,
+    };
     const key = findOption(lines, choice);
     if (key === null) {
       if (!dialogShown(lines)) this.#settle(brief, { state: "superseded" });
-      return {
-        ok: false,
-        message: `Couldn't find ${name}'s approval dialog: opened its terminal`,
-        openTerminal: true,
-      };
+      return missing;
     }
-    await this.#write(crewId, key);
+    try {
+      await this.#write(crewId, key);
+    } catch (error) {
+      console.warn(`[briefs] couldn't type into ${crewId}'s terminal: ${(error as Error).message}`);
+      return missing;
+    }
     if (choice === "approve") {
       this.#approve(brief, "you");
       return { ok: true };
     }
-    this.#settle(brief, { state: "revised", reason });
-    await new Promise((resolve) => setTimeout(resolve, REASON_DELAY_MS));
+    // Settled in the terminal while the key went in: no reason to type.
+    if (!this.#settle(brief, { state: "revised", reason })) {
+      return already(this.#state(brief.id) ?? "superseded");
+    }
+    await new Promise((done) => setTimeout(done, REASON_DELAY_MS));
+    // A new plan already came: the reason would land on it, not this one.
+    if (this.latest(crewId)?.id !== brief.id) return already("superseded");
     try {
       await this.#crew.prompt(crewId, reason, "station");
     } catch (error) {
@@ -207,8 +235,9 @@ export class BriefService {
     return { ok: true };
   }
 
-  #approve(brief: BriefRecord, by: "you" | "terminal"): void {
-    this.#db.transaction((tx) => {
+  /** Approve a waiting brief; false when it was no longer waiting. */
+  #approve(brief: BriefRecord, by: "you" | "terminal"): boolean {
+    const changed = this.#db.transaction((tx) => {
       const { changes } = tx
         .update(briefs)
         .set({ state: "approved", approvedBy: by, settledAt: Date.now() })
@@ -221,20 +250,28 @@ export class BriefService {
           .where(eq(crewTable.id, brief.crewId))
           .run();
       }
+      return changes > 0;
     });
-    this.#changed(brief.deckId, brief.crewId);
+    if (changed) this.#changed(brief.deckId, brief.crewId);
+    return changed;
   }
 
+  /** Settle a waiting brief; false when it was no longer waiting. */
   #settle(
     brief: BriefRecord,
     patch: { state: "superseded" } | { state: "revised"; reason: string },
-  ): void {
-    this.#db
+  ): boolean {
+    const { changes } = this.#db
       .update(briefs)
       .set({ ...patch, settledAt: Date.now() })
       .where(and(eq(briefs.id, brief.id), eq(briefs.state, "waiting")))
       .run();
-    this.#changed(brief.deckId, brief.crewId);
+    if (changes > 0) this.#changed(brief.deckId, brief.crewId);
+    return changes > 0;
+  }
+
+  #state(briefId: string): BriefState | undefined {
+    return this.#db.select().from(briefs).where(eq(briefs.id, briefId)).get()?.state;
   }
 
   #supersedeWaiting(crewId: string): void {

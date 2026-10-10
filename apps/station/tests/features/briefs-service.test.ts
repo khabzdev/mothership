@@ -52,6 +52,12 @@ let screen: string[];
 /** Per-crew screens, over `screen`. */
 let screens: Record<string, string[]>;
 let screenFails: boolean;
+/** When set, screen reads wait for it. */
+let screenGate: Promise<void> | null;
+/** Screen reads started. */
+let reads: number;
+/** Runs as the service types a key, before it lands; throws to fail the write. */
+let onKey: ((data: string) => void) | null;
 let service: BriefService;
 
 const frame = (lines: string[]): ScreenFrame => ({
@@ -74,6 +80,9 @@ beforeEach(() => {
   screen = V1;
   screens = {};
   screenFails = false;
+  screenGate = null;
+  reads = 0;
+  onKey = null;
   const broadcast = (msg: ServerMsg) => sent.push(msg);
   launcher = new FakeLauncher();
   // Crew prompts go through the launcher: record them in the same list as the service's keys.
@@ -87,12 +96,15 @@ beforeEach(() => {
     crew,
     screens: {
       screen: async (crewId) => {
+        reads++;
+        if (screenGate) await screenGate;
         if (screenFails) throw new Error("no session");
         return frame(screens[crewId] ?? screen);
       },
     },
     broadcast,
     write: async (_crewId, data) => {
+      onKey?.(data);
       writes.push(data);
     },
   });
@@ -177,9 +189,14 @@ describe("BriefService", () => {
   test("a brief settled while the screen is read gets no key", async () => {
     const { id } = await hire();
     plan(id);
+    let release!: () => void;
+    screenGate = new Promise((done) => (release = done));
     const answer = service.approve(id);
-    // The edit lands while the station is reading the screen.
-    signal(id, { type: "working", activity: { tool: "Write" } });
+    // Past the first check, the read is pending: the edit lands now.
+    await vi.waitFor(() => expect(reads).toBe(1));
+    signal(id, { type: "working", activity: { tool: "Write", filePath: join(repo, "a.ts") } });
+    expect(service.info(id)?.state).toBe("approved");
+    release();
     expect(await answer).toEqual({ ok: false, message: "Already approved", openTerminal: false });
     expect(writes).toEqual([]);
   });
@@ -237,11 +254,52 @@ describe("BriefService", () => {
   test("an edit while waiting is approval in the terminal", async () => {
     const { id } = await hire();
     plan(id);
-    signal(id, { type: "working", activity: { tool: "Read", filePath: "a.ts" } });
+    signal(id, { type: "working", activity: { tool: "Read", filePath: join(repo, "a.ts") } });
     expect(service.info(id)?.state).toBe("waiting");
-    signal(id, { type: "working", activity: { tool: "Edit", filePath: "a.ts" } });
+    signal(id, { type: "working", activity: { tool: "Write", filePath: join(repo, "src/a.ts") } });
     expect(service.history(id)[0]).toMatchObject({ state: "approved", approvedBy: "terminal" });
     expect(writes).toEqual([]);
+  });
+
+  test("only edits in its working directory approve in the terminal", async () => {
+    const { id } = await hire();
+    plan(id);
+    // Claude writing its own plan file is still planning.
+    const planFile = join(scratch, "home", ".claude", "plans", "x.md");
+    signal(id, { type: "working", activity: { tool: "Write", filePath: planFile } });
+    signal(id, { type: "working", activity: { tool: "Edit" } });
+    // A sibling folder that only starts with the same name isn't inside it.
+    signal(id, { type: "working", activity: { tool: "Edit", filePath: `${repo}-other/a.ts` } });
+    expect(service.info(id)?.state).toBe("waiting");
+  });
+
+  test("a key that can't be typed: the brief still waits", async () => {
+    const { id } = await hire();
+    plan(id);
+    onKey = () => {
+      throw new Error("pty closed");
+    };
+    expect(await service.approve(id)).toEqual({
+      ok: false,
+      message: "Couldn't find Nova's approval dialog: opened its terminal",
+      openTerminal: true,
+    });
+    expect(service.info(id)?.state).toBe("waiting");
+    onKey = null;
+    expect(await service.approve(id)).toEqual({ ok: true });
+  });
+
+  test("approved in the terminal while keep planning went in: no reason typed", async () => {
+    const { id } = await hire();
+    plan(id);
+    onKey = () =>
+      signal(id, { type: "working", activity: { tool: "Edit", filePath: join(repo, "a.ts") } });
+    vi.useFakeTimers();
+    const answer = service.revise(id, "smaller");
+    await vi.advanceTimersByTimeAsync(REASON_DELAY_MS * 2);
+    expect(await answer).toEqual({ ok: false, message: "Already approved", openTerminal: false });
+    expect(writes).toEqual(["3"]);
+    expect(service.history(id)[0]).toMatchObject({ state: "approved", approvedBy: "terminal" });
   });
 
   test("a plan after a revision is the next revision", async () => {
