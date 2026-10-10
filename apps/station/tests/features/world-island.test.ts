@@ -20,9 +20,10 @@ const rim = () =>
   entries().filter((e) => e.piece === "terrain_slope" || e.piece === "terrain_slope_outer_corner");
 
 describe("the island", () => {
-  test("grows the deck by one tile on every side, in whole tiles", () => {
+  test("grows the deck by two tiles on every side, in whole tiles", () => {
     expect(TILE).toBe(4);
     expect(TERRAIN_SCALE).toBe(2);
+    expect([ISLAND.maxX, ISLAND.maxZ]).toEqual([26, 22]);
     expect(ISLAND.minX).toBeLessThanOrEqual(DECK.minX - TILE);
     expect(ISLAND.maxX).toBeGreaterThanOrEqual(DECK.maxX + TILE);
     expect(ISLAND.minZ).toBeLessThanOrEqual(DECK.minZ - TILE);
@@ -94,7 +95,7 @@ describe("the island", () => {
     expect(entries()).toHaveLength(
       ((ISLAND.maxX - ISLAND.minX) / TILE) * ((ISLAND.maxZ - ISLAND.minZ) / TILE),
     );
-    expect(entries()).toHaveLength(99);
+    expect(entries()).toHaveLength(143);
   });
 
   test("ground and rim tops are at y = 0", () => {
@@ -106,12 +107,12 @@ describe("the island", () => {
     }
   });
 
-  test("two mining tiles sit in the south-east outer ring", () => {
+  test("two mining tiles sit on the flat ring, inside the rim", () => {
     expect(MINING_TILES).toEqual([
       { x: 20, z: 8 },
       { x: 20, z: 12 },
     ]);
-    for (const t of MINING_TILES) expect(t.x).toBe(ISLAND.maxX - TILE / 2);
+    for (const t of MINING_TILES) expect(t.x).toBe(ISLAND.maxX - TILE * 1.5);
     const at = islandPlan().terrain_mining.map((p) => [p.position[0], p.position[2]]);
     expect(at).toEqual(MINING_TILES.map((t) => [t.x, t.z]));
   });

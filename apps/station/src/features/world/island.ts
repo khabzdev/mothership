@@ -25,15 +25,15 @@ const NATIVE_TOP: Record<TerrainPiece, number> = {
   terrain_slope_outer_corner: 1,
 };
 
-/** The deck grown by one tile on every side, in whole tiles and centred on the origin. */
+/** The deck grown by two tiles on every side: a flat ring for the outpost, then the slope rim, in whole tiles and centred on the origin. */
 const halfTiles = (half: number) => Math.ceil(half / (TILE / 2));
-const reachX = (halfTiles(Math.max(-DECK.minX, DECK.maxX)) + 1) * (TILE / 2) + TILE / 2;
-const reachZ = (halfTiles(Math.max(-DECK.minZ, DECK.maxZ)) + 1) * (TILE / 2) + TILE / 2;
+const reachX = (halfTiles(Math.max(-DECK.minX, DECK.maxX)) + 3) * (TILE / 2) + TILE / 2;
+const reachZ = (halfTiles(Math.max(-DECK.minZ, DECK.maxZ)) + 3) * (TILE / 2) + TILE / 2;
 export const ISLAND = { minX: -reachX, maxX: reachX, minZ: -reachZ, maxZ: reachZ };
 
-/** The two south-east outer-ring tiles under the drill (the east middle stays clear for the departure pad). */
+/** The two south-east flat-ring tiles under the drill (the east middle stays clear for the departure pad). */
 export const MINING_TILES: { x: number; z: number }[] = [2 * TILE, 3 * TILE].map((z) => ({
-  x: ISLAND.maxX - TILE / 2,
+  x: ISLAND.maxX - TILE * 1.5,
   z,
 }));
 
@@ -72,8 +72,8 @@ export function islandPlan(): Record<TerrainPiece, Placement[]> {
       const east = i === lastX;
       const north = k === 0;
       const south = k === lastZ;
-      if (!west && !east && !north && !south) return place("terrain_tall", x, z, 0);
       if (MINING_TILES.some((t) => t.x === x && t.z === z)) return place("terrain_mining", x, z, 0);
+      if (!west && !east && !north && !south) return place("terrain_tall", x, z, 0);
       // A slope falls toward its native -x, a corner toward native -x and +z; turn them outward.
       if ((west || east) && (north || south)) {
         const rotY = north ? (west ? -Math.PI / 2 : Math.PI) : west ? 0 : Math.PI / 2;

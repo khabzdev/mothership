@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { DECK, DEPARTURE_PAD, LAUNCH_PAD, SHIP_PAD } from "../../src/features/world/layout";
-import { ISLAND } from "../../src/features/world/island";
+import { ISLAND, TILE } from "../../src/features/world/island";
 import { OUTPOST, OUTPOST_SCALE, PAD_CLEARINGS } from "../../src/features/world/outpost";
 import { SPACE_PIECES } from "../../src/features/world/scene/models";
 
@@ -16,10 +16,11 @@ describe("the outpost", () => {
   test("every outpost piece stands on the island, outside the play area", () => {
     for (const { piece, placement } of placements()) {
       const [x, , z] = placement.position;
-      expect(x, piece).toBeGreaterThan(ISLAND.minX);
-      expect(x, piece).toBeLessThan(ISLAND.maxX);
-      expect(z, piece).toBeGreaterThan(ISLAND.minZ);
-      expect(z, piece).toBeLessThan(ISLAND.maxZ);
+      // On the flat ring: inside the island's slope rim (one tile in from the edge).
+      expect(x, piece).toBeGreaterThan(ISLAND.minX + TILE);
+      expect(x, piece).toBeLessThan(ISLAND.maxX - TILE);
+      expect(z, piece).toBeGreaterThan(ISLAND.minZ + TILE);
+      expect(z, piece).toBeLessThan(ISLAND.maxZ - TILE);
       if (piece === "lights") {
         // Just outside the walking clamp, within a metre of it.
         const out = Math.max(

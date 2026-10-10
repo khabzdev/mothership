@@ -21,8 +21,8 @@ const at = (x: number, z: number, rotY = 0, y = 0, scale = OUTPOST_SCALE): Place
   scale,
 });
 
-const NORTH_Z = -15.5;
-const SOUTH_Z = 15.5;
+const NORTH_Z = -16;
+const SOUTH_Z = 16;
 const WEST_X = -20;
 const EAST_X = 20;
 /** Tunnels are 2 m long natively: shrunk so a gap between modules is spanned, raised to door height. */
@@ -61,19 +61,19 @@ export const OUTPOST: Record<string, Placement[]> = {
   // South: solar panels, then the cargo depot, containers and the truck with its trailer.
   solarpanel: [-18, -15.2, -12.4, -9.6].map((x) => at(x, SOUTH_Z)),
   cargodepot_A: [at(-2, SOUTH_Z)],
-  containers_A: [at(3.5, 15, Math.PI / 2)],
-  containers_B: [at(5.5, 16.5)],
+  containers_A: [at(3.5, 15.5, Math.PI / 2)],
+  containers_B: [at(5.5, 16.8)],
   cargo_A_stacked: [at(8.5, SOUTH_Z)],
-  spacetruck: [at(13.5, 16, Math.PI / 2)],
-  spacetruck_trailer: [at(16.2, 16, Math.PI / 2)],
+  spacetruck: [at(13.5, 16.3, Math.PI / 2)],
+  spacetruck_trailer: [at(16.2, 16.3, Math.PI / 2)],
 
   // Light posts just outside the walking clamp, at the play area's corners (the north-east one
   // moved south, out of the launch pad's clearing).
   lights: [at(-18.2, -13.2), at(-18.2, 13.2), at(18.2, 13.2), at(18.2, -9.5)],
 
   // Rocks scattered on the outer ring.
-  rocks_A: [at(-21, 12, 0.6), at(21, -8.5, 2.1), at(0, 17, 4)],
-  rocks_B: [at(-21, -12, 1.2), at(-7, 17.2, 3), at(14.5, 17.4, 5)],
-  rock_A: [at(-21, 6, 0.3), at(21, 5, 1.7), at(-4, -17.4, 2.4), at(21, 15.5, 0.9)],
-  rock_B: [at(-21, 15, 2.8), at(21, -3.5, 4.4), at(16.5, 14.5, 1.1)],
+  rocks_A: [at(-21, 13, 0.6), at(21, -8.5, 2.1), at(0, 16.8, 4)],
+  rocks_B: [at(-21, -12, 1.2), at(-7, 16.8, 3), at(14.5, 16.8, 5)],
+  rock_A: [at(-21, 6, 0.3), at(21, 5, 1.7), at(-4, -17.2, 2.4), at(21, 16.5, 0.9)],
+  rock_B: [at(-21, 16.5, 2.8), at(21, -3.5, 4.4), at(16.5, 14.8, 1.1)],
 };
