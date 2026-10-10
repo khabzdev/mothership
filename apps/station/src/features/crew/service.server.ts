@@ -68,6 +68,7 @@ function toInfo(row: Row, describe?: Describe): CrewInfo {
     ...(row.branch && { branch: row.branch }),
     ...(row.prUrl && { prUrl: row.prUrl }),
     ...(preflight && { preflight }),
+    ...(row.cleanBriefs > 0 && { cleanBriefs: row.cleanBriefs }),
   };
 }
 

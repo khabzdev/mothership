@@ -42,6 +42,7 @@ describe("database", () => {
       .all()
       .map((row) => (row as { name: string }).name);
     expect(tables).toEqual([
+      "briefs",
       "console_labels",
       "crew",
       "deck_checks",

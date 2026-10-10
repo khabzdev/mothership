@@ -1,4 +1,5 @@
 import {
+  BRIEF_STATES,
   CHECK_VERDICTS,
   CREW_ACTIONS,
   CREW_STATUSES,
@@ -60,6 +61,8 @@ export const crew = sqliteTable(
     flight: integer("flight").notNull().default(1),
     /** Pre-flight hand-backs left this flight. */
     fuel: integer("fuel").notNull().default(3),
+    /** Briefs approved with no revision asked for, in a row. */
+    cleanBriefs: integer("clean_briefs").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   },
   (t) => [
@@ -148,6 +151,37 @@ export const preflights = sqliteTable(
     index("preflights_deck_idx").on(t.deckId, t.startedAt),
     check("preflights_state_check", oneOf("state", PREFLIGHT_STATES)),
     check("preflights_trigger_check", oneOf("trigger", PREFLIGHT_TRIGGERS)),
+  ],
+);
+
+export const BRIEF_APPROVERS = ["you", "terminal"] as const;
+
+/**
+ * One brief: the plan a crew member submits for approval before changing anything. Kept after
+ * the crew member leaves, so the deck's history still shows it.
+ */
+export const briefs = sqliteTable(
+  "briefs",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    crewId: text("crew_id").notNull(),
+    /** Counts from 1 per crew member. */
+    revision: integer("revision").notNull(),
+    text: text("text").notNull(),
+    state: text("state", { enum: BRIEF_STATES }).notNull().default("waiting"),
+    approvedBy: text("approved_by", { enum: BRIEF_APPROVERS }),
+    /** Why it was sent back for a revision. */
+    reason: text("reason"),
+    createdAt: integer("created_at").notNull().default(now),
+    settledAt: integer("settled_at"),
+  },
+  (t) => [
+    index("briefs_crew_idx").on(t.crewId, t.revision),
+    check("briefs_state_check", oneOf("state", BRIEF_STATES)),
+    check("briefs_approved_by_check", oneOf("approved_by", BRIEF_APPROVERS)),
   ],
 );
 

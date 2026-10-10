@@ -46,6 +46,17 @@ export interface PreflightInfo {
   maxFuel: number;
 }
 
+export const BRIEF_STATES = ["waiting", "approved", "revised", "superseded"] as const;
+export type BriefState = (typeof BRIEF_STATES)[number];
+
+/** A crew member's latest brief, as the roster shows it. */
+export interface BriefInfo {
+  revision: number;
+  state: BriefState;
+  /** The brief's one-sentence goal. */
+  goal: string;
+}
+
 /** A crew member at a console on a deck (agent-office's WorkerInfo). */
 export interface CrewInfo {
   id: CrewId;
@@ -66,6 +77,9 @@ export interface CrewInfo {
   branch?: string;
   prUrl?: string;
   preflight?: PreflightInfo;
+  brief?: BriefInfo;
+  /** Briefs approved with no revision asked for, in a row (omitted when 0). */
+  cleanBriefs?: number;
 }
 
 /** One pre-flight check a deck runs before its crew may hand work back. */
@@ -140,6 +154,8 @@ export type ServerMsg =
       verdict: CheckVerdict;
       done: boolean;
     }
+  /** A crew member's brief changed (submitted, approved, revised). */
+  | { type: "crew.brief"; deckId: DeckId; crewId: CrewId }
   | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
   | { type: "deck.checks"; deckId: DeckId; armed: boolean | null; checks: DeckCheck[] }
   | { type: "deck.clones"; clones: CloneInfo[] }

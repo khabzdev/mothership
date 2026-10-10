@@ -90,6 +90,10 @@ export function parseServerMsg(raw: string): ServerMsg | null {
             done: o.done,
           }
         : null;
+    case "crew.brief":
+      return isId(o.deckId) && isId(o.crewId)
+        ? { type: o.type, deckId: o.deckId, crewId: o.crewId }
+        : null;
     case "deck.labels":
       return isId(o.deckId) && Array.isArray(o.labels) && o.labels.every(isConsoleLabel)
         ? { type: o.type, deckId: o.deckId, labels: o.labels }

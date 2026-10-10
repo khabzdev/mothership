@@ -39,6 +39,7 @@ describe("types", () => {
       | "crew.roster"
       | "crew.screen"
       | "crew.preflight"
+      | "crew.brief"
       | "deck.labels"
       | "deck.checks"
       | "deck.clones"
