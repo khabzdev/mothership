@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { BRIEF_INSTRUCTIONS } from "../../src/features/briefs/model.ts";
 import type { CrewLauncher, LaunchRequest } from "../../src/features/crew/launcher.server.ts";
 import { parseHireInput, parsePromptInput } from "../../src/features/crew/model.ts";
 import { CrewService } from "../../src/features/crew/service.server.ts";
@@ -89,6 +90,7 @@ describe("hire", () => {
         provider: "claude-code",
         prompt: "Add dark mode",
         cwd: repo,
+        plan: { instructions: BRIEF_INSTRUCTIONS },
       },
     ]);
     expect(nova.kind).toBe("agent");
@@ -275,7 +277,7 @@ describe("pre-flight hooks", () => {
       fuel: 3,
       maxFuel: 3,
     };
-    service.describeWith((crewId) => (crewId === id ? preflight : undefined));
+    service.describeWith((crewId) => (crewId === id ? { preflight } : {}));
     expect(service.member(id).preflight).toEqual(preflight);
     expect(service.roster("deck-1")[0]!.preflight).toEqual(preflight);
   });

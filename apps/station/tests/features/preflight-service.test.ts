@@ -98,7 +98,7 @@ beforeEach(() => {
     return result(opts, verdicts.shift() ?? "go");
   };
   service = new PreflightService({ db, crew, checks, broadcast, home, run: (o) => run(o) });
-  crew.describeWith((id) => service.info(id));
+  crew.describeWith((id) => ({ preflight: service.info(id) }));
 });
 
 afterEach(() => rmSync(scratch, { recursive: true, force: true }));

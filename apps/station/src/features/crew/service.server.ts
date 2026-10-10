@@ -1,9 +1,16 @@
-import type { CrewInfo, CrewStatus, PreflightInfo, ServerMsg } from "@mothership/protocol";
+import type {
+  BriefInfo,
+  CrewInfo,
+  CrewStatus,
+  PreflightInfo,
+  ServerMsg,
+} from "@mothership/protocol";
 import type { CrewSignal } from "@mothership/providers";
 import { and, asc, eq } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Db } from "../../shared/db/client.server";
+import { BRIEF_INSTRUCTIONS } from "../briefs/model";
 import { crew, decks } from "../../shared/db/schema";
 import { toolAction } from "./actions";
 import type { CrewLauncher } from "./launcher.server";
@@ -47,11 +54,12 @@ const SUBMIT_DELAY_MS = 120;
 /** Who typed a prompt: you, or the station handing pre-flight failures back. */
 export type PromptFrom = "you" | "station";
 
-type Describe = (crewId: string) => PreflightInfo | undefined;
+/** What other services add to a crew member's roster entry. */
+type Describe = (crewId: string) => { preflight?: PreflightInfo; brief?: BriefInfo };
 type Busy = (crewId: string) => boolean;
 
 function toInfo(row: Row, describe?: Describe): CrewInfo {
-  const preflight = describe?.(row.id);
+  const { preflight, brief } = describe?.(row.id) ?? {};
   return {
     id: row.id,
     kind: row.provider === "shell" ? "shell" : "agent",
@@ -68,6 +76,7 @@ function toInfo(row: Row, describe?: Describe): CrewInfo {
     ...(row.branch && { branch: row.branch }),
     ...(row.prUrl && { prUrl: row.prUrl }),
     ...(preflight && { preflight }),
+    ...(brief && { brief }),
     ...(row.cleanBriefs > 0 && { cleanBriefs: row.cleanBriefs }),
   };
 }
@@ -100,7 +109,7 @@ export class CrewService {
       .map((row) => this.#info(row));
   }
 
-  /** Add each crew member's pre-flight summary to what the roster says about it. */
+  /** Add each crew member's pre-flight and brief summaries to what the roster says about it. */
   describeWith(fn: Describe): void {
     this.#describe = fn;
   }
@@ -232,7 +241,16 @@ export class CrewService {
     this.#broadcast(deck.id);
 
     try {
-      await launcher.launch({ crewId: id, missionId: id, provider, prompt: input.task, cwd });
+      await launcher.launch({
+        crewId: id,
+        missionId: id,
+        provider,
+        prompt: input.task,
+        cwd,
+        // A task for Claude starts in plan mode: it writes a brief for you to approve first.
+        ...(provider === "claude-code" &&
+          input.task.trim() && { plan: { instructions: BRIEF_INSTRUCTIONS } }),
+      });
     } catch (error) {
       db.delete(crew).where(eq(crew.id, id)).run();
       this.#broadcast(deck.id);

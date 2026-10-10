@@ -61,7 +61,7 @@ export const crew = sqliteTable(
     flight: integer("flight").notNull().default(1),
     /** Pre-flight hand-backs left this flight. */
     fuel: integer("fuel").notNull().default(3),
-    /** Briefs approved with no revision asked for, in a row. */
+    /** A running total of its briefs approved as first written (at revision 1). */
     cleanBriefs: integer("clean_briefs").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   },

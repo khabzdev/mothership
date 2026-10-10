@@ -78,7 +78,7 @@ export interface CrewInfo {
   prUrl?: string;
   preflight?: PreflightInfo;
   brief?: BriefInfo;
-  /** Briefs approved with no revision asked for, in a row (omitted when 0). */
+  /** A running total of briefs approved as first written, at revision 1 (omitted when 0). */
   cleanBriefs?: number;
 }
 

@@ -1,4 +1,5 @@
 import { PROVIDERS } from "@mothership/providers";
+import { BriefService } from "../features/briefs/briefs.server";
 import { CrewService } from "../features/crew/service.server";
 import { onCrewSignal } from "../features/crew/hooks.server";
 import { PtyCrewLauncher } from "../features/crew/launcher.server";
@@ -33,6 +34,7 @@ interface Station {
   queue: QueueService;
   checks: CheckService;
   preflight: PreflightService;
+  briefs: BriefService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -65,12 +67,25 @@ export function getStation(): Station {
       broadcast: (msg) => hub.broadcast(msg),
       home,
     });
-    crew.describeWith((crewId) => preflight.info(crewId));
     crew.busyWith((crewId) => preflight.busy(crewId));
     preflight.reconcile();
 
+    // Briefs: the plans Claude submits in plan mode; Y and N answer its approval dialog.
+    const briefs = new BriefService({
+      db: getDb(),
+      crew,
+      screens: launcher,
+      broadcast: (msg) => hub.broadcast(msg),
+      write: (crewId, data) => launcher.write(crewId, data),
+    });
+    crew.describeWith((crewId) => ({
+      preflight: preflight.info(crewId),
+      brief: briefs.info(crewId),
+    }));
+
     onCrewSignal((event) => crew.handleSignal(event));
     onCrewSignal((event) => preflight.handleSignal(event));
+    onCrewSignal((event) => briefs.handleSignal(event));
     launcher.onExit(({ crewId }) => crew.handleExit(crewId));
     launcher.onExit(({ crewId }) => preflight.cancel(crewId));
     const screens = new ScreenRelay(launcher, (msg) => hub.broadcast(msg));
@@ -91,7 +106,10 @@ export function getStation(): Station {
       console.warn("[station] PTY host connection lost; reconnecting");
       void reconcile();
     });
-    void reconcile();
+    // Briefs left waiting by a station that stopped are checked once the sessions are known.
+    void reconcile()
+      .then(() => briefs.reconcile())
+      .catch((error: unknown) => console.error("[station] brief reconcile failed", error));
     registerTerminals(new TerminalRelay(launcher, (peer, msg) => hub.send(peer, msg)));
 
     let cached: Promise<Diagnostics> | undefined;
@@ -141,7 +159,18 @@ export function getStation(): Station {
       isSettled: (crewId) => !preflight.busy(crewId),
     });
     setInterval(() => void queue.tickAll(), 4000);
-    return { crew, launcher, labels, clones, boards, queue, checks, preflight, diagnostics };
+    return {
+      crew,
+      launcher,
+      labels,
+      clones,
+      boards,
+      queue,
+      checks,
+      preflight,
+      briefs,
+      diagnostics,
+    };
   })();
   return shared.__mothershipStation;
 }
