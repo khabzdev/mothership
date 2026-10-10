@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { BRIEF_INSTRUCTIONS, GOAL_MAX, goalOf } from "../../src/features/briefs/model.ts";
+import { BRIEF_INSTRUCTIONS, GOAL_MAX, goalOf, prBrief } from "../../src/features/briefs/model.ts";
 
 describe("brief model", () => {
   test("instructions ask for the five headings", () => {
@@ -23,6 +23,14 @@ describe("brief model", () => {
   test("a long goal is clipped", () => {
     expect(goalOf(`## Goal\n${"x".repeat(300)}`)).toHaveLength(GOAL_MAX);
     expect(goalOf(`## Goal\n${"x".repeat(300)}`).endsWith("…")).toBe(true);
+  });
+});
+
+describe("prBrief", () => {
+  test("heads the approved brief with its revision, text trimmed at the end only", () => {
+    expect(prBrief({ revision: 2, text: "Goal: Ship it\n\n  Approach: x\n\n" })).toBe(
+      "## Brief (approved, rev 2)\n\nGoal: Ship it\n\n  Approach: x",
+    );
   });
 });
 

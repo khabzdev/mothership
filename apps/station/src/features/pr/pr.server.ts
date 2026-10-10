@@ -14,6 +14,8 @@ export interface PrRequest {
   branch: string;
   repoPath: string;
   task: string;
+  /** The approved brief, as markdown (`prBrief`). */
+  brief?: string;
   name: string;
   console: string;
   /** The latest pre-flight, as markdown (`prEvidence`). */
@@ -33,11 +35,12 @@ export function prTitle(task: string, branch: string): string {
   return line.length > MAX_TITLE ? `${line.slice(0, MAX_TITLE - 1)}…` : line;
 }
 
-/** The PR body: the task as given, what was committed, and who opened it. */
+/** The PR body: the task as given, the approved brief, what was committed, and who opened it. */
 export function prBody(request: PrRequest, commits: string[]): string {
   const task = request.task.trim();
   return [
     task ? `## Task\n\n${task.replace(/^/gm, "> ")}` : "",
+    request.brief ?? "",
     commits.length ? `## Commits\n\n${commits.map((c) => `- ${c}`).join("\n")}` : "",
     request.evidence ?? "",
     `Opened from Mothership by ${request.name} at ${request.console}.`,

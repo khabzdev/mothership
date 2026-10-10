@@ -1,4 +1,5 @@
 import { parseCrewIdInput } from "../crew/model";
+import type { BriefRecord } from "./briefs.server";
 
 /** The text appended to Claude's system prompt: a brief is written and submitted before any edit. */
 export const BRIEF_INSTRUCTIONS =
@@ -72,4 +73,9 @@ export function parseReviseInput(input: unknown): { crewId: string; reason: stri
   const reason = typeof raw === "string" ? raw.trim() : "";
   if (!reason || reason.length > REASON_MAX) throw new Error("Say what to change");
   return { crewId, reason };
+}
+
+/** The approved brief as a pull request section, headed with its revision. */
+export function prBrief(record: Pick<BriefRecord, "revision" | "text">): string {
+  return `## Brief (approved, rev ${record.revision})\n\n${record.text.trimEnd()}`;
 }

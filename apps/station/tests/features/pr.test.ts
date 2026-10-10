@@ -30,6 +30,17 @@ describe("PR title and body", () => {
     expect(prTitle("x".repeat(100), request.branch)).toHaveLength(72);
   });
 
+  test("prBody puts the approved brief between the task and the commits", () => {
+    const body = prBody({ ...request, brief: "## Brief (approved, rev 2)\n\nB" }, ["Add toggle"]);
+    expect(body).toContain("## Brief (approved, rev 2)\n\nB");
+    expect(body.indexOf("## Task")).toBeLessThan(body.indexOf("## Brief (approved, rev 2)"));
+    expect(body.indexOf("## Brief (approved, rev 2)")).toBeLessThan(body.indexOf("## Commits"));
+  });
+
+  test("prBody has no brief section without a brief", () => {
+    expect(prBody(request, ["Add toggle"])).not.toContain("## Brief");
+  });
+
   test("prBody puts evidence before the sign-off", () => {
     const body = prBody({ ...request, evidence: "### Pre-flight: GO" }, ["Add toggle"]);
     expect(body.indexOf("### Pre-flight: GO")).toBeGreaterThan(body.indexOf("- Add toggle"));
