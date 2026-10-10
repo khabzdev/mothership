@@ -1,16 +1,24 @@
 import type { CrewInfo, InspectionInfo } from "@mothership/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import {
+  DOCK_FACING,
   DOCK_Y,
   DRONE_SCALE,
+  FLY_S,
   HOVER_Y,
+  LINGER_S,
+  VERDICT_S,
   beatOffset,
   droneFlight,
+  droneStep,
   droneTarget,
   eyeColor,
+  hearVerdict,
+  restingDrone,
+  type DroneState,
   type Vec3,
 } from "../../src/features/world/drone.ts";
-import { CONSOLES } from "../../src/features/world/layout.ts";
+import { CONSOLES, INSPECTOR_DOCK } from "../../src/features/world/layout.ts";
 
 const from: Vec3 = { x: -2, y: DOCK_Y, z: 12 };
 const to: Vec3 = { x: 4, y: HOVER_Y, z: -3 };
@@ -154,5 +162,134 @@ describe("beatOffset", () => {
   test("writes into out", () => {
     const out = v();
     expect(beatOffset("scanning", 1, out)).toBe(out);
+  });
+});
+
+describe("droneStep", () => {
+  const spot = (crewId: string, x: number, z: number) => ({ crewId, x, z, facing: 0 });
+  const nova = spot("nova", 4, -3);
+  const vega = spot("vega", -6, 3);
+  const near = (a: Vec3, b: Vec3) => {
+    expect(a.x).toBeCloseTo(b.x);
+    expect(a.y).toBeCloseTo(b.y);
+    expect(a.z).toBeCloseTo(b.z);
+  };
+
+  /** Fly to `target` from the pad and settle over it, scanning; returns the clock. */
+  function scanning(s: DroneState, target = nova): number {
+    droneStep(s, 1, target);
+    droneStep(s, 1 + FLY_S, target);
+    return 1 + FLY_S;
+  }
+
+  test("rests at its pad, idle, facing the deck", () => {
+    const s = restingDrone();
+    droneStep(s, 0.5, null);
+    expect(s.beat).toBe("idle");
+    near(s.at, { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
+    expect(s.facing).toBe(DOCK_FACING);
+  });
+
+  test("flies to a review, then scans over its console", () => {
+    const s = restingDrone();
+    droneStep(s, 1, nova);
+    expect(s.beat).toBe("flying");
+    expect(s.crewId).toBe("nova");
+    droneStep(s, 1 + FLY_S / 2, nova);
+    expect(s.beat).toBe("flying");
+    expect(s.at.y).toBeGreaterThan(HOVER_Y);
+    droneStep(s, 1 + FLY_S, nova);
+    expect(s.beat).toBe("scanning");
+    near(s.at, { x: nova.x, y: HOVER_Y, z: nova.z });
+  });
+
+  test("a verdict arriving during the linger plays over the right console", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    // The review leaves the roster a moment before its verdict arrives.
+    droneStep(s, t + 0.1, null);
+    droneStep(s, t + 0.2, null);
+    expect(s.beat).toBe("scanning");
+    expect(hearVerdict(s, "nova", "flagged")).toBe(true);
+    droneStep(s, t + 0.3, null);
+    expect(s.beat).toBe("flagged");
+    near(s.at, { x: nova.x, y: HOVER_Y, z: nova.z });
+  });
+
+  test("with no verdict it heads home after the linger", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    droneStep(s, t + 0.1, null);
+    droneStep(s, t + 0.1 + LINGER_S - 0.01, null);
+    expect(s.beat).toBe("scanning");
+    droneStep(s, t + 0.11 + LINGER_S, null);
+    expect(s.beat).toBe("returning");
+    expect(s.crewId).toBeNull();
+  });
+
+  test("a verdict for another crew member is ignored unless it's resting", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    expect(hearVerdict(s, "vega", "cleared")).toBe(false);
+    droneStep(s, t + 0.1, nova);
+    expect(s.beat).toBe("scanning");
+
+    const resting = restingDrone();
+    expect(hearVerdict(resting, "vega", "cleared")).toBe(true);
+    droneStep(resting, 1, null);
+    expect(resting.beat).toBe("cleared");
+    near(resting.at, { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
+  });
+
+  test("moves on after VERDICT_S: to the next review, or home", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    hearVerdict(s, "nova", "cleared");
+    droneStep(s, t, null);
+    droneStep(s, t + VERDICT_S - 0.01, vega);
+    expect(s.beat).toBe("cleared");
+    droneStep(s, t + VERDICT_S, vega);
+    expect(s.beat).toBe("flying");
+    expect(s.crewId).toBe("vega");
+
+    const home = restingDrone();
+    const u = scanning(home);
+    hearVerdict(home, "nova", "failed");
+    droneStep(home, u, null);
+    droneStep(home, u + VERDICT_S, null);
+    expect(home.beat).toBe("returning");
+  });
+
+  test("returns to the pad and goes idle, facing the deck", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    hearVerdict(s, "nova", "cleared");
+    droneStep(s, t, null);
+    droneStep(s, t + VERDICT_S, null);
+    expect(s.beat).toBe("returning");
+    droneStep(s, t + VERDICT_S + FLY_S, null);
+    expect(s.beat).toBe("idle");
+    near(s.at, { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
+    expect(Math.cos(s.facing - DOCK_FACING)).toBeCloseTo(1);
+  });
+
+  test("a new review takes it off a scan of one that's gone", () => {
+    const s = restingDrone();
+    const t = scanning(s);
+    droneStep(s, t + 0.1, vega);
+    expect(s.beat).toBe("flying");
+    expect(s.crewId).toBe("vega");
+    // From where it was, over Nova's console.
+    near(s.from, { x: nova.x, y: HOVER_Y, z: nova.z });
+  });
+
+  test("steps in place: the state it's given, and nothing new", () => {
+    const s = restingDrone();
+    const { at, from, to } = s;
+    droneStep(s, 1, nova);
+    droneStep(s, 1 + FLY_S, null);
+    expect(s.at).toBe(at);
+    expect(s.from).toBe(from);
+    expect(s.to).toBe(to);
   });
 });

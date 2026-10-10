@@ -1,5 +1,5 @@
 import type { CrewInfo } from "@mothership/protocol";
-import { consoleSeat, type ConsoleDef } from "./layout";
+import { consoleSeat, INSPECTOR_DOCK, type ConsoleDef } from "./layout";
 
 // The Inspector drone's moves: where it goes, how it flies there and how it reacts to a verdict.
 // Pure and allocation-free, so the scene can call it every frame.
@@ -14,6 +14,10 @@ export const DOCK_Y = 0.9;
 export const FLY_S = 1.2;
 /** How long a verdict beat lasts before it flies home (s). */
 export const VERDICT_S = 1.5;
+/** Facing the deck from the pad (its front is +z; the deck lies north, -z). */
+export const DOCK_FACING = Math.PI;
+/** How long it waits once its review is gone before heading home: the verdict may still be on its way. */
+export const LINGER_S = 0.4;
 
 /** How far the arc rises over the higher end of a flight. */
 const ARC = 0.8;
@@ -109,4 +113,136 @@ export function beatOffset(beat: DroneBeat, t: number, out: Vec3): Vec3 {
   else if (beat === "flagged") out.x = SHAKE * Math.sin(2 * Math.PI * SHAKES * u);
   else if (beat === "failed") out.y = -SHRUG * Math.sin(Math.PI * u);
   return out;
+}
+
+/** A beat that plays a verdict. */
+export type Verdict = Extract<DroneBeat, "cleared" | "flagged" | "failed">;
+
+/** Where the drone goes for a review (see droneTarget). */
+export type DroneSpot = NonNullable<ReturnType<typeof droneTarget>>;
+
+/** The drone's flight, stepped in place each frame by droneStep. */
+export interface DroneState {
+  beat: DroneBeat;
+  /** When the beat (or flight) began, on the frame clock (s). */
+  since: number;
+  from: Vec3;
+  to: Vec3;
+  fromFacing: number;
+  toFacing: number;
+  /** The crew member it's flying to or scanning. */
+  crewId: string | null;
+  /** When its review left the roster (s), or -1 while it's there. */
+  lostAt: number;
+  /** A verdict heard over the hub, played on the next step. */
+  heard: Verdict | null;
+  /** Where it is now (before beatOffset), and which way it faces. */
+  at: Vec3;
+  facing: number;
+}
+
+/** The drone idle on its pad. */
+export function restingDrone(): DroneState {
+  const pad = () => ({ x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z });
+  return {
+    beat: "idle",
+    since: 0,
+    from: pad(),
+    to: pad(),
+    fromFacing: DOCK_FACING,
+    toFacing: DOCK_FACING,
+    crewId: null,
+    lostAt: -1,
+    heard: null,
+    at: pad(),
+    facing: DOCK_FACING,
+  };
+}
+
+/**
+ * Hear a verdict for `crewId`: its own review's, or (resting at or flying home to its pad) one it
+ * never got to fly to. Whether it will play.
+ */
+export function hearVerdict(s: DroneState, crewId: string, verdict: Verdict): boolean {
+  const resting = s.beat === "idle" || s.beat === "returning";
+  if (s.crewId !== crewId && !resting) return false;
+  s.heard = verdict;
+  return true;
+}
+
+/** The shortest way round from angle `a` to `b`, `s` of the way (0 to 1). */
+function turn(a: number, b: number, s: number): number {
+  const d = Math.atan2(Math.sin(b - a), Math.cos(b - a));
+  return a + d * s;
+}
+
+const setVec = (v: Vec3, x: number, y: number, z: number) => {
+  v.x = x;
+  v.y = y;
+  v.z = z;
+};
+
+/** Start a flight from where it is to (x, y, z), facing `toFacing`. */
+function fly(
+  s: DroneState,
+  now: number,
+  beat: DroneBeat,
+  x: number,
+  y: number,
+  z: number,
+  toFacing: number,
+): void {
+  s.beat = beat;
+  s.since = now;
+  setVec(s.from, s.at.x, s.at.y, s.at.z);
+  setVec(s.to, x, y, z);
+  s.fromFacing = s.facing;
+  s.toFacing = toFacing;
+}
+
+/** Fly to the review under way, or home to the pad when there's none. */
+function moveOn(s: DroneState, now: number, next: DroneSpot | null): void {
+  s.lostAt = -1;
+  s.crewId = next?.crewId ?? null;
+  if (next) fly(s, now, "flying", next.x, HOVER_Y, next.z, next.facing);
+  else fly(s, now, "returning", INSPECTOR_DOCK.x, DOCK_Y, INSPECTOR_DOCK.z, DOCK_FACING);
+}
+
+/**
+ * One frame of the drone's flight at `now` (s), with `next` the review under way: a heard verdict
+ * plays where it is, then it moves on; it flies to a new review, lingers a moment when its review
+ * goes (the verdict may be on its way) and then heads home. Updates `s` in place, `at` and
+ * `facing` included; allocates nothing.
+ */
+export function droneStep(s: DroneState, now: number, next: DroneSpot | null): DroneState {
+  if (s.heard) {
+    s.beat = s.heard;
+    s.since = now;
+    s.crewId = null;
+    s.heard = null;
+    // Settle where it is: a flight cut short stops here.
+    setVec(s.from, s.at.x, s.at.y, s.at.z);
+    setVec(s.to, s.at.x, s.at.y, s.at.z);
+    s.fromFacing = s.toFacing = s.facing;
+  }
+  const verdict = s.beat === "cleared" || s.beat === "flagged" || s.beat === "failed";
+  const elapsed = now - s.since;
+  if (next) s.lostAt = -1;
+  if (verdict) {
+    if (elapsed >= VERDICT_S) moveOn(s, now, next);
+  } else if (next && next.crewId !== s.crewId) {
+    moveOn(s, now, next);
+  } else if (!next && s.crewId) {
+    if (s.lostAt < 0) s.lostAt = now;
+    else if (now - s.lostAt >= LINGER_S) moveOn(s, now, null);
+  } else if (s.beat === "flying" && elapsed >= FLY_S) {
+    s.beat = "scanning";
+  } else if (s.beat === "returning" && elapsed >= FLY_S) {
+    s.beat = "idle";
+  }
+
+  const t = (now - s.since) / FLY_S;
+  droneFlight(s.from, s.to, s.beat === "flying" || s.beat === "returning" ? t : 1, s.at);
+  s.facing = turn(s.fromFacing, s.toFacing, Math.min(1, Math.max(0, t)));
+  return s;
 }

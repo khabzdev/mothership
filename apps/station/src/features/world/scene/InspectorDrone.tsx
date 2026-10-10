@@ -18,13 +18,12 @@ import {
   beatOffset,
   DOCK_Y,
   DRONE_SCALE,
-  droneFlight,
+  droneStep,
   droneTarget,
   eyeColor,
-  FLY_S,
-  HOVER_Y,
-  VERDICT_S,
-  type DroneBeat,
+  hearVerdict,
+  restingDrone,
+  type Verdict,
   type Vec3,
 } from "../drone";
 import { CONSOLES, INSPECTOR_DOCK } from "../layout";
@@ -40,86 +39,14 @@ const EYE = {
 } as const;
 /** The eye at rest: lit, but under bloom's threshold. */
 const DIM = 0.5;
-/** Facing the deck from the pad (its front is +z; the deck lies north, -z). */
-const DOCK_FACING = Math.PI;
-/** How long it waits once its review is gone before heading home: the verdict may still be on its way. */
-const LINGER_S = 0.4;
 /** The scan cone in the drone's own (scaled) frame: from the eye down to the console's screen. */
 const CONE = { radius: 0.3, length: 1.0, tilt: -0.26, sweep: 0.3 };
-
-type Target = NonNullable<ReturnType<typeof droneTarget>>;
-type Verdict = Extract<DroneBeat, "cleared" | "flagged" | "failed">;
 
 /** The verdict a `crew.inspection` message plays, if any: a plain cancel just sends it home. */
 function verdictOf(msg: Extract<ServerMsg, { type: "crew.inspection" }>): Verdict | null {
   if (msg.state === "cleared" || msg.state === "flagged") return msg.state;
   if (msg.state === "cancelled" && msg.failed !== undefined) return "failed";
   return null;
-}
-
-/** The shortest way round from angle `a` to `b`, `s` of the way (0 to 1). */
-function turn(a: number, b: number, s: number): number {
-  const d = Math.atan2(Math.sin(b - a), Math.cos(b - a));
-  return a + d * s;
-}
-
-interface Flight {
-  beat: DroneBeat;
-  /** When the beat (or flight) began, on the frame clock (s); -1: on the next frame. */
-  since: number;
-  from: Vec3;
-  to: Vec3;
-  fromFacing: number;
-  toFacing: number;
-  /** The crew member it's flying to or scanning. */
-  crewId: string | null;
-  /** When its review left the roster (s), or -1 while it's there. */
-  lostAt: number;
-  /** A verdict heard over the hub, played on the next frame. */
-  verdict: { crewId: string; beat: Verdict } | null;
-}
-
-/** Start a flight from where the drone is (`at`, facing `facingNow`) to (x, y, z), facing `toFacing`. */
-function fly(
-  f: Flight,
-  at: Vec3,
-  facingNow: number,
-  now: number,
-  beat: DroneBeat,
-  x: number,
-  y: number,
-  z: number,
-  toFacing: number,
-): void {
-  f.beat = beat;
-  f.since = now;
-  f.from.x = at.x;
-  f.from.y = at.y;
-  f.from.z = at.z;
-  f.to.x = x;
-  f.to.y = y;
-  f.to.z = z;
-  f.fromFacing = facingNow;
-  f.toFacing = toFacing;
-}
-
-/** Fly to the review under way, or home to the pad when there's none. */
-function moveOn(f: Flight, at: Vec3, facingNow: number, now: number, next: Target | null): void {
-  f.lostAt = -1;
-  f.crewId = next?.crewId ?? null;
-  if (next) fly(f, at, facingNow, now, "flying", next.x, HOVER_Y, next.z, next.facing);
-  else
-    fly(
-      f,
-      at,
-      facingNow,
-      now,
-      "returning",
-      INSPECTOR_DOCK.x,
-      DOCK_Y,
-      INSPECTOR_DOCK.z,
-      DOCK_FACING,
-    );
 }
 
 /**
@@ -174,20 +101,8 @@ export function InspectorDrone({ deckId, crew }: { deckId: string; crew: CrewInf
     [parts],
   );
 
-  const flight = useRef<Flight>({
-    beat: "idle",
-    since: 0,
-    from: { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z },
-    to: { x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z },
-    fromFacing: DOCK_FACING,
-    toFacing: DOCK_FACING,
-    crewId: null,
-    lostAt: -1,
-    verdict: null,
-  });
-  const at = useMemo<Vec3>(() => ({ x: INSPECTOR_DOCK.x, y: DOCK_Y, z: INSPECTOR_DOCK.z }), []);
+  const flight = useMemo(restingDrone, []);
   const shake = useMemo<Vec3>(() => ({ x: 0, y: 0, z: 0 }), []);
-  const facing = useRef(DOCK_FACING);
 
   const root = useRef<Group>(null);
   const wobble = useRef<Group>(null);
@@ -199,59 +114,21 @@ export function InspectorDrone({ deckId, crew }: { deckId: string; crew: CrewInf
       if (msg.type !== "crew.inspection" || msg.deckId !== deckId) return;
       const beat = verdictOf(msg);
       if (!beat) return;
-      const f = flight.current;
-      // Its own review's verdict, or (resting at its pad) one it never got to fly to.
-      const resting = f.beat === "idle" || f.beat === "returning";
-      if (f.crewId !== msg.crewId && !resting) return;
-      f.verdict = { crewId: msg.crewId, beat };
+      if (!hearVerdict(flight, msg.crewId, beat)) return;
       if (beat === "cleared") chime();
     });
   }, [client, deckId]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;
-    const f = flight.current;
-
-    const next = targetRef.current;
-
-    // A verdict plays where it is, then it moves on.
-    if (f.verdict) {
-      f.beat = f.verdict.beat;
-      f.since = now;
-      f.crewId = null;
-      f.verdict = null;
-      // Settle where it is: a flight cut short stops here.
-      f.from.x = f.to.x = at.x;
-      f.from.y = f.to.y = at.y;
-      f.from.z = f.to.z = at.z;
-      f.fromFacing = f.toFacing = facing.current;
-    }
-    const verdict = f.beat === "cleared" || f.beat === "flagged" || f.beat === "failed";
-    const elapsed = now - f.since;
-    if (next) f.lostAt = -1;
-    if (verdict) {
-      if (elapsed >= VERDICT_S) moveOn(f, at, facing.current, now, next);
-    } else if (next && next.crewId !== f.crewId) {
-      moveOn(f, at, facing.current, now, next);
-    } else if (!next && f.crewId) {
-      // Its review is gone: wait a moment for the verdict, then head home.
-      if (f.lostAt < 0) f.lostAt = now;
-      else if (now - f.lostAt >= LINGER_S) moveOn(f, at, facing.current, now, null);
-    } else if (f.beat === "flying" && elapsed >= FLY_S) {
-      f.beat = "scanning";
-    } else if (f.beat === "returning" && elapsed >= FLY_S) {
-      f.beat = "idle";
-    }
-
-    const t = (now - f.since) / FLY_S;
-    droneFlight(f.from, f.to, f.beat === "flying" || f.beat === "returning" ? t : 1, at);
-    facing.current = turn(f.fromFacing, f.toFacing, Math.min(1, Math.max(0, t)));
+    const f = droneStep(flight, now, targetRef.current);
+    const { at } = f;
     beatOffset(f.beat, f.beat === "idle" ? now : now - f.since, shake);
 
     const group = root.current;
     if (group) {
       group.position.set(at.x, at.y, at.z);
-      group.rotation.y = facing.current;
+      group.rotation.y = f.facing;
     }
     wobble.current?.position.set(shake.x, shake.y, shake.z);
 
