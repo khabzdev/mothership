@@ -12,6 +12,7 @@ import {
   BOARD_STAND_Z,
   SHIP_STOP,
   FLIGHT_CONTROL,
+  INSPECTOR_DOCK,
   flightControlInReach,
   boardInReach,
   departurePath,
@@ -172,5 +173,23 @@ describe("deck layout", () => {
     expect(Math.hypot(SHIP_PAD.x - LAUNCH_PAD.x, SHIP_PAD.z - LAUNCH_PAD.z)).toBeGreaterThanOrEqual(
       6,
     );
+  });
+});
+
+describe("Inspector dock", () => {
+  test("just east of Flight Control, on the deck and clear of every collider", () => {
+    expect(INSPECTOR_DOCK).toEqual({ x: FLIGHT_CONTROL.x + 2.4, z: FLIGHT_CONTROL.z - 0.6 });
+    expect(INSPECTOR_DOCK.x).toBeGreaterThan(DECK.minX);
+    expect(INSPECTOR_DOCK.x).toBeLessThan(DECK.maxX);
+    expect(INSPECTOR_DOCK.z).toBeGreaterThan(DECK.minZ);
+    expect(INSPECTOR_DOCK.z).toBeLessThan(DECK.maxZ);
+    const inside = COLLIDERS.filter(
+      (b) =>
+        INSPECTOR_DOCK.x > b.minX &&
+        INSPECTOR_DOCK.x < b.maxX &&
+        INSPECTOR_DOCK.z > b.minZ &&
+        INSPECTOR_DOCK.z < b.maxZ,
+    );
+    expect(inside).toEqual([]);
   });
 });

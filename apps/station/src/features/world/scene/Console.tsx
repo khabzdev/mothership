@@ -1,4 +1,4 @@
-import type { BriefInfo, CrewInfo, PreflightInfo } from "@mothership/protocol";
+import type { BriefInfo, CrewInfo, InspectionInfo, PreflightInfo } from "@mothership/protocol";
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
@@ -19,6 +19,7 @@ import { GLOW, KIT, PAINTED } from "./materials";
 import { KAYKIT_SCALE } from "./models";
 import { Lamps } from "./Lamps";
 import { paintBrief, showsBriefPanel } from "./paint-brief";
+import { paintInspection, showsInspectionPanel } from "./paint-inspection";
 import { paintPreflight, showsPreflightPanel } from "./paint-preflight";
 import { paintScreen } from "./paint-screen";
 import { STATUS_COLORS } from "./status";
@@ -36,13 +37,18 @@ function HoloScreen({
   placeholder,
   preflight,
   brief,
+  inspection,
   status,
+  atConsole,
 }: {
   crewId?: string;
   placeholder: string;
   preflight?: PreflightInfo;
   brief?: BriefInfo;
+  inspection?: InspectionInfo;
   status?: CrewInfo["status"];
+  /** The captain stands at this console: show the keys. */
+  atConsole: boolean;
 }) {
   const screen = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -64,6 +70,12 @@ function HoloScreen({
   const shownAt = useRef(0);
   if (!panel) shownAt.current = 0;
   else if (!shownAt.current) shownAt.current = Date.now();
+  const inspectionPanel = !briefPanel && !panel && showsInspectionPanel(inspection, status);
+  const inspectionState = inspection?.state;
+  const inspectionQueued = inspection?.queued;
+  const inspectionBlockers = inspection?.blockers;
+  const inspectionNotes = inspection?.notes;
+  const firstBlocker = inspection?.firstBlocker;
 
   useEffect(() => {
     const { canvas, ctx, texture } = screen;
@@ -84,6 +96,18 @@ function HoloScreen({
       const tick = preflight.state === "running" ? setInterval(paint, 1000) : undefined;
       return () => clearInterval(tick);
     }
+    if (inspectionPanel && inspectionState && inspectionBlockers !== undefined) {
+      const shown: InspectionInfo = {
+        state: inspectionState,
+        blockers: inspectionBlockers,
+        notes: inspectionNotes ?? 0,
+        ...(firstBlocker !== undefined && { firstBlocker }),
+        ...(inspectionQueued && { queued: inspectionQueued }),
+      };
+      paintInspection(ctx, canvas.width, canvas.height, shown, atConsole);
+      texture.needsUpdate = true;
+      return;
+    }
     const paint = () => {
       const frame = crewId ? getScreen(crewId)?.frame : undefined;
       paintScreen(ctx, canvas.width, canvas.height, frame, placeholder);
@@ -101,6 +125,13 @@ function HoloScreen({
     briefRevision,
     briefState,
     briefGoal,
+    inspectionPanel,
+    inspectionState,
+    inspectionQueued,
+    inspectionBlockers,
+    inspectionNotes,
+    firstBlocker,
+    atConsole,
   ]);
 
   useEffect(() => () => screen.texture.dispose(), [screen]);
@@ -255,7 +286,9 @@ export function Console({
           crewId={crew?.id}
           preflight={crew?.preflight}
           brief={crew?.brief}
+          inspection={crew?.inspection}
           status={crew?.status}
+          atConsole={active}
           placeholder={!crew ? "STANDBY" : crew.status === "asleep" ? "OFFLINE" : "BOOTING…"}
         />
       </group>

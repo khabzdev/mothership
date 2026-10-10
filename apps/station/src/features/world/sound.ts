@@ -267,6 +267,13 @@ export function playCheck(verdict: "go" | "nogo" | "skipped"): void {
   }
 }
 
+/** The Inspector cleared a change: a soft high pair, quieter than the done ding (only if sound is on). */
+export function chime(): void {
+  if (ctx?.state !== "running") return;
+  bell(1319, 0, 0.1, 0.5);
+  bell(1760, 0.1, 0.08, 0.6);
+}
+
 /** Say a line aloud, dropping whatever was still queued; silent where speech isn't available. */
 export function speak(line: string): void {
   if (ctx?.state !== "running" || typeof speechSynthesis === "undefined") return;

@@ -64,6 +64,8 @@ export const FLIGHT_CONTROL = { x: -4.5, z: DECK.maxZ } as const;
 /** The desk's footprint, its back to the south edge. */
 export const FLIGHT_CONTROL_DESK = { width: 2.4, depth: 0.8, height: 0.9 } as const;
 const SOUTH_EDGE = DECK.maxZ - 0.15;
+/** The Inspector drone's hover pad, just east of Flight Control's desk. */
+export const INSPECTOR_DOCK = { x: FLIGHT_CONTROL.x + 2.4, z: FLIGHT_CONTROL.z - 0.6 } as const;
 
 /** Standing in front of the Flight Control desk. */
 export function flightControlInReach(x: number, z: number, reach = 1.6): boolean {
