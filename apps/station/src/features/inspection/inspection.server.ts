@@ -1,9 +1,7 @@
 import type { InspectionInfo, InspectionState, ServerMsg } from "@mothership/protocol";
 import type { LaunchPlan, ProviderAdapter } from "@mothership/providers";
 import { and, desc, eq, notInArray, sql, type SQL } from "drizzle-orm";
-import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { promisify } from "node:util";
 import type { Db } from "../../shared/db/client.server";
 import { crew as crewTable, decks, inspections } from "../../shared/db/schema";
 import type { BriefService } from "../briefs/briefs.server";
@@ -13,13 +11,12 @@ import type { CheckService } from "../preflight/checks.server";
 import { fingerprint as worktreeFingerprint } from "../preflight/fingerprint.server";
 import { afterVerdict } from "../preflight/flight";
 import type { PreflightService } from "../preflight/preflight.server";
+import { homeRefOf } from "../changes/git.server";
 import { readInspectionDiff } from "./diff.server";
 import { flaggedDetail, inspectionHandBack, type Finding } from "./model";
 import { parseReview, reviewFailure, reviewPrompt } from "./review";
 import { REVIEW_TIMEOUT_MS, runReview, type RunReview } from "./runner.server";
 import { scopeCheck, type ChangedStat } from "./scope";
-
-const exec = promisify(execFile);
 
 /** At most this many AI reviews run at once, station-wide; the rest wait their turn. */
 export const MAX_REVIEWS = 1;
@@ -130,7 +127,7 @@ export class InspectionService {
     this.#run = deps.run ?? runReview;
     this.#readDiff = deps.readDiff ?? readInspectionDiff;
     this.#fingerprint = deps.fingerprint ?? worktreeFingerprint;
-    this.#homeRef = deps.homeRef ?? ((crewId) => this.#deckHead(crewId));
+    this.#homeRef = deps.homeRef ?? (async (crewId) => homeRefOf(this.#crew.workdir(crewId)));
     this.#crew.onPrompt(({ crewId }) => {
       if (!this.#handingBack.has(crewId)) this.cancel(crewId);
     });
@@ -542,14 +539,6 @@ export class InspectionService {
       name: r.name,
       verdict: r.verdict,
     }));
-  }
-
-  /** The deck checkout's HEAD, which a worktree of its own branched from; null without one. */
-  async #deckHead(crewId: string): Promise<string | null> {
-    const { repoPath, ownWorktree } = this.#crew.workdir(crewId);
-    if (!ownWorktree) return null;
-    const { stdout } = await exec("git", ["-C", repoPath, "rev-parse", "HEAD"]);
-    return stdout.trim();
   }
 
   #records(where: SQL, limit?: number): InspectionRecord[] {

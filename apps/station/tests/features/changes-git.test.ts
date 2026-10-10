@@ -14,6 +14,7 @@ import {
   commitAll,
   discardAll,
   discardFile,
+  homeRefOf,
   readChanges,
   readDiff,
 } from "../../src/features/changes/git.server.ts";
@@ -41,6 +42,21 @@ beforeEach(() => {
 });
 
 afterEach(() => rmSync(scratch, { recursive: true, force: true }));
+
+describe("homeRefOf", () => {
+  test("a worktree of its own measures from the deck checkout's HEAD", async () => {
+    expect(await homeRefOf({ repoPath: repo, ownWorktree: true })).toBe(home);
+    writeFileSync(join(repo, "a.txt"), "moved on\n");
+    git(repo, "commit", "-qam", "Deck moved on");
+    expect(await homeRefOf({ repoPath: repo, ownWorktree: true })).toBe(
+      git(repo, "rev-parse", "HEAD").trim(),
+    );
+  });
+
+  test("the deck's shared checkout has none", async () => {
+    expect(await homeRefOf({ repoPath: repo, ownWorktree: false })).toBeNull();
+  });
+});
 
 describe("readChanges", () => {
   test("a fresh worktree has nothing changed", async () => {

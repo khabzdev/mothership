@@ -13,6 +13,18 @@ const MAX_FILES = 300;
 const MAX_DIFF = 200_000;
 
 /**
+ * What a crew member's changes are measured against: in a worktree of its own, the deck
+ * checkout's HEAD (which it branched from); in the deck's shared checkout, nothing.
+ */
+export async function homeRefOf(workdir: {
+  repoPath: string;
+  ownWorktree: boolean;
+}): Promise<string | null> {
+  if (!workdir.ownWorktree) return null;
+  return (await git(workdir.repoPath, ["rev-parse", "HEAD"])).trim();
+}
+
+/**
  * What a crew member changed in `cwd` (agent-office's Changes window). In its own worktree that's
  * everything since it branched off the deck's checkout (`homeRef`), committed or not; in the deck's
  * shared checkout it's just what isn't committed yet.

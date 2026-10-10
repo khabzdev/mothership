@@ -1,19 +1,13 @@
-import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { promisify } from "node:util";
 import { getStation } from "../../app/station.server";
-import { commitAll, discardAll, discardFile, readChanges, readDiff } from "./git.server";
+import { commitAll, discardAll, discardFile, homeRefOf, readChanges, readDiff } from "./git.server";
 import type { ChangedFile } from "./model";
-
-const run = promisify(execFile);
 
 /** A crew member's checkout and what its changes are measured against. */
 async function checkout(crewId: string): Promise<{ cwd: string; homeRef: string | null }> {
-  const { cwd, repoPath, ownWorktree } = getStation().crew.workdir(crewId);
-  if (!existsSync(cwd)) throw new Error("Its worktree is gone");
-  if (!ownWorktree) return { cwd, homeRef: null };
-  const { stdout } = await run("git", ["-C", repoPath, "rev-parse", "HEAD"]);
-  return { cwd, homeRef: stdout.trim() };
+  const workdir = getStation().crew.workdir(crewId);
+  if (!existsSync(workdir.cwd)) throw new Error("Its worktree is gone");
+  return { cwd: workdir.cwd, homeRef: await homeRefOf(workdir) };
 }
 
 export async function changesOf(crewId: string) {
