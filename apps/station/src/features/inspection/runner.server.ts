@@ -6,6 +6,8 @@ export const REVIEW_TIMEOUT_MS = 300_000;
 /** The most review output kept; the rest is dropped. */
 export const REVIEW_OUTPUT_CAP = 1024 * 1024;
 const STDERR_TAIL = 2048;
+/** After the command exits (or is killed), how long its output may keep coming before we stop listening. */
+const EXIT_GRACE_MS = 250;
 
 export interface ReviewRun {
   ok: boolean;
@@ -33,11 +35,15 @@ export function runReview(opts: {
     let aborted = false;
     let spawnError: string | undefined;
     let settled = false;
+    let grace: ReturnType<typeof setTimeout> | undefined;
+    let stopListening = () => {};
 
     const done = (exitCode: number | null) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(grace);
+      stopListening();
       signal?.removeEventListener("abort", onAbort);
       const ok = exitCode === 0 && !timedOut && !aborted && !spawnError;
       const reason = spawnError
@@ -57,14 +63,20 @@ export function runReview(opts: {
       });
     };
 
+    let killGroup = () => {};
+    // Killed: settle shortly even if something outside the group still holds the output open.
+    const stop = () => {
+      killGroup();
+      clearTimeout(grace);
+      grace = setTimeout(() => done(null), EXIT_GRACE_MS);
+    };
     const timer = setTimeout(() => {
       timedOut = true;
-      killGroup();
+      stop();
     }, timeoutMs);
-    let killGroup = () => {};
     const onAbort = () => {
       aborted = true;
-      killGroup();
+      stop();
     };
 
     if (signal?.aborted) {
@@ -93,15 +105,21 @@ export function runReview(opts: {
         child.kill("SIGKILL");
       }
     };
+    stopListening = () => {
+      child.stdout.destroy();
+      child.stderr.destroy();
+    };
     signal?.addEventListener("abort", onAbort, { once: true });
 
-    child.stdout.on("data", (chunk: Buffer) => {
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
       if (stdout.length < REVIEW_OUTPUT_CAP) {
-        stdout = (stdout + chunk.toString("utf8")).slice(0, REVIEW_OUTPUT_CAP);
+        stdout = (stdout + chunk).slice(0, REVIEW_OUTPUT_CAP);
       }
     });
-    child.stderr.on("data", (chunk: Buffer) => {
-      stderr = (stderr + chunk.toString("utf8")).slice(-STDERR_TAIL);
+    child.stderr.on("data", (chunk: string) => {
+      stderr = (stderr + chunk).slice(-STDERR_TAIL);
     });
     // A command that exits without reading its input closes the pipe on us.
     child.stdin.on("error", () => {});
@@ -109,6 +127,15 @@ export function runReview(opts: {
     child.on("error", (err) => {
       spawnError = err.message;
       done(null);
+    });
+    // The command is through when it exits. Anything it left running in the background (and
+    // holding its output open) gets a moment to finish writing, then goes with its group.
+    child.on("exit", (code) => {
+      clearTimeout(grace);
+      grace = setTimeout(() => {
+        killGroup();
+        done(code);
+      }, EXIT_GRACE_MS);
     });
     child.on("close", (code) => {
       // Anything the command left running goes with its group.

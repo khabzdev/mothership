@@ -121,6 +121,54 @@ describe("runReview", () => {
     }
   });
 
+  test("settles on time when an escaped grandchild holds its output open", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "inspection-escape-"));
+    const pidFile = join(dir, "grandchild.pid");
+    try {
+      // The grandchild leads its own process group, so killing the run's group misses it.
+      const plan = node(
+        `const fs = require('fs'); const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {stdio:'inherit', detached:true}); fs.writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); setInterval(()=>{},1000)`,
+      );
+      const started = Date.now();
+      const r = await runReview({ plan, prompt: "x", timeoutMs: 300 });
+      expect(r).toMatchObject({ ok: false, timedOut: true });
+      expect(Date.now() - started).toBeLessThan(2000);
+    } finally {
+      const pid = readPid(pidFile);
+      if (pid > 0 && alive(pid)) process.kill(pid, "SIGKILL");
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("settles soon after the command exits even when a grandchild keeps its output open", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "inspection-exit-"));
+    const pidFile = join(dir, "grandchild.pid");
+    try {
+      const plan = node(
+        `const fs = require('fs'); const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {stdio:'inherit', detached:true}); c.unref(); fs.writeFileSync(${JSON.stringify(pidFile)}, String(c.pid)); process.stdout.write('done', () => process.exit(0))`,
+      );
+      const started = Date.now();
+      const r = await runReview({ plan, prompt: "x", timeoutMs: 20_000 });
+      expect(r).toMatchObject({ ok: true, stdout: "done", exitCode: 0 });
+      expect(Date.now() - started).toBeLessThan(2000);
+    } finally {
+      const pid = readPid(pidFile);
+      if (pid > 0 && alive(pid)) process.kill(pid, "SIGKILL");
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("multi-byte characters split across chunks come through whole", async () => {
+    const r = await runReview({
+      plan: node(
+        "const b = Buffer.from('héllo ✓'); process.stdout.write(b.subarray(0, 2)); setTimeout(() => process.stdout.write(b.subarray(2)), 50)",
+      ),
+      prompt: "x",
+      timeoutMs: 10_000,
+    });
+    expect(r.stdout).toBe("héllo ✓");
+  });
+
   test("an already aborted signal never starts the command", async () => {
     const ac = new AbortController();
     ac.abort();
