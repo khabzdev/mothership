@@ -4,8 +4,10 @@ import { consoleSeat, type ConsoleDef } from "./layout";
 // The Inspector drone's moves: where it goes, how it flies there and how it reacts to a verdict.
 // Pure and allocation-free, so the scene can call it every frame.
 
-/** How high the drone hovers over a console it's inspecting (m). */
-export const HOVER_Y = 1.6;
+/** How high the drone hovers over a console it's inspecting (m): above the crew name tags. */
+export const HOVER_Y = 2.9;
+/** How much bigger the drone is drawn than its modelled size, so it reads from the default camera. */
+export const DRONE_SCALE = 1.4;
 /** How high it hovers over its pad. */
 export const DOCK_Y = 0.9;
 /** How long a flight takes (s). */

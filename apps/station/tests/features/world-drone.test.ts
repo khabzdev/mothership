@@ -2,6 +2,7 @@ import type { CrewInfo, InspectionInfo } from "@mothership/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import {
   DOCK_Y,
+  DRONE_SCALE,
   HOVER_Y,
   beatOffset,
   droneFlight,
@@ -14,6 +15,13 @@ import { CONSOLES } from "../../src/features/world/layout.ts";
 const from: Vec3 = { x: -2, y: DOCK_Y, z: 12 };
 const to: Vec3 = { x: 4, y: HOVER_Y, z: -3 };
 const v = (): Vec3 => ({ x: 0, y: 0, z: 0 });
+
+describe("drone size and height", () => {
+  test("hovers above the name tags and is drawn larger", () => {
+    expect(HOVER_Y).toBe(2.9);
+    expect(DRONE_SCALE).toBe(1.4);
+  });
+});
 
 describe("droneFlight", () => {
   test("starts at from and ends at to", () => {

@@ -17,6 +17,7 @@ import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
 import {
   beatOffset,
   DOCK_Y,
+  DRONE_SCALE,
   droneFlight,
   droneTarget,
   eyeColor,
@@ -43,8 +44,8 @@ const DIM = 0.5;
 const DOCK_FACING = Math.PI;
 /** How long it waits once its review is gone before heading home: the verdict may still be on its way. */
 const LINGER_S = 0.4;
-/** The scan cone: from the eye down to the console's screen. */
-const CONE = { radius: 0.24, length: 0.7, tilt: -0.52, sweep: 0.3 };
+/** The scan cone in the drone's own (scaled) frame: from the eye down to the console's screen. */
+const CONE = { radius: 0.3, length: 1.4, tilt: -0.2, sweep: 0.3 };
 
 type Target = NonNullable<ReturnType<typeof droneTarget>>;
 type Verdict = Extract<DroneBeat, "cleared" | "flagged" | "failed">;
@@ -275,7 +276,7 @@ export function InspectorDrone({ deckId, crew }: { deckId: string; crew: CrewInf
         position={[INSPECTOR_DOCK.x, 0.012, INSPECTOR_DOCK.z]}
         rotation={[-Math.PI / 2, 0, 0]}
       />
-      <group ref={root} position={[INSPECTOR_DOCK.x, DOCK_Y, INSPECTOR_DOCK.z]}>
+      <group ref={root} position={[INSPECTOR_DOCK.x, DOCK_Y, INSPECTOR_DOCK.z]} scale={DRONE_SCALE}>
         <group ref={wobble}>
           <mesh geometry={parts.body} material={parts.shell} castShadow />
           <mesh geometry={parts.ring} material={parts.glow} rotation={[Math.PI / 2, 0, 0]} />
