@@ -91,7 +91,7 @@ export class CrewService {
   #describe: Describe | undefined;
   #busy: Busy = () => false;
   #briefWaiting: Briefed = () => false;
-  #briefApproved: Briefed = () => false;
+  #briefUnapproved: Briefed = () => false;
   /** Crew with a prompt typed by the station or the app, whose submit hook is still to come. */
   readonly #submitting = new Set<string>();
   /** Crew under a station alert, which stands until they work again. */
@@ -128,9 +128,9 @@ export class CrewService {
     this.#briefWaiting = fn;
   }
 
-  /** Ask whether a crew member has had a brief approved, so a resume needn't plan again. */
-  briefApprovedWith(fn: Briefed): void {
-    this.#briefApproved = fn;
+  /** Ask whether a crew member has briefs, none of them approved, so a resume plans again. */
+  briefUnapprovedWith(fn: Briefed): void {
+    this.#briefUnapproved = fn;
   }
 
   /** Whether a crew member's "needs you" is only Claude idling at its prompt (safe to type into). */
@@ -192,9 +192,10 @@ export class CrewService {
     if (row.status !== "asleep") throw new Error(`${row.name} is still running`);
     if (!existsSync(row.cwd)) throw new Error(`${row.name}'s worktree is gone: ${row.cwd}`);
     const shell = row.provider === "shell";
-    // Not yet approved, it resumes planning: started without plan mode, its first edit would land.
+    // Briefed but not yet approved, it resumes planning: without plan mode its first edit would
+    // land. Crew with no brief (hired before briefs) resume as they were.
     const plan =
-      row.provider === "claude-code" && !!row.task.trim() && !this.#briefApproved(crewId);
+      row.provider === "claude-code" && !!row.task.trim() && this.#briefUnapproved(crewId);
     this.#update(crewId, shell ? "idle" : "starting", { action: null, detail: null });
     try {
       await this.#deps.launcher.launch({

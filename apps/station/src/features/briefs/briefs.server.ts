@@ -127,6 +127,12 @@ export class BriefService {
     return !!latest && latest.state !== "approved";
   }
 
+  /** Whether it has briefs and none of them is approved: a resume must plan again. */
+  unapproved(crewId: string): boolean {
+    const history = this.history(crewId);
+    return history.length > 0 && !history.some((b) => b.state === "approved");
+  }
+
   latest(crewId: string): BriefRecord | null {
     return this.history(crewId)[0] ?? null;
   }

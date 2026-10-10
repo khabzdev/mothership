@@ -382,7 +382,7 @@ describe("a brief waiting", () => {
   test("resume relaunches in plan mode until a brief is approved", async () => {
     const nova = await hire(1);
     let approved = false;
-    service.briefApprovedWith((crewId) => crewId === nova.id && approved);
+    service.briefUnapprovedWith((crewId) => crewId === nova.id && !approved);
     service.handleSignal({ crewId: nova.id, signal: { type: "idle" }, sessionId: "sess-1" });
     service.handleExit(nova.id);
     await service.resume(nova.id);
@@ -397,7 +397,15 @@ describe("a brief waiting", () => {
     expect(launcher.launches.at(-1)).not.toHaveProperty("plan");
   });
 
+  test("resume never plans without a brief (hired before briefs), as before", async () => {
+    const nova = await hire(1);
+    service.handleExit(nova.id);
+    await service.resume(nova.id);
+    expect(launcher.launches.at(-1)).not.toHaveProperty("plan");
+  });
+
   test("resume never plans without a task, or for a shell", async () => {
+    service.briefUnapprovedWith(() => true);
     const blank = await hire(1, "  ");
     service.handleExit(blank.id);
     await service.resume(blank.id);

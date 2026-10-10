@@ -114,7 +114,7 @@ beforeEach(() => {
   });
   crew.describeWith((id) => ({ brief: service.info(id) }));
   crew.briefWaitingWith((id) => service.waiting(id));
-  crew.briefApprovedWith((id) => service.approved(id) !== null);
+  crew.briefUnapprovedWith((id) => service.unapproved(id));
 });
 
 afterEach(() => {
@@ -428,6 +428,13 @@ describe("BriefService", () => {
     crew.handleExit(id);
     await crew.resume(id);
     expect(launcher.launches.at(-1)).toMatchObject({ resume: "s-1" });
+    expect(launcher.launches.at(-1)!.plan).toBeUndefined();
+  });
+
+  test("a crew member with no brief resumes without plan flags", async () => {
+    const { id } = await hire();
+    crew.handleExit(id);
+    await crew.resume(id);
     expect(launcher.launches.at(-1)!.plan).toBeUndefined();
   });
 
