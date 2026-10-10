@@ -1,5 +1,6 @@
 import { CommandPalette } from "@cloudflare/kumo";
 import {
+  AirplaneTakeOff01Icon,
   ArrowUpDownIcon,
   ComputerTerminal01Icon,
   GitPullRequestIcon,
@@ -104,6 +105,7 @@ export function Palette({
     const free = CONSOLES.find((c) => !crew.some((m) => m.consoleId === c.id));
     const waiting = waitingInOrder(crew)[0];
 
+    const nogo = crew.find((m) => m.preflight?.state === "nogo");
     const actions: Entry[] = [
       ...(waiting
         ? [
@@ -115,6 +117,20 @@ export function Palette({
               run: () => {
                 jumpTo(waiting.consoleId);
                 openOverlay({ kind: "terminal", crewId: waiting.id });
+              },
+            },
+          ]
+        : []),
+      ...(nogo
+        ? [
+            {
+              id: "a:nogo",
+              title: "Crew with NO-GO",
+              subtitle: `${nogo.name}'s pre-flight failed`,
+              icon: AirplaneTakeOff01Icon,
+              run: (walk: boolean) => {
+                if (walk) jumpTo(nogo.consoleId);
+                openOverlay({ kind: "preflight", crewId: nogo.id });
               },
             },
           ]
@@ -184,6 +200,19 @@ export function Palette({
       },
     }));
 
+    const flights: Entry[] = crew
+      .filter((m) => m.kind === "agent")
+      .map((m) => ({
+        id: `f:${m.id}`,
+        title: `Pre-flight ${m.name}`,
+        subtitle: "Checks run when it stops",
+        icon: AirplaneTakeOff01Icon,
+        run: (walk) => {
+          if (walk) jumpTo(m.consoleId);
+          openOverlay({ kind: "preflight", crewId: m.id });
+        },
+      }));
+
     const consoles: Entry[] = CONSOLES.map((c) => {
       const m = crew.find((x) => x.consoleId === c.id);
       return {
@@ -234,6 +263,7 @@ export function Palette({
     const groups: Group[] = [
       { id: "actions", label: "Actions", items: actions },
       { id: "crew", label: "Crew", items: people },
+      { id: "flights", label: "Pre-flight", items: flights },
       { id: "boards", label: "Boards", items: boards },
       { id: "issues", label: "Issues", items: issues },
       { id: "pulls", label: "Pull requests", items: pulls },

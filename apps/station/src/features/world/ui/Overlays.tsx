@@ -1,5 +1,6 @@
 import { Button, Checkbox, ClipboardText } from "@cloudflare/kumo";
 import {
+  AirplaneTakeOff01Icon,
   GitBranchIcon,
   GitPullRequestIcon,
   LinkSquare02Icon,
@@ -13,6 +14,7 @@ import {
 import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
 import { QueueWindow } from "../../queue/ui/QueueWindow";
@@ -137,6 +139,19 @@ function ChangesWindow({ member }: { member: CrewInfo }) {
   );
 }
 
+function PreflightOverlay({ member }: { member: CrewInfo }) {
+  return (
+    <Modal
+      wide
+      icon={AirplaneTakeOff01Icon}
+      title={`${member.name} · pre-flight`}
+      subtitle={<StatusBadge crew={member} />}
+    >
+      <PreflightWindow member={member} />
+    </Modal>
+  );
+}
+
 function PrWindow({ member }: { member: CrewInfo }) {
   const url = member.prUrl ?? "";
   const number = /\/pull\/(\d+)/.exec(url)?.[1];
@@ -195,6 +210,10 @@ export function Overlays({
     case "changes": {
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <ChangesWindow member={member} /> : null;
+    }
+    case "preflight": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <PreflightOverlay member={member} /> : null;
     }
     case "pr": {
       const member = crew.find((c) => c.id === overlay.crewId);

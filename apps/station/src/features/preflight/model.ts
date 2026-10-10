@@ -55,3 +55,17 @@ export function parseCheckPatch(input: unknown): CheckPatch {
   }
   return patch;
 }
+
+const ID = /^[\w-]+$/;
+
+function pathSafeId(o: Record<string, unknown>, key: string): string {
+  const value = typeof o[key] === "string" ? o[key] : "";
+  if (!ID.test(value)) throw new Error(`${key} is not valid`);
+  return value;
+}
+
+/** Ids end up in a file path, so only letters, digits, `_` and `-` get through. */
+export function parseLogInput(input: unknown): { preflightId: string; checkId: string } {
+  const o = asRecord(input);
+  return { preflightId: pathSafeId(o, "preflightId"), checkId: pathSafeId(o, "checkId") };
+}

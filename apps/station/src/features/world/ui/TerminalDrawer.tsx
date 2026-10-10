@@ -1,6 +1,7 @@
 import { Button, Tooltip } from "@cloudflare/kumo";
 import { Drawer } from "@cloudflare/kumo/primitives/drawer";
 import {
+  AirplaneTakeOff01Icon,
   ArrowExpand01Icon,
   ArrowShrink01Icon,
   Cancel01Icon,
@@ -95,6 +96,16 @@ export function TerminalDrawer({ member }: { member: CrewInfo }) {
                     onClick={() => open({ kind: "changes", crewId: member.id })}
                   >
                     Changes
+                  </Button>
+                )}
+                {member.kind === "agent" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<Icon icon={AirplaneTakeOff01Icon} />}
+                    onClick={() => open({ kind: "preflight", crewId: member.id })}
+                  >
+                    Pre-flight
                   </Button>
                 )}
                 <Tooltip content={tall ? "Shorter" : "Taller"}>

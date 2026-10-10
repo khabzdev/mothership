@@ -143,6 +143,11 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           e.preventDefault();
           pullRequest(member);
           return;
+        case "KeyG":
+          if (!member || member.kind === "shell") return;
+          e.preventDefault();
+          open({ kind: "preflight", crewId: member.id });
+          return;
         case "KeyL":
           e.preventDefault();
           open({ kind: "label", consoleId });
