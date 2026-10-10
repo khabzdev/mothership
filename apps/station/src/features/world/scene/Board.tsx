@@ -23,7 +23,7 @@ const PLINTH_GEOMETRY = new BoxGeometry(1, FACE_Y - FRAME, 0.6);
 const DRAWN_PPM = (PX * 2) / 4.2;
 /** How much taller text stands on the board than the paint numbers draw it. */
 const TEXT_SCALE = 2;
-const NOTE = { rows: 2, gap: 26, lines: 3 };
+const NOTE = { rows: 2, gap: 26, lines: 2 };
 const DISPLAY = '"Big Shoulders Display", "Arial Narrow", sans-serif';
 const MONO = '"Martian Mono", ui-monospace, monospace';
 const SANS = '"Instrument Sans", ui-sans-serif, sans-serif';
