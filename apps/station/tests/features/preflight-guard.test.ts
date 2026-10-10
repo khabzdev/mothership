@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { launchGuard } from "../../src/features/preflight/guard.ts";
+import { INSPECTOR_GUARD, launchGuard } from "../../src/features/preflight/guard.ts";
 import { prEvidence } from "../../src/features/preflight/report.ts";
 import type { PreflightRecord } from "../../src/features/preflight/preflight.server.ts";
 
@@ -85,10 +85,12 @@ describe("prEvidence", () => {
 });
 
 describe("launchGuard with the Inspector", () => {
-  const NOT_CLEARED = "The Inspector hasn't cleared this commit. Launch anyway?";
+  const NOT_CLEARED = INSPECTOR_GUARD;
   const go = record();
   const cur = { hash: "same" };
   const on = (latest: { state: string; fingerprint: string } | null) => ({ on: true, latest });
+  test("the exported reason is the spec copy", () =>
+    expect(INSPECTOR_GUARD).toBe("The Inspector hasn't cleared this commit. Launch anyway?"));
   test("flagged", () =>
     expect(launchGuard(go, cur, true, on({ state: "flagged", fingerprint: "same" }))).toBe(
       NOT_CLEARED,
