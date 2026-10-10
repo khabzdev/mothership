@@ -115,6 +115,13 @@ export class CheckService {
   }
 
   message(deckId: string): ServerMsg {
-    return { type: "deck.checks", deckId, armed: this.armed(deckId), checks: this.list(deckId) };
+    const deck = this.#db.select().from(decks).where(eq(decks.id, deckId)).get();
+    return {
+      type: "deck.checks",
+      deckId,
+      armed: this.armed(deckId),
+      checks: this.list(deckId),
+      inspector: deck?.inspector ?? true,
+    };
   }
 }

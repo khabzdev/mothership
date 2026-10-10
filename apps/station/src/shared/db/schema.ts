@@ -31,6 +31,8 @@ export const decks = sqliteTable("decks", {
   queueLimit: integer("queue_limit").notNull().default(3),
   /** Whether pre-flight checks run on this deck: null until the user has been asked. */
   checksArmed: integer("checks_armed", { mode: "boolean" }),
+  /** Whether the Inspector reviews every stop on this deck. */
+  inspector: integer("inspector", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
 });
 
@@ -182,6 +184,45 @@ export const briefs = sqliteTable(
     index("briefs_crew_idx").on(t.crewId, t.revision),
     check("briefs_state_check", oneOf("state", BRIEF_STATES)),
     check("briefs_approved_by_check", oneOf("approved_by", BRIEF_APPROVERS)),
+  ],
+);
+
+export const INSPECTION_TRIGGERS = ["stop", "manual"] as const;
+export const INSPECTION_STATES = ["running", "cleared", "flagged", "cancelled"] as const;
+
+/**
+ * One inspection: the Inspector's review of a crew member's change. Kept after the crew member
+ * leaves, so the deck's history still shows it.
+ */
+export const inspections = sqliteTable(
+  "inspections",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    crewId: text("crew_id").notNull(),
+    flight: integer("flight").notNull(),
+    attempt: integer("attempt").notNull(),
+    trigger: text("trigger", { enum: INSPECTION_TRIGGERS }).notNull(),
+    state: text("state", { enum: INSPECTION_STATES }).notNull().default("running"),
+    /** Why it was cancelled. */
+    reason: text("reason"),
+    /** The worktree fingerprint inspected. */
+    fingerprint: text("fingerprint").notNull(),
+    /** HEAD when it started. */
+    commit: text("commit").notNull(),
+    /** JSON `Finding[]`. */
+    findings: text("findings").notNull().default("[]"),
+    /** The brief it was checked against. */
+    briefId: text("brief_id"),
+    startedAt: integer("started_at").notNull().default(now),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => [
+    index("inspections_crew_idx").on(t.crewId, t.startedAt),
+    check("inspections_state_check", oneOf("state", INSPECTION_STATES)),
+    check("inspections_trigger_check", oneOf("trigger", INSPECTION_TRIGGERS)),
   ],
 );
 

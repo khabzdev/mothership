@@ -8,6 +8,7 @@ export const realtimeKeys = {
   checks: (deckId: string) => ["decks", deckId, "checks"] as const,
   preflight: (crewId: string) => ["preflight", crewId] as const,
   brief: (crewId: string) => ["brief", crewId] as const,
+  inspection: (crewId: string) => ["inspection", crewId] as const,
   decks: ["decks"] as const,
   clones: ["clones"] as const,
 };
@@ -22,11 +23,14 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
     queryClient.setQueryData(realtimeKeys.checks(msg.deckId), {
       armed: msg.armed,
       checks: msg.checks,
+      inspector: msg.inspector,
     });
   else if (msg.type === "crew.preflight")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.preflight(msg.crewId) });
   else if (msg.type === "crew.brief")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.brief(msg.crewId) });
+  else if (msg.type === "crew.inspection")
+    void queryClient.invalidateQueries({ queryKey: realtimeKeys.inspection(msg.crewId) });
   else if (msg.type === "deck.clones") {
     const known = queryClient.getQueryData<{ id: string }[]>(realtimeKeys.decks) ?? [];
     queryClient.setQueryData(realtimeKeys.clones, msg.clones);

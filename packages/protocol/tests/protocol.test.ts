@@ -40,6 +40,7 @@ describe("types", () => {
       | "crew.screen"
       | "crew.preflight"
       | "crew.brief"
+      | "crew.inspection"
       | "deck.labels"
       | "deck.checks"
       | "deck.clones"
@@ -158,6 +159,26 @@ describe("parseServerMsg", () => {
     },
     { type: "crew.brief", deckId: "d1", crewId: "c1" },
     {
+      type: "crew.roster",
+      deckId: "d1",
+      crew: [
+        {
+          ...nova,
+          inspection: { state: "flagged", blockers: 1, notes: 0, firstBlocker: "T" },
+        },
+        { ...nova, inspection: { state: "running", blockers: 0, notes: 0, queued: true } },
+      ],
+    },
+    { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1", state: "cleared" },
+    {
+      type: "crew.inspection",
+      deckId: "d1",
+      crewId: "c1",
+      inspectionId: "i1",
+      state: "cancelled",
+      failed: "timed out",
+    },
+    {
       type: "crew.screen",
       crewId: "c1",
       frame: { cols: 80, rows: 2, lines: [[["hi", -1, -1, 0]], []] },
@@ -172,6 +193,7 @@ describe("parseServerMsg", () => {
       deckId: "d1",
       armed: null,
       checks: [{ id: "k1", name: "test", command: "vp test", timeoutMs: 300000, enabled: true }],
+      inspector: true,
     },
     {
       type: "deck.clones",
@@ -225,6 +247,28 @@ describe("parseServerMsg", () => {
     expect(parseServerMsg(roster({ brief: { ...brief, goal: 5 } }))).toBeNull();
     expect(parseServerMsg(roster({ cleanBriefs: -1 }))).toBeNull();
     expect(parseServerMsg(roster({ cleanBriefs: 1.5 }))).toBeNull();
+  });
+
+  test("rejects a malformed inspection summary or crew.inspection", () => {
+    const roster = (inspection: object) =>
+      JSON.stringify({ type: "crew.roster", deckId: "d1", crew: [{ ...nova, inspection }] });
+    const ok = { state: "flagged", blockers: 1, notes: 0, firstBlocker: "T" };
+    expect(parseServerMsg(roster(ok))).not.toBeNull();
+    expect(parseServerMsg(roster({ ...ok, blockers: "1" }))).toBeNull();
+    expect(parseServerMsg(roster({ ...ok, state: "bogus" }))).toBeNull();
+    expect(parseServerMsg(roster({ ...ok, firstBlocker: 5 }))).toBeNull();
+    expect(parseServerMsg(roster({ ...ok, queued: false }))).toBeNull();
+    const msg = { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1" };
+    expect(parseServerMsg(JSON.stringify({ ...msg, state: "bogus" }))).toBeNull();
+    expect(parseServerMsg(JSON.stringify({ ...msg, state: "cleared", failed: 3 }))).toBeNull();
+    expect(
+      parseServerMsg(JSON.stringify({ ...msg, state: "cleared", inspectionId: "" })),
+    ).toBeNull();
+  });
+
+  test("rejects a deck.checks without the inspector flag", () => {
+    const raw = JSON.stringify({ type: "deck.checks", deckId: "d1", armed: null, checks: [] });
+    expect(parseServerMsg(raw)).toBeNull();
   });
 
   test("rejects a crew.brief without a crewId", () => {

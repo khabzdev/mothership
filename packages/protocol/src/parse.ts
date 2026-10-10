@@ -10,6 +10,9 @@ import {
   type CheckVerdict,
   type CrewInfo,
   type DeckCheck,
+  INSPECTION_STATES,
+  type InspectionInfo,
+  type InspectionState,
   PREFLIGHT_STATES,
   type PreflightInfo,
   type Run,
@@ -96,6 +99,21 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return isId(o.deckId) && isId(o.crewId)
         ? { type: o.type, deckId: o.deckId, crewId: o.crewId }
         : null;
+    case "crew.inspection":
+      return isId(o.deckId) &&
+        isId(o.crewId) &&
+        isId(o.inspectionId) &&
+        INSPECTION_STATES.includes(o.state as InspectionState) &&
+        (o.failed === undefined || typeof o.failed === "string")
+        ? {
+            type: o.type,
+            deckId: o.deckId,
+            crewId: o.crewId,
+            inspectionId: o.inspectionId,
+            state: o.state as InspectionState,
+            ...(o.failed !== undefined && { failed: o.failed as string }),
+          }
+        : null;
     case "deck.labels":
       return isId(o.deckId) && Array.isArray(o.labels) && o.labels.every(isConsoleLabel)
         ? { type: o.type, deckId: o.deckId, labels: o.labels }
@@ -104,8 +122,15 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return isId(o.deckId) &&
         (o.armed === null || typeof o.armed === "boolean") &&
         Array.isArray(o.checks) &&
-        o.checks.every(isDeckCheck)
-        ? { type: o.type, deckId: o.deckId, armed: o.armed, checks: o.checks }
+        o.checks.every(isDeckCheck) &&
+        typeof o.inspector === "boolean"
+        ? {
+            type: o.type,
+            deckId: o.deckId,
+            armed: o.armed,
+            checks: o.checks,
+            inspector: o.inspector,
+          }
         : null;
     case "deck.clones":
       return Array.isArray(o.clones) && o.clones.every(isCloneInfo)
@@ -209,6 +234,7 @@ function isCrewInfo(value: unknown): value is CrewInfo {
     CREW_STATUSES.includes(c.status as CrewInfo["status"]) &&
     (c.preflight === undefined || isPreflightInfo(c.preflight)) &&
     (c.brief === undefined || isBriefInfo(c.brief)) &&
+    (c.inspection === undefined || isInspectionInfo(c.inspection)) &&
     (c.cleanBriefs === undefined ||
       (Number.isInteger(c.cleanBriefs) && (c.cleanBriefs as number) >= 0))
   );
@@ -222,6 +248,20 @@ function isBriefInfo(value: unknown): value is BriefInfo {
     (b.revision as number) >= 1 &&
     BRIEF_STATES.includes(b.state as BriefInfo["state"]) &&
     typeof b.goal === "string"
+  );
+}
+
+function isInspectionInfo(value: unknown): value is InspectionInfo {
+  if (typeof value !== "object" || value === null) return false;
+  const i = value as Record<string, unknown>;
+  return (
+    INSPECTION_STATES.includes(i.state as InspectionState) &&
+    Number.isInteger(i.blockers) &&
+    (i.blockers as number) >= 0 &&
+    Number.isInteger(i.notes) &&
+    (i.notes as number) >= 0 &&
+    (i.firstBlocker === undefined || typeof i.firstBlocker === "string") &&
+    (i.queued === undefined || i.queued === true)
   );
 }
 

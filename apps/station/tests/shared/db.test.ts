@@ -2,7 +2,13 @@ import { eq } from "drizzle-orm";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vite-plus/test";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
-import { crew, decks, preflightResults, preflights } from "../../src/shared/db/schema.ts";
+import {
+  crew,
+  decks,
+  inspections,
+  preflightResults,
+  preflights,
+} from "../../src/shared/db/schema.ts";
 
 const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
 let db: Db;
@@ -47,10 +53,45 @@ describe("database", () => {
       "crew",
       "deck_checks",
       "decks",
+      "inspections",
       "preflight_results",
       "preflights",
       "queue_tasks",
     ]);
+  });
+
+  test("a new deck has the Inspector on", () => {
+    expect(deck().inspector).toBe(true);
+  });
+
+  test("inspections check their state and trigger", () => {
+    const d = deck();
+    const row = {
+      id: "i1",
+      deckId: d.id,
+      crewId: "c1",
+      flight: 1,
+      attempt: 1,
+      trigger: "stop" as const,
+      state: "running" as const,
+      fingerprint: "f",
+      commit: "abc",
+      findings: "[]",
+    };
+    db.insert(inspections).values(row).run();
+    expect(db.select().from(inspections).get()).toMatchObject({ reason: null, briefId: null });
+    expect(() =>
+      db
+        .insert(inspections)
+        .values({ ...row, id: "i2", state: "bogus" as never })
+        .run(),
+    ).toThrow(/CHECK/);
+    expect(() =>
+      db
+        .insert(inspections)
+        .values({ ...row, id: "i3", trigger: "bogus" as never })
+        .run(),
+    ).toThrow(/CHECK/);
   });
 
   test("enables foreign keys", () => {

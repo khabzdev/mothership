@@ -1,3 +1,5 @@
+import type { InspectionInfo } from "@mothership/protocol";
+
 /** How serious a finding is: a blocker is handed back, a note is only shown. */
 export type Severity = "blocker" | "note";
 
@@ -16,14 +18,6 @@ export const MAX_FINDINGS = 10;
 
 /** The longest finding title, ellipsis included. */
 export const TITLE_MAX = 80;
-
-/** What a crew row knows about its latest inspection (moves to the protocol package later). */
-export interface InspectionInfo {
-  state: "running" | "cleared" | "flagged" | "cancelled";
-  blockers: number;
-  notes: number;
-  firstBlocker?: string;
-}
 
 const asRecord = (input: unknown) =>
   (typeof input === "object" && input !== null ? input : {}) as Record<string, unknown>;

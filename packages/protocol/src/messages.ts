@@ -57,6 +57,19 @@ export interface BriefInfo {
   goal: string;
 }
 
+export const INSPECTION_STATES = ["running", "cleared", "flagged", "cancelled"] as const;
+export type InspectionState = (typeof INSPECTION_STATES)[number];
+
+/** A crew member's latest inspection this flight, as the roster shows it. */
+export interface InspectionInfo {
+  state: InspectionState;
+  blockers: number;
+  notes: number;
+  firstBlocker?: string;
+  /** Running, but the AI review hasn't started yet. */
+  queued?: true;
+}
+
 /** A crew member at a console on a deck (agent-office's WorkerInfo). */
 export interface CrewInfo {
   id: CrewId;
@@ -78,6 +91,7 @@ export interface CrewInfo {
   prUrl?: string;
   preflight?: PreflightInfo;
   brief?: BriefInfo;
+  inspection?: InspectionInfo;
   /** A running total of briefs approved as first written, at revision 1 (omitted when 0). */
   cleanBriefs?: number;
 }
@@ -156,8 +170,23 @@ export type ServerMsg =
     }
   /** A crew member's brief changed (submitted, approved, revised). */
   | { type: "crew.brief"; deckId: DeckId; crewId: CrewId }
+  /** A crew member's inspection changed; `failed` says why it couldn't run. */
+  | {
+      type: "crew.inspection";
+      deckId: DeckId;
+      crewId: CrewId;
+      inspectionId: string;
+      state: InspectionState;
+      failed?: string;
+    }
   | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
-  | { type: "deck.checks"; deckId: DeckId; armed: boolean | null; checks: DeckCheck[] }
+  | {
+      type: "deck.checks";
+      deckId: DeckId;
+      armed: boolean | null;
+      checks: DeckCheck[];
+      inspector: boolean;
+    }
   | { type: "deck.clones"; clones: CloneInfo[] }
   /** A pull request merged: the launch klaxon. `crewId` is the crew member it came from, if known. */
   | { type: "pr.merged"; deckId: DeckId; number: number; title: string; crewId?: CrewId }

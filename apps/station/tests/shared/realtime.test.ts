@@ -129,9 +129,35 @@ describe("applyServerMsg", () => {
     const checks = [
       { id: "k1", name: "test", command: "vp test", timeoutMs: 300_000, enabled: true },
     ];
-    applyServerMsg(qc, { type: "deck.checks", deckId: "d1", armed: true, checks });
-    expect(qc.getQueryData(realtimeKeys.checks("d1"))).toEqual({ armed: true, checks });
+    applyServerMsg(qc, {
+      type: "deck.checks",
+      deckId: "d1",
+      armed: true,
+      checks,
+      inspector: false,
+    });
+    expect(qc.getQueryData(realtimeKeys.checks("d1"))).toEqual({
+      armed: true,
+      checks,
+      inspector: false,
+    });
     expect(realtimeKeys.checks("d1")).toEqual(["decks", "d1", "checks"]);
+  });
+
+  test("a crew.inspection makes that crew member's inspection stale", () => {
+    const qc = new QueryClient();
+    qc.setQueryData(realtimeKeys.inspection("c1"), { latest: null });
+    qc.setQueryData(realtimeKeys.inspection("c2"), { latest: null });
+    applyServerMsg(qc, {
+      type: "crew.inspection",
+      deckId: "d1",
+      crewId: "c1",
+      inspectionId: "i1",
+      state: "flagged",
+    });
+    expect(qc.getQueryState(realtimeKeys.inspection("c1"))?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(realtimeKeys.inspection("c2"))?.isInvalidated).toBe(false);
+    expect(realtimeKeys.inspection("c1")).toEqual(["inspection", "c1"]);
   });
 
   test("a finished pre-flight check makes its crew member's pre-flight stale", () => {

@@ -89,6 +89,7 @@ describe("CloneManager", () => {
           modules: [],
           queueLimit: 3,
           checksArmed: null,
+          inspector: true,
           createdAt: new Date(),
         } as Deck;
       },

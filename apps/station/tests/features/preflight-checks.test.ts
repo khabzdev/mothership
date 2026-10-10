@@ -49,6 +49,7 @@ describe("CheckService", () => {
       deckId: "deck-1",
       armed: true,
       checks: service.list("deck-1"),
+      inspector: true,
     });
   });
 
