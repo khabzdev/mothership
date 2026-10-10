@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vite-plus/test";
-import { DECK, GARAGE_DOOR, LAUNCH_PAD, SHIP_PAD } from "../../src/features/world/layout";
+import { BOARDS, DECK, GARAGE_DOOR, LAUNCH_PAD, SHIP_PAD } from "../../src/features/world/layout";
 import { ISLAND, TILE } from "../../src/features/world/island";
 import { GARAGE, OUTPOST, OUTPOST_SCALE, PAD_CLEARINGS } from "../../src/features/world/outpost";
 import type { Placement } from "../../src/features/world/placement";
@@ -139,6 +139,68 @@ describe("the outpost", () => {
           b.maxZ <= a.minZ + slack;
         expect(apart, `${label(all[i])} vs ${label(all[j])}`).toBe(true);
       }
+  });
+
+  test("nothing stands north of the board wall, between the play area's west edge and the ship pad", () => {
+    const east = SHIP_PAD.x - 4;
+    for (const e of pieces()) {
+      // Light posts are points just outside the walking clamp (see above).
+      const b =
+        e.piece === "lights"
+          ? {
+              minX: e.placement.position[0],
+              maxX: e.placement.position[0],
+              minZ: e.placement.position[2],
+              maxZ: e.placement.position[2],
+            }
+          : e.box;
+      if (b.minZ >= DECK.minZ) continue;
+      expect(b.maxX <= DECK.minX || b.minX >= east, label(e)).toBe(true);
+    }
+  });
+
+  test("the board wall stands clear of every outpost footprint", () => {
+    for (const b of Object.values(BOARDS)) {
+      // Plinth (half a gap past each side) back to the tilted top, to the plinth's front.
+      const wall = {
+        minX: b.x - b.width / 2 - 0.2,
+        maxX: b.x + b.width / 2 + 0.2,
+        minZ: b.z - 1,
+        maxZ: b.z + 0.5,
+      };
+      for (const e of pieces()) {
+        const o = e.box;
+        const apart =
+          o.maxX <= wall.minX || wall.maxX <= o.minX || o.maxZ <= wall.minZ || wall.maxZ <= o.minZ;
+        expect(apart, `${label(e)} vs board at ${b.x}`).toBe(true);
+      }
+    }
+  });
+
+  test("every tunnel joins two modules", () => {
+    const modules = pieces().filter((e) => e.piece.startsWith("basemodule_"));
+    for (const t of OUTPOST.tunnel_straight_A ?? []) {
+      const box = footprint("tunnel_straight_A", t);
+      const touching = modules.filter(
+        (m) =>
+          m.box.minX <= box.maxX + 0.2 &&
+          box.minX <= m.box.maxX + 0.2 &&
+          m.box.minZ <= box.maxZ + 0.2 &&
+          box.minZ <= m.box.maxZ + 0.2,
+      );
+      expect(touching.length, `tunnel at ${t.position[0]}, ${t.position[2]}`).toBe(2);
+    }
+  });
+
+  test("every roof module sits on a module", () => {
+    const modules = pieces().filter((e) => e.piece.startsWith("basemodule_"));
+    for (const r of OUTPOST.roofmodule_solarpanels ?? []) {
+      const under = modules.some(
+        (m) =>
+          m.placement.position[0] === r.position[0] && m.placement.position[2] === r.position[2],
+      );
+      expect(under, `roof at ${r.position[0]}, ${r.position[2]}`).toBe(true);
+    }
   });
 
   test("outpost pieces are known assets", () => {

@@ -1,4 +1,4 @@
-import { ISLAND } from "../../src/features/world/island.ts";
+import { ISLAND, TILE } from "../../src/features/world/island.ts";
 import { PAD_CLEARINGS } from "../../src/features/world/outpost.ts";
 import { describe, expect, test } from "vite-plus/test";
 import {
@@ -9,6 +9,7 @@ import {
   COLLIDERS,
   addCollider,
   BOARDS,
+  BOARD_STAND_Z,
   SHIP_STOP,
   FLIGHT_CONTROL,
   flightControlInReach,
@@ -93,25 +94,54 @@ describe("deck layout", () => {
     expect(moveWithCollisions(SHIP_STOP.x, SHIP_STOP.z, 0, 0)).toEqual(SHIP_STOP);
   });
 
-  test("boards stand on the island inside the play area", () => {
-    for (const b of Object.values(BOARDS)) {
-      expect(b.z).toBeGreaterThan(DECK.minZ);
-      expect(b.z).toBeLessThanOrEqual(DECK.minZ + 1);
+  const boards = Object.entries(BOARDS) as [keyof typeof BOARDS, (typeof BOARDS)["mission"]][];
+  /** The north walk limit: as close to the boards as the captain gets. */
+  const NORTH_LIMIT = DECK.minZ + 0.6;
+
+  test("boards stand on the flat ring just outside the play area, on the island", () => {
+    for (const [, b] of boards) {
+      // The plinth's front edge (b.z + 0.5) stays off the deck; the tilted top stays on the ring.
+      expect(b.z + 0.5).toBeLessThanOrEqual(DECK.minZ);
+      expect(b.z - 1).toBeGreaterThanOrEqual(ISLAND.minZ + TILE);
+      expect(b.z).toBeCloseTo(DECK.minZ - 1.5);
     }
   });
 
-  test("the captain can't walk into a board", () => {
-    for (const b of Object.values(BOARDS)) {
-      let p = { x: b.x, z: b.z + 1.5 };
-      for (let i = 0; i < 40; i++) p = moveWithCollisions(p.x, p.z, 0, -0.1);
-      expect(p.z).toBeGreaterThanOrEqual(b.z + 0.5 + 0.32 - 1e-9);
-      expect(boardInReach(p.x, p.z)).not.toBeNull();
+  test("the boards are one wall along the north edge, big enough to read", () => {
+    const sorted = boards.map(([, b]) => b).sort((a, b) => a.x - b.x);
+    for (let i = 1; i < sorted.length; i++) {
+      const [a, b] = [sorted[i - 1]!, sorted[i]!];
+      expect(a.x + a.width / 2).toBeLessThanOrEqual(b.x - b.width / 2);
+      expect(a.z).toBe(b.z);
     }
+    const west = sorted[0]!.x - sorted[0]!.width / 2;
+    const east = sorted.at(-1)!.x + sorted.at(-1)!.width / 2;
+    expect(east - west).toBeGreaterThanOrEqual(19);
+    for (const b of sorted) expect(b.height).toBeGreaterThanOrEqual(4);
+  });
+
+  test("the board wall stays well clear of the ship pad's clearing", () => {
+    const clearing = PAD_CLEARINGS.find((c) => c.x === SHIP_PAD.x && c.z === SHIP_PAD.z)!;
+    for (const [, b] of boards)
+      expect(b.x + b.width / 2).toBeLessThanOrEqual(clearing.x - clearing.r - 2);
+  });
+
+  test("walking north toward a board stops at the walk limit, in reach of it", () => {
+    for (const [id, b] of boards)
+      for (const dx of [-b.width / 2 + 0.3, 0, b.width / 2 - 0.3]) {
+        let p = { x: b.x + dx, z: b.z + 4 };
+        for (let i = 0; i < 60; i++) p = moveWithCollisions(p.x, p.z, 0, -0.1);
+        expect(p.z, `${id} at ${dx}`).toBeCloseTo(NORTH_LIMIT);
+        expect(boardInReach(p.x, p.z), `${id} at ${dx}`).toBe(id);
+      }
   });
 
   test("you read a board standing in front of it, not from the consoles", () => {
-    expect(boardInReach(BOARDS.mission.x, BOARDS.mission.z + 1.5)).toBe("mission");
-    expect(boardInReach(BOARDS.launch.x + 1, BOARDS.launch.z + 1)).toBe("launch");
+    for (const [id, b] of boards) {
+      expect(boardInReach(b.x, NORTH_LIMIT)).toBe(id);
+      expect(boardInReach(b.x, BOARD_STAND_Z)).toBe(id);
+      expect(moveWithCollisions(b.x, BOARD_STAND_Z, 0, 0)).toEqual({ x: b.x, z: BOARD_STAND_Z });
+    }
     for (const c of CONSOLES) {
       const seat = consoleSeat(c, 1.25);
       expect(boardInReach(seat.x, seat.z)).toBeNull();

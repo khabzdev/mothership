@@ -15,8 +15,6 @@ const SPACE = {
   files: ["spacebits_texture.png"],
   models: [
     "basemodule_A",
-    "basemodule_B",
-    "basemodule_C",
     "basemodule_garage",
     "cargo_A_stacked",
     "containers_A",
@@ -29,7 +27,6 @@ const SPACE = {
     "solarpanel",
     "spacetruck",
     "drill_structure",
-    "basemodule_D",
     "basemodule_E",
     "cargodepot_A",
     "rock_B",

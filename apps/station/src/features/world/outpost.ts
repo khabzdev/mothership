@@ -23,9 +23,10 @@ const at = (x: number, z: number, rotY = 0, y = 0, scale = OUTPOST_SCALE): Place
   scale,
 });
 
-// Rows sit on the flat ring between the play area and the slope rim: north and south rows at
-// z = ±16.1 (a module's depth just fits the 5.2 m band), the east column at x ≈ 20.3.
-const NORTH_Z = -16.1;
+// Rows sit on the flat ring between the play area and the slope rim: the south row at z = 16.1
+// (a module's depth just fits the 5.2 m band), the east column at x ≈ 20.3. The north side is
+// left to the board wall: a module facing the deck is 4.3–4.6 m deep, too deep for the 4.2 m
+// west strip, so the only one kept stands in the north-west corner, west of the play area.
 const SOUTH_Z = 16.1;
 const EAST_X = 20.3;
 /** Tunnels are 2 m long natively: at this scale they bridge the 2 m gap between modules. */
@@ -33,8 +34,8 @@ const TUNNEL_SCALE = 1;
 const TUNNEL_Y = 0.6;
 const tunnel = (x: number, z: number) => at(x, z, 0, TUNNEL_Y, TUNNEL_SCALE);
 
-/** North: a row of modules from the north-west corner, stopping short of the ship pad. */
-const NORTH_ROW = [-20.1, -13.88, -7.8, -1.36];
+/** The north-west corner module, facing the deck (east). */
+const CORNER = { x: -20.4, z: -16 };
 const mining = {
   x: EAST_X - 0.1,
   z: MINING_TILES.reduce((sum, t) => sum + t.z, 0) / MINING_TILES.length,
@@ -44,19 +45,12 @@ const mining = {
 export const GARAGE: Placement = at(GARAGE_SPOT.x, GARAGE_SPOT.z, Math.PI);
 
 export const OUTPOST: Record<string, Placement[]> = {
-  // North: modules joined by tunnels. South-west: the dome (the garage is GARAGE, facing the deck).
-  basemodule_A: [at(NORTH_ROW[0], NORTH_Z)],
-  basemodule_B: [at(NORTH_ROW[1], NORTH_Z)],
-  basemodule_C: [at(NORTH_ROW[2], NORTH_Z)],
-  basemodule_D: [at(NORTH_ROW[3], NORTH_Z)],
+  // North-west corner: a module with solar panels on its roof. South-west: the dome, joined by a
+  // tunnel to the garage (GARAGE, facing the deck).
+  basemodule_A: [at(CORNER.x, CORNER.z, Math.PI / 2)],
+  roofmodule_solarpanels: [at(CORNER.x, CORNER.z, Math.PI / 2, 2)],
   basemodule_E: [at(-20.1, SOUTH_Z, Math.PI)],
-  tunnel_straight_A: [
-    tunnel(-16.96, NORTH_Z),
-    tunnel(-10.8, NORTH_Z),
-    tunnel(-4.8, NORTH_Z),
-    tunnel(-17, SOUTH_Z),
-  ],
-  roofmodule_solarpanels: [at(NORTH_ROW[0], NORTH_Z, 0, 2), at(NORTH_ROW[2], NORTH_Z, 0, 2)],
+  tunnel_straight_A: [tunnel(-17, SOUTH_Z)],
 
   // East: the drill over the mining tiles and the wind turbines.
   drill_structure: [at(mining.x, mining.z)],
@@ -78,7 +72,7 @@ export const OUTPOST: Record<string, Placement[]> = {
 
   // Rocks scattered on the flat ring, in the gaps.
   rocks_A: [at(-20.4, -10, 0.6, 0, 1.2), at(20, 16.6, 2.1, 0, 1.2)],
-  rocks_B: [at(-20.4, 4, 1.2, 0, 1.2), at(4.8, -16.2, 3, 0, 1.2)],
+  rocks_B: [at(-20.4, 4, 1.2, 0, 1.2), at(-20.4, -7, 3, 0, 1.2)],
   rock_A: [at(-20.5, -4, 0.3, 0, 1.2), at(-20.5, 12, 2.4, 0, 1.2), at(20.6, 14.5, 0.9, 0, 1.2)],
   rock_B: [at(-20.5, 8, 2.8, 0, 1.2), at(-20.5, 0.5, 4.4, 0, 1.2)],
 };

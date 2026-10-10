@@ -48,8 +48,6 @@ export const LANDING_PAD_PIECE = "landingpad_large";
 /** Every KayKit Space Base piece the app references, each preloaded. */
 export const SPACE_PIECES: readonly string[] = [
   "basemodule_A",
-  "basemodule_B",
-  "basemodule_C",
   "basemodule_garage",
   "cargo_A_stacked",
   "containers_A",
@@ -62,7 +60,6 @@ export const SPACE_PIECES: readonly string[] = [
   "rocks_A",
   "solarpanel",
   "spacetruck",
-  "basemodule_D",
   "basemodule_E",
   "cargodepot_A",
   "rock_B",

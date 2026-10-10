@@ -183,26 +183,40 @@ export function shipInReach(x: number, z: number, reach = 1.5): boolean {
 
 export type BoardId = "mission" | "launch" | "queue";
 
-/** The boards, standing free on posts at the north edge of the island: issues (Mission board), pull requests (Launch board) and the task queue. */
-export const BOARDS: Record<BoardId, { x: number; z: number; width: number; height: number }> = {
-  mission: { x: -10.5, z: DECK.minZ + 0.6, width: 4.2, height: 2.3 },
-  launch: { x: -4.5, z: DECK.minZ + 0.6, width: 4.2, height: 2.3 },
-  queue: { x: 0.9, z: DECK.minZ + 0.6, width: 2.8, height: 2.3 },
-};
+/** Where the board wall starts at its west end. */
+const WALL_WEST = -16.5;
+/** The gap between neighbouring boards in the wall. */
+export const BOARD_GAP = 0.4;
+const BOARD_HEIGHT = 4.2;
+const BOARD_WIDTHS: Record<BoardId, number> = { mission: 7, launch: 7, queue: 5.5 };
 
-/** Each board is solid: its base plate, posts and panel. */
-for (const b of Object.values(BOARDS))
-  COLLIDERS.push({
-    minX: b.x - b.width / 2,
-    maxX: b.x + b.width / 2,
-    minZ: b.z - 0.1,
-    maxZ: b.z + 0.5,
-  });
+/**
+ * The boards, side by side as one wall on the flat ring just north of the play area, from the
+ * north-west eastward and well short of the ship pad: issues (Mission board), pull requests
+ * (Launch board) and the task queue. The walk clamp keeps the Captain off them.
+ */
+export const BOARDS = (() => {
+  const boards = {} as Record<BoardId, { x: number; z: number; width: number; height: number }>;
+  let west = WALL_WEST;
+  for (const id of ["mission", "launch", "queue"] as const) {
+    const width = BOARD_WIDTHS[id];
+    boards[id] = { x: west + width / 2, z: DECK.minZ - 1.5, width, height: BOARD_HEIGHT };
+    west += width + BOARD_GAP;
+  }
+  return boards;
+})();
+
+/** How far each board's face tilts back (top away from the deck), to read straight on from mid-deck. */
+export const BOARD_TILT = (12 * Math.PI) / 180;
+/** Where you stand to read a board: on the deck, a step in from its north edge. */
+export const BOARD_STAND_Z = DECK.minZ + 2.2;
+/** How far in front of a board (from its z) you can read it: past the stand, not to the consoles. */
+const BOARD_REACH = 4.2;
 
 /** The board you're standing in front of, if any. */
 export function boardInReach(x: number, z: number): BoardId | null {
   for (const [id, b] of Object.entries(BOARDS) as [BoardId, (typeof BOARDS)[BoardId]][]) {
-    if (Math.abs(x - b.x) < b.width / 2 && z - b.z < 2.6) return id;
+    if (Math.abs(x - b.x) < b.width / 2 && z - b.z < BOARD_REACH) return id;
   }
   return null;
 }

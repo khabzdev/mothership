@@ -21,7 +21,7 @@ import { decksQuery } from "../decks/queries";
 import { boardQuery } from "../github/queries";
 import { issueColumn } from "../github/model";
 import { useDeckChoice } from "../world/deck-choice";
-import { BOARDS, CONSOLES, FLIGHT_CONTROL, type BoardId } from "../world/layout";
+import { BOARD_STAND_Z, BOARDS, CONSOLES, FLIGHT_CONTROL, type BoardId } from "../world/layout";
 import { captain, jumpTo } from "../world/scene/Captain";
 import { aboard, useWorld } from "../world/store";
 import { waitingInOrder } from "../world/waiting";
@@ -46,7 +46,7 @@ interface Group {
 function goToBoard(board: BoardId): void {
   if (aboard()) return;
   const b = BOARDS[board];
-  Object.assign(captain, { x: b.x, z: b.z + 1.6, facing: Math.PI, snap: true });
+  Object.assign(captain, { x: b.x, z: BOARD_STAND_Z, facing: Math.PI, snap: true });
 }
 
 /** Stand at the Flight Control desk, facing it. */
