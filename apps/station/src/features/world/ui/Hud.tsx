@@ -113,6 +113,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
           <Key k="P" label={`Prompt ${member.name}`} />
           <Key k="C" label="Changes" />
           {member.kind === "agent" && <Key k="G" label="Pre-flight" />}
+          {member.brief && <Key k="B" label="Brief" />}
           {member.branch && <Key k="O" label={member.prUrl ? "See PR" : "Open PR"} />}
           {member.status === "asleep" && (
             <Key k="R" label={member.kind === "shell" ? "Restart" : "Resume"} />

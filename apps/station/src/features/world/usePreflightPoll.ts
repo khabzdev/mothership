@@ -7,7 +7,7 @@ import { playCheck, speak } from "./sound";
 
 const VOICE_KEY = "mothership.poll.voice";
 
-function voiceOn(): boolean {
+export function voiceOn(): boolean {
   try {
     return localStorage.getItem(VOICE_KEY) !== "0";
   } catch {

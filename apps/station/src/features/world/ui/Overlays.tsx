@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { FlightControlWindow } from "../../preflight/ui/FlightControl";
 import { LaunchCheck } from "../../preflight/ui/LaunchCheck";
+import { BriefWindow } from "../../briefs/ui/BriefWindow";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
@@ -154,6 +155,18 @@ function PreflightOverlay({ member }: { member: CrewInfo }) {
   );
 }
 
+function BriefOverlay({ member }: { member: CrewInfo }) {
+  return (
+    <Modal
+      icon={TaskDaily01Icon}
+      title={`${member.name} · brief`}
+      subtitle={<StatusBadge crew={member} />}
+    >
+      <BriefWindow member={member} />
+    </Modal>
+  );
+}
+
 function PrWindow({ member }: { member: CrewInfo }) {
   const url = member.prUrl ?? "";
   const number = /\/pull\/(\d+)/.exec(url)?.[1];
@@ -216,6 +229,10 @@ export function Overlays({
     case "preflight": {
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <PreflightOverlay member={member} /> : null;
+    }
+    case "brief": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <BriefOverlay member={member} /> : null;
     }
     case "launchCheck": {
       const member = crew.find((c) => c.id === overlay.crewId);

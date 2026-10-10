@@ -172,7 +172,12 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           resume(member);
           return;
         case "KeyB":
-          if (member) return;
+          if (member) {
+            if (!member.brief) return;
+            e.preventDefault();
+            open({ kind: "brief", crewId: member.id });
+            return;
+          }
           e.preventDefault();
           shell(deckId, consoleId);
           return;
