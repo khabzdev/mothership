@@ -3,7 +3,7 @@ import { Html, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Group, Mesh } from "three";
-import { ActHold, actFor } from "../acting";
+import { ActHold, actFor, stanceFor } from "../acting";
 import { useWorld } from "../store";
 import { removeTypist, setTyping } from "../sound";
 import { consoleSeat, type ConsoleDef } from "../layout";
@@ -19,21 +19,6 @@ import { STATUS_COLORS } from "./status";
 /** How long the cheer on GO and the failing act on NO-GO last (ms). */
 const CHEER_MS = 2500;
 const FAIL_MS = 3000;
-
-/** Seated at the console unless it's waving for you or celebrating (agent-office's stances). */
-export function stanceFor(crew: Pick<CrewInfo, "status" | "action">): {
-  clip: string;
-  seated: boolean;
-} {
-  switch (crew.status) {
-    case "needs_input":
-      return { clip: "Spellcast_Raise", seated: false };
-    case "done":
-      return { clip: "Cheer", seated: false };
-    default:
-      return { clip: "Sit_Chair_Idle", seated: true };
-  }
-}
 
 /**
  * Where a seated crew member's origin goes, from the console's middle. Sit_Chair_Idle puts the

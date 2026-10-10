@@ -11,6 +11,20 @@ export const ACT_MIN = 1.2;
 /** Head in its hands lasts at least this long, so you catch it. */
 export const DESPAIR_MIN = 4;
 
+/**
+ * Seated at the console unless it's waving for you or celebrating (agent-office's stances). Done
+ * crew only celebrate once there's nothing left to prove: not while a pre-flight runs or is NO-GO.
+ */
+export function stanceFor(crew: Pick<CrewInfo, "status" | "preflight">): {
+  clip: string;
+  seated: boolean;
+} {
+  const unproven = crew.preflight?.state === "running" || crew.preflight?.state === "nogo";
+  if (crew.status === "needs_input") return { clip: "Spellcast_Raise", seated: false };
+  if (crew.status === "done" && !unproven) return { clip: "Cheer", seated: false };
+  return { clip: "Sit_Chair_Idle", seated: true };
+}
+
 /** The act a crew member's status and action call for right now. */
 export function actFor(crew: Pick<CrewInfo, "status" | "action">): Act {
   if (crew.status !== "working") return "rest";
