@@ -174,6 +174,8 @@ export const briefs = sqliteTable(
     /** Counts from 1 per crew member. */
     revision: integer("revision").notNull(),
     text: text("text").notNull(),
+    /** The crew member's task when it was submitted: a brief only covers the task it was for. */
+    task: text("task").notNull().default(""),
     state: text("state", { enum: BRIEF_STATES }).notNull().default("waiting"),
     approvedBy: text("approved_by", { enum: BRIEF_APPROVERS }),
     /** Why it was sent back for a revision. */

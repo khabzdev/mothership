@@ -91,6 +91,7 @@ export class PreflightService {
   readonly #queue: Job[] = [];
   readonly #active = new Map<string, Job>();
   #planning: (crewId: string) => boolean = () => false;
+  #onGo: (crewId: string, print: { hash: string; commit: string }) => void = () => {};
 
   constructor(deps: Deps) {
     this.#db = deps.db;
@@ -110,6 +111,14 @@ export class PreflightService {
    */
   planningWith(fn: (crewId: string) => boolean): void {
     this.#planning = fn;
+  }
+
+  /**
+   * Hear about a stop that passed: a stop run's GO, or a stop with nothing changed since one.
+   * `print` is the worktree the checks passed on.
+   */
+  onGo(fn: (crewId: string, print: { hash: string; commit: string }) => void): void {
+    this.#onGo = fn;
   }
 
   /** A stop starts a pre-flight; going back to work cancels one, spending no fuel. */
@@ -170,6 +179,10 @@ export class PreflightService {
           crewId,
           `${names.join(", ")} still NO-GO; ${row.name} stopped without changes`,
         );
+      }
+      // Passed on this very worktree: still a GO, for whatever follows one.
+      if (last.trigger === "stop" && last.state === "go" && last.flight === row.flight) {
+        this.#onGo(crewId, print);
       }
       return null;
     }
@@ -375,6 +388,7 @@ export class PreflightService {
 
     const verdicts: CheckVerdict[] = [];
     const failures: CheckFailure[] = [];
+    let passedOn = job.hash;
     for (const [position, check] of job.checks.entries()) {
       if (job.abort.signal.aborted) return;
       const run = await this.#check(job, check);
@@ -396,6 +410,7 @@ export class PreflightService {
       // coverage, --fix), so the next unchanged stop and O's guard both see a match.
       const hash = done ? await this.#refingerprint(job) : job.hash;
       if (job.abort.signal.aborted) return;
+      passedOn = hash;
       this.#db.transaction((tx) => {
         tx.insert(preflightResults)
           .values({
@@ -433,11 +448,11 @@ export class PreflightService {
       });
       this.#crew.refresh(job.deckId);
     }
-    await this.#handBack(job, member.flight, verdicts, failures);
+    await this.#handBack(job, member.flight, verdicts, failures, passedOn);
   }
 
   /**
-   * After a stop's NO-GO: type the failures into the agent and spend one fuel, or, with the tank
+   * After a stop's GO: say so (onGo). After its NO-GO: type the failures into the agent and spend one fuel, or, with the tank
    * empty (or the agent unreachable), raise "needs you". A manual run spends no fuel.
    */
   async #handBack(
@@ -445,13 +460,17 @@ export class PreflightService {
     flight: number,
     verdicts: CheckVerdict[],
     failures: CheckFailure[],
+    hash: string,
   ): Promise<void> {
     if (job.trigger !== "stop" || job.abort.signal.aborted) return;
     const member = this.#crewRow(job.crewId);
     if (!member || member.flight !== flight) return;
     const attempt = this.#stopAttempts(job.crewId);
     const outcome = afterPreflight(verdicts, member.fuel, attempt);
-    if (outcome.kind === "go") return;
+    if (outcome.kind === "go") {
+      this.#onGo(job.crewId, { hash, commit: job.commit });
+      return;
+    }
     const names = failures.map((f) => f.name);
     if (outcome.kind === "outOfFuel") {
       this.#crew.alert(job.crewId, outOfFuelDetail(names, outcome.attempts));

@@ -7,6 +7,7 @@ import { crewRegistry } from "../features/crew/registry.server";
 import { CloneManager } from "../features/decks/clone.server";
 import { dockRepo } from "../features/decks/decks.server";
 import { GitHubBoards } from "../features/github/github.server";
+import { InspectionService } from "../features/inspection/inspection.server";
 import { QueueService } from "../features/queue/queue.server";
 import { getDeck } from "../features/decks/decks.server";
 import { LabelService } from "../features/labels/labels.server";
@@ -35,6 +36,7 @@ interface Station {
   checks: CheckService;
   preflight: PreflightService;
   briefs: BriefService;
+  inspections: InspectionService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -67,7 +69,6 @@ export function getStation(): Station {
       broadcast: (msg) => hub.broadcast(msg),
       home,
     });
-    crew.busyWith((crewId) => preflight.busy(crewId));
     preflight.reconcile();
 
     // Briefs: the plans Claude submits in plan mode; Y and N answer its approval dialog.
@@ -78,9 +79,23 @@ export function getStation(): Station {
       broadcast: (msg) => hub.broadcast(msg),
       write: (crewId, data) => launcher.write(crewId, data),
     });
+    // The Inspector: every stop that passes pre-flight gets a scope check and a read-only review.
+    const inspections = new InspectionService({
+      db: getDb(),
+      crew,
+      checks,
+      briefs,
+      preflight,
+      providers: PROVIDERS,
+      broadcast: (msg) => hub.broadcast(msg),
+    });
+    preflight.onGo((crewId, print) => inspections.afterGo(crewId, print));
+    inspections.reconcile();
+    crew.busyWith((crewId) => preflight.busy(crewId) || inspections.busy(crewId));
     crew.describeWith((crewId) => ({
       preflight: preflight.info(crewId),
       brief: briefs.info(crewId),
+      inspection: inspections.info(crewId),
     }));
     crew.briefWaitingWith((crewId) => briefs.waiting(crewId));
     crew.briefUnapprovedWith((crewId) => briefs.unapproved(crewId));
@@ -89,8 +104,10 @@ export function getStation(): Station {
     onCrewSignal((event) => crew.handleSignal(event));
     onCrewSignal((event) => preflight.handleSignal(event));
     onCrewSignal((event) => briefs.handleSignal(event));
+    onCrewSignal((event) => inspections.handleSignal(event));
     launcher.onExit(({ crewId }) => crew.handleExit(crewId));
     launcher.onExit(({ crewId }) => preflight.cancel(crewId));
+    launcher.onExit(({ crewId }) => inspections.cancel(crewId));
     const screens = new ScreenRelay(launcher, (msg) => hub.broadcast(msg));
     screens.start();
     crew.onGone((crewId) => screens.forget(crewId));
@@ -162,7 +179,7 @@ export function getStation(): Station {
       db: getDb(),
       crew,
       claim: (deckId, n) => boards.claimIssue(getDeck(getDb(), deckId).repoPath, n),
-      isSettled: (crewId) => !preflight.busy(crewId),
+      isSettled: (crewId) => !preflight.busy(crewId) && !inspections.busy(crewId),
     });
     setInterval(() => void queue.tickAll(), 4000);
     return {
@@ -175,6 +192,7 @@ export function getStation(): Station {
       checks,
       preflight,
       briefs,
+      inspections,
       diagnostics,
     };
   })();

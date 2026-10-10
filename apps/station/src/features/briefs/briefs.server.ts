@@ -156,6 +156,28 @@ export class BriefService {
     return this.history(crewId).find((b) => b.state === "approved") ?? null;
   }
 
+  /**
+   * The latest approved revision for the task the crew member is on now: a brief approved for an
+   * earlier task doesn't cover this one.
+   */
+  approvedForTask(crewId: string): BriefRecord | null {
+    const member = this.#db
+      .select({ task: crewTable.task })
+      .from(crewTable)
+      .where(eq(crewTable.id, crewId))
+      .get();
+    if (!member) return null;
+    const row = this.#db
+      .select()
+      .from(briefs)
+      .where(
+        and(eq(briefs.crewId, crewId), eq(briefs.state, "approved"), eq(briefs.task, member.task)),
+      )
+      .orderBy(desc(briefs.revision))
+      .get();
+    return row ? toRecord(row) : null;
+  }
+
   /** On startup: a waiting brief whose dialog isn't on its crew member's screen is superseded. */
   async reconcile(): Promise<void> {
     const waiting = this.#db.select().from(briefs).where(eq(briefs.state, "waiting")).all();
@@ -187,6 +209,7 @@ export class BriefService {
           crewId,
           revision: (last?.revision ?? 0) + 1,
           text,
+          task: member.task,
           createdAt: Date.now(),
         })
         .run();

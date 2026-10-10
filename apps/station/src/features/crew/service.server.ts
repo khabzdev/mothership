@@ -2,6 +2,7 @@ import type {
   BriefInfo,
   CrewInfo,
   CrewStatus,
+  InspectionInfo,
   PreflightInfo,
   ServerMsg,
 } from "@mothership/protocol";
@@ -55,12 +56,16 @@ const SUBMIT_DELAY_MS = 120;
 export type PromptFrom = "you" | "station";
 
 /** What other services add to a crew member's roster entry. */
-type Describe = (crewId: string) => { preflight?: PreflightInfo; brief?: BriefInfo };
+type Describe = (crewId: string) => {
+  preflight?: PreflightInfo;
+  brief?: BriefInfo;
+  inspection?: InspectionInfo;
+};
 type Busy = (crewId: string) => boolean;
 type Briefed = (crewId: string) => boolean;
 
 function toInfo(row: Row, describe?: Describe): CrewInfo {
-  const { preflight, brief } = describe?.(row.id) ?? {};
+  const { preflight, brief, inspection } = describe?.(row.id) ?? {};
   return {
     id: row.id,
     kind: row.provider === "shell" ? "shell" : "agent",
@@ -78,6 +83,7 @@ function toInfo(row: Row, describe?: Describe): CrewInfo {
     ...(row.prUrl && { prUrl: row.prUrl }),
     ...(preflight && { preflight }),
     ...(brief && { brief }),
+    ...(inspection && { inspection }),
     ...(row.cleanBriefs > 0 && { cleanBriefs: row.cleanBriefs }),
   };
 }
@@ -113,7 +119,7 @@ export class CrewService {
       .map((row) => this.#info(row));
   }
 
-  /** Add each crew member's pre-flight and brief summaries to what the roster says about it. */
+  /** Add each crew member's pre-flight, brief and inspection summaries to what the roster says about it. */
   describeWith(fn: Describe): void {
     this.#describe = fn;
   }

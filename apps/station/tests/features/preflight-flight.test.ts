@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { afterPreflight, DEFAULT_FUEL } from "../../src/features/preflight/flight.ts";
+import { afterPreflight, afterVerdict, DEFAULT_FUEL } from "../../src/features/preflight/flight.ts";
 import {
   handBackMessage,
   outOfFuelDetail,
@@ -32,6 +32,20 @@ describe("afterPreflight", () => {
 
   test("an empty verdict list is never GO", () => {
     expect(afterPreflight([], 3, 1)).not.toEqual({ kind: "go" });
+  });
+});
+
+describe("afterVerdict", () => {
+  test("ok → go, whatever the tank", () => {
+    expect(afterVerdict(true, 0, 3)).toEqual({ kind: "go" });
+  });
+
+  test("not ok with fuel → hand back attempt n+1 of fuel+attempt", () => {
+    expect(afterVerdict(false, 2, 1)).toEqual({ kind: "handBack", attempt: 2, maxAttempts: 3 });
+  });
+
+  test("not ok on an empty tank → out of fuel", () => {
+    expect(afterVerdict(false, 0, 4)).toEqual({ kind: "outOfFuel", attempts: 4 });
   });
 });
 

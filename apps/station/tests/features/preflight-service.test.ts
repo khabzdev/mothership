@@ -898,4 +898,46 @@ describe("PreflightService", () => {
       ["stop", 1],
     ]);
   });
+
+  describe("onGo", () => {
+    let gos: [string, { hash: string; commit: string }][];
+    beforeEach(() => {
+      gos = [];
+      service.onGo((crewId, print) => gos.push([crewId, print]));
+    });
+
+    test("a stop GO calls it once with the run's fingerprint", async () => {
+      const { id } = await hireWithChange();
+      stop(id);
+      await settled(id);
+      const record = service.latest(id)!;
+      expect(gos).toEqual([[id, { hash: record.fingerprint, commit: record.commit }]]);
+    });
+
+    test("a NO-GO or a manual GO doesn't call it", async () => {
+      const { id } = await hireWithChange();
+      verdicts = ["go", "nogo"];
+      stop(id);
+      await settled(id);
+      await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(2));
+      writeFileSync(join(crew.workdir(id).cwd, "change.txt"), "manual");
+      await service.run(id, "manual");
+      await settled(id);
+      expect(service.latest(id)).toMatchObject({ trigger: "manual", state: "go" });
+      expect(gos).toEqual([]);
+    });
+
+    test("an unchanged stop after a stop GO calls it again with the same hash", async () => {
+      const { id } = await hireWithChange();
+      stop(id);
+      await settled(id);
+      expect(await service.run(id, "stop")).toBeNull();
+      expect(service.history(id)).toHaveLength(1);
+      const { fingerprint: hash, commit } = service.latest(id)!;
+      expect(gos).toEqual([
+        [id, { hash, commit }],
+        [id, { hash, commit }],
+      ]);
+    });
+  });
 });

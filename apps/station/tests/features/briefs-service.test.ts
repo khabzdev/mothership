@@ -504,4 +504,15 @@ describe("BriefService", () => {
     await crew.prompt(id, "Also add tests");
     expect(writes.at(-1)).toBe("\x1b[200~Also add tests\x1b[201~");
   });
+
+  test("approvedForTask ignores an approved brief from an earlier task", async () => {
+    const { id } = await hire(0, "Task one");
+    plan(id);
+    await service.approve(id);
+    expect(service.approvedForTask(id)).toMatchObject({ revision: 1, text: PLAN });
+    // The crew member moves on to another task: its old brief doesn't cover it.
+    db.update(crewTable).set({ task: "Task two" }).where(eq(crewTable.id, id)).run();
+    expect(service.approvedForTask(id)).toBeNull();
+    expect(service.approved(id)).toMatchObject({ revision: 1 });
+  });
 });
