@@ -40,15 +40,18 @@ export function useFurniture(name: string) {
   return useStatic(FURNITURE_URL(name));
 }
 
+/** The pieces drawn outside the outpost plan and the island: the garage, and the lander with its pad. */
+export const GARAGE_PIECE = "basemodule_garage";
+export const LANDER_PIECE = "lander_A";
+export const LANDING_PAD_PIECE = "landingpad_large";
+
 /** Every KayKit Space Base piece the app references, each preloaded. */
 export const SPACE_PIECES: readonly string[] = [
   "basemodule_A",
   "basemodule_B",
   "basemodule_C",
   "basemodule_garage",
-  "cargo_A",
   "cargo_A_stacked",
-  "cargo_B",
   "containers_A",
   "containers_B",
   "drill_structure",
@@ -59,8 +62,6 @@ export const SPACE_PIECES: readonly string[] = [
   "rocks_A",
   "solarpanel",
   "spacetruck",
-  "structure_low",
-  "structure_tall",
   "basemodule_D",
   "basemodule_E",
   "cargodepot_A",
@@ -68,10 +69,8 @@ export const SPACE_PIECES: readonly string[] = [
   "rocks_B",
   "roofmodule_solarpanels",
   "spacetruck_trailer",
-  "terrain_low",
   "terrain_tall",
   "terrain_slope",
-  "terrain_slope_inner_corner",
   "terrain_slope_outer_corner",
   "terrain_mining",
   "tunnel_straight_A",

@@ -59,11 +59,11 @@ export interface Box {
   maxZ: number;
 }
 
-/** Flight Control: a desk against the south bulkhead, where a deck's pre-flight checks are set. */
+/** Flight Control: a desk against the deck's south edge, where a deck's pre-flight checks are set. */
 export const FLIGHT_CONTROL = { x: -4.5, z: DECK.maxZ } as const;
-/** The desk's footprint, its back to the bulkhead's inner face. */
+/** The desk's footprint, its back to the south edge. */
 export const FLIGHT_CONTROL_DESK = { width: 2.4, depth: 0.8, height: 0.9 } as const;
-const BULKHEAD_FACE = DECK.maxZ - 0.15;
+const SOUTH_EDGE = DECK.maxZ - 0.15;
 
 /** Standing in front of the Flight Control desk. */
 export function flightControlInReach(x: number, z: number, reach = 1.6): boolean {
@@ -81,8 +81,8 @@ export const COLLIDERS: Box[] = [
   {
     minX: FLIGHT_CONTROL.x - FLIGHT_CONTROL_DESK.width / 2,
     maxX: FLIGHT_CONTROL.x + FLIGHT_CONTROL_DESK.width / 2,
-    minZ: BULKHEAD_FACE - FLIGHT_CONTROL_DESK.depth,
-    maxZ: BULKHEAD_FACE,
+    minZ: SOUTH_EDGE - FLIGHT_CONTROL_DESK.depth,
+    maxZ: SOUTH_EDGE,
   },
 ];
 

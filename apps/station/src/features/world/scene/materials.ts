@@ -2,8 +2,6 @@
 // lit like the KayKit models (MeshStandardMaterial), so hand-built parts sit next to the kit's pieces.
 
 export const KIT = {
-  /** Bulkhead lavender, the main panel colour. */
-  hull: "#a0a8c9",
   /** Shaded panels and door frames. */
   slate: "#868ba1",
   /** Dark metal: frames, bezels. */

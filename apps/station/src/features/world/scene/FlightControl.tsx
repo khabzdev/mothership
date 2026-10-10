@@ -47,7 +47,7 @@ function paint(canvas: HTMLCanvasElement, armed: boolean | null, checks: DeckChe
 }
 
 /**
- * Flight Control: a desk against the south bulkhead whose screen shows the deck's pre-flight
+ * Flight Control: a desk against the deck's south edge, whose screen shows the deck's pre-flight
  * checks and whether they're armed. E in front of it opens the Flight Control window.
  */
 export function FlightControl({ armed, checks }: { armed: boolean | null; checks: DeckCheck[] }) {
@@ -72,7 +72,7 @@ export function FlightControl({ armed, checks }: { armed: boolean | null; checks
   useEffect(() => () => surface.texture.dispose(), [surface]);
 
   const { width, depth, height } = FLIGHT_CONTROL_DESK;
-  // Back against the bulkhead's inner face, its front (and screen) facing into the deck (-z).
+  // Back against the south edge, its front (and screen) facing into the deck (-z).
   const z = FLIGHT_CONTROL.z - 0.15 - depth / 2;
 
   return (

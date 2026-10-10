@@ -1,12 +1,18 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "vite-plus/test";
-import { SPACE_PIECES } from "../../src/features/world/scene/models.ts";
+import { islandPlan } from "../../src/features/world/island.ts";
+import { OUTPOST } from "../../src/features/world/outpost.ts";
+import {
+  GARAGE_PIECE,
+  LANDER_PIECE,
+  LANDING_PAD_PIECE,
+  SPACE_PIECES,
+} from "../../src/features/world/scene/models.ts";
 
 const dir = new URL("../../public/models/space-base/", import.meta.url);
 
 describe("space base assets", () => {
   test("every space piece has its gltf, bin and the texture", () => {
-    expect(SPACE_PIECES).toHaveLength(35);
     for (const name of SPACE_PIECES) {
       const gltf = new URL(`${name}.gltf`, dir);
       expect(existsSync(gltf), `${name}.gltf missing: run vp run assets`).toBe(true);
@@ -23,6 +29,20 @@ describe("space base assets", () => {
     expect(existsSync(new URL("License.txt", dir)), "License.txt missing: run vp run assets").toBe(
       true,
     );
+  });
+});
+
+describe("space piece list", () => {
+  test("is exactly the pieces the scene draws", () => {
+    const drawn = new Set([
+      ...Object.keys(OUTPOST),
+      GARAGE_PIECE,
+      LANDER_PIECE,
+      LANDING_PAD_PIECE,
+      ...Object.keys(islandPlan()),
+    ]);
+    expect(new Set(SPACE_PIECES)).toEqual(drawn);
+    expect(new Set(SPACE_PIECES).size).toBe(SPACE_PIECES.length);
   });
 });
 

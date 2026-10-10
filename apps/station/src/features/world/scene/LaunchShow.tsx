@@ -12,13 +12,14 @@ import { BOARDS, CONSOLES, LAUNCH_PAD, consoleSeat } from "../layout";
 import { OUTPOST_SCALE, PAD_TOP } from "../outpost";
 import { useWorld } from "../store";
 import type { CrewInfo } from "@mothership/protocol";
-import { useProp } from "./models";
+import { GLOW } from "./materials";
+import { LANDER_PIECE, LANDING_PAD_PIECE, useProp } from "./models";
 
 /** Seconds: the klaxon, then lift-off, then climbing out of sight. */
 const LIFTOFF = 1.7;
 const CLIMB = 6;
-/** The engine's flame, over 1 so it blooms. */
-const FLAME = new Color("#ffb020").multiplyScalar(3);
+/** The engine's flame, bright enough to bloom. */
+const FLAME = new Color("#ffb020").multiplyScalar(GLOW);
 const CONFETTI = 160;
 const COLORS = ["#ff5f1f", "#ffd166", "#06d6a0", "#5aa9ff", "#ef476f", "#f8f3e6"].map(
   (c) => new Color(c),
@@ -32,8 +33,8 @@ const dummy = new Object3D();
  */
 export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
   const launch = useWorld((s) => s.launch);
-  const lander = useProp("lander_A");
-  const pad = useProp("landingpad_large");
+  const lander = useProp(LANDER_PIECE);
+  const pad = useProp(LANDING_PAD_PIECE);
   const ship = useRef<Group>(null);
   const flame = useRef<Mesh>(null);
   const confetti = useRef<InstancedMesh>(null);

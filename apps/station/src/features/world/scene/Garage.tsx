@@ -2,7 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo } from "react";
 import type { Mesh } from "three";
 import { GARAGE } from "../outpost";
-import { useProp } from "./models";
+import { GARAGE_PIECE, useProp } from "./models";
 
 /** The garage door, set each frame by whoever is going through it, and who's waiting their turn. */
 export const garage = { door: 0, using: null as string | null, queue: [] as string[] };
@@ -16,7 +16,7 @@ const ROLLED = 0.05;
  * for crew sent home.
  */
 export function Garage() {
-  const scene = useProp("basemodule_garage");
+  const scene = useProp(GARAGE_PIECE);
   const door = useMemo(() => {
     const node = scene.getObjectByName("basemodule_garage_door") as Mesh | undefined;
     if (!node) throw new Error("No door in basemodule_garage");

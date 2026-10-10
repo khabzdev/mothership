@@ -1,8 +1,10 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import { AdditiveBlending, Color, type Group, type Mesh } from "three";
+import { rosterQuery } from "../../crew/queries";
 import { decksQuery } from "../../decks/queries";
+import { labelsQuery } from "../../labels/queries";
 import { useDeckChoice } from "../deck-choice";
 import { SHIP_PAD } from "../layout";
 import { OUTPOST_SCALE, PAD_TOP } from "../outpost";
@@ -10,7 +12,7 @@ import { flightOutcome, restingPose, shipPose } from "../ship";
 import { useWorld } from "../store";
 import { stepOutOfShip } from "./Captain";
 import { GLOW } from "./materials";
-import { useProp } from "./models";
+import { LANDER_PIECE, LANDING_PAD_PIECE, useProp } from "./models";
 
 /** The engine's flame, bright enough to bloom. */
 const FLAME = new Color("#ffb020").multiplyScalar(GLOW);
@@ -21,11 +23,12 @@ const FLAME = new Color("#ffb020").multiplyScalar(GLOW);
  * comes down onto the pad and you step out.
  */
 export function ShipPad() {
-  const pad = useProp("landingpad_large");
-  const lander = useProp("lander_A");
+  const pad = useProp(LANDING_PAD_PIECE);
+  const lander = useProp(LANDER_PIECE);
   const ship = useRef<Group>(null);
   const flame = useRef<Mesh>(null);
   const { data: decks } = useSuspenseQuery(decksQuery);
+  const queryClient = useQueryClient();
   const { deckId, choose } = useDeckChoice();
   const pose = useRef(restingPose());
   /** The flight (by when it was picked) already flown, so the deck switches exactly once. */
@@ -44,10 +47,23 @@ export function ShipPad() {
         // Switched deck some other way mid-flight, or the deck's gone: the flight just ends.
         const ids = decks.map((d) => d.id);
         if (flightOutcome(flight, deckId, ids) === "fly") {
-          setArriving(true);
-          choose(flight.to);
+          // Warm the target deck's data first so Game doesn't suspend (hiding the landing behind
+          // the Boarding fallback). The flight stays up (ship out of sight) until then; if the
+          // prefetch fails, switch anyway rather than strand the flight.
+          const to = flight.to;
+          void Promise.all([
+            queryClient.ensureQueryData(rosterQuery(to)),
+            queryClient.ensureQueryData(labelsQuery(to)),
+          ])
+            .catch(() => undefined)
+            .then(() => {
+              useWorld.getState().setArriving(true);
+              choose(to);
+              useWorld.getState().endFlight();
+            });
+        } else {
+          endFlight();
         }
-        endFlight();
       }
     } else if (arriving) {
       landing.current ??= now;

@@ -188,7 +188,9 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
     // (capture) and stops there, so the same press doesn't also close a window.
     const onEscape = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      const { flight, cancelFlight } = useWorld.getState();
+      const { flight, cancelFlight, paletteOpen, overlay } = useWorld.getState();
+      // The palette or a window is up: its own Escape closes it, not the flight.
+      if (paletteOpen || overlay) return;
       if (!canCancel(flight, Date.now())) return;
       e.preventDefault();
       e.stopPropagation();
