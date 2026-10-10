@@ -14,7 +14,7 @@ import {
   shipInReach,
 } from "../layout";
 import { footsteps, scheduleTyping, setListener } from "../sound";
-import { gameKeysEnabled, useWorld } from "../store";
+import { aboard, gameKeysEnabled, useWorld } from "../store";
 import { KAYKIT_SCALE, useCharacter } from "./models";
 import { poseDebug } from "./pose";
 
@@ -35,7 +35,8 @@ export const captain: { x: number; z: number; facing: number; snap: boolean | nu
 /** Put the Captain behind a console's crew member, facing the console (agent-office's N jump). */
 export function jumpTo(consoleId: number): void {
   const def = CONSOLES[consoleId];
-  if (!def) return;
+  // Aboard your ship there's nowhere to jump to.
+  if (!def || aboard()) return;
   // Behind the crew member, standing or seated, looking over its shoulder at the console.
   const spot = consoleSeat(def, 2.2);
   captain.x = spot.x + Math.cos(def.rotY) * 0.7;

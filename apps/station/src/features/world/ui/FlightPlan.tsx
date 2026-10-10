@@ -61,7 +61,7 @@ export function FlightPlan({
   // palette it switches at once and you stay where you are.
   const ride = (id: string) => {
     const action = rideAction(fromShip, id, deckId);
-    if (action === "fly") startFlight(id);
+    if (action === "fly") startFlight(id, deckId);
     else if (action === "choose") choose(id);
     close();
   };

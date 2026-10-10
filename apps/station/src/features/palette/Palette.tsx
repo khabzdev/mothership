@@ -23,7 +23,7 @@ import { issueColumn } from "../github/model";
 import { useDeckChoice } from "../world/deck-choice";
 import { BOARDS, CONSOLES, FLIGHT_CONTROL, type BoardId } from "../world/layout";
 import { captain, jumpTo } from "../world/scene/Captain";
-import { useWorld } from "../world/store";
+import { aboard, useWorld } from "../world/store";
 import { waitingInOrder } from "../world/waiting";
 import { rank } from "./match";
 
@@ -44,12 +44,14 @@ interface Group {
 
 /** Stand in front of a board, facing it. */
 function goToBoard(board: BoardId): void {
+  if (aboard()) return;
   const b = BOARDS[board];
   Object.assign(captain, { x: b.x, z: b.z + 1.6, facing: Math.PI, snap: true });
 }
 
 /** Stand at the Flight Control desk, facing it. */
 function goToFlightControl(): void {
+  if (aboard()) return;
   Object.assign(captain, { x: FLIGHT_CONTROL.x, z: FLIGHT_CONTROL.z - 1.4, facing: 0, snap: true });
 }
 

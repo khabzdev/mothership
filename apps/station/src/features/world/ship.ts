@@ -61,6 +61,18 @@ export function canCancel(flight: { at: number } | null, now: number): boolean {
 }
 
 /**
+ * When the take-off ends: fly on to the picked deck, or just end the flight. It ends when the deck
+ * switched some other way mid-flight (top bar, palette) or the picked deck is gone.
+ */
+export function flightOutcome(
+  flight: { to: string; from: string | null },
+  current: string | null,
+  deckIds: readonly string[],
+): "fly" | "end" {
+  return current === flight.from && deckIds.includes(flight.to) ? "fly" : "end";
+}
+
+/**
  * Picking a deck in the Flight plan: from your ship you fly there; from the top bar or the
  * palette you switch straight over; your own deck keeps you where you are.
  */

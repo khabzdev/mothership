@@ -4,6 +4,7 @@ import {
   CLIMB_HEIGHT,
   SHIP_TIMING,
   canCancel,
+  flightOutcome,
   rideAction,
   shipPose,
 } from "../../src/features/world/ship.ts";
@@ -54,6 +55,15 @@ describe("your ship", () => {
     expect(canCancel(null, 10_200)).toBe(false);
   });
 
+  test("a take-off flies on to the picked deck only from the deck it left, if that deck's still there", () => {
+    const flight = { to: "d2", from: "d1" };
+    expect(flightOutcome(flight, "d1", ["d1", "d2"])).toBe("fly");
+    // Switched to another deck from the top bar or palette mid-flight.
+    expect(flightOutcome(flight, "d3", ["d1", "d2", "d3"])).toBe("end");
+    // The picked deck was undocked mid-flight.
+    expect(flightOutcome(flight, "d1", ["d1"])).toBe("end");
+  });
+
   test("picking a deck: fly from the ship, switch from anywhere else, stay on your own deck", () => {
     expect(rideAction(true, "d2", "d1")).toBe("fly");
     expect(rideAction(false, "d2", "d1")).toBe("choose");
@@ -66,14 +76,14 @@ describe("flight state", () => {
   afterEach(() => useWorld.setState({ flight: null, arriving: false }));
 
   test("starting a flight records where to and when; cancelling clears it", () => {
-    useWorld.getState().startFlight("d2");
-    expect(useWorld.getState().flight).toEqual({ to: "d2", at: expect.any(Number) });
+    useWorld.getState().startFlight("d2", "d1");
+    expect(useWorld.getState().flight).toEqual({ to: "d2", from: "d1", at: expect.any(Number) });
     useWorld.getState().cancelFlight();
     expect(useWorld.getState().flight).toBeNull();
   });
 
   test("ending a flight clears it; arriving is its own flag", () => {
-    useWorld.getState().startFlight("d2");
+    useWorld.getState().startFlight("d2", "d1");
     useWorld.getState().setArriving(true);
     useWorld.getState().endFlight();
     expect(useWorld.getState().flight).toBeNull();

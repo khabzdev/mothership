@@ -6,7 +6,7 @@ import { decksQuery } from "../../decks/queries";
 import { useDeckChoice } from "../deck-choice";
 import { SHIP_PAD } from "../layout";
 import { OUTPOST_SCALE } from "../outpost";
-import { restingPose, shipPose } from "../ship";
+import { flightOutcome, restingPose, shipPose } from "../ship";
 import { useWorld } from "../store";
 import { stepOutOfShip } from "./Captain";
 import { GLOW } from "./materials";
@@ -28,7 +28,7 @@ export function ShipPad() {
   const ship = useRef<Group>(null);
   const flame = useRef<Mesh>(null);
   const { data: decks } = useSuspenseQuery(decksQuery);
-  const { choose } = useDeckChoice();
+  const { deckId, choose } = useDeckChoice();
   const pose = useRef(restingPose());
   /** The flight (by when it was picked) already flown, so the deck switches exactly once. */
   const flown = useRef<number | null>(null);
@@ -43,8 +43,9 @@ export function ShipPad() {
       shipPose("takeoff", (now - flight.at) / 1000, p);
       if (p.done && flown.current !== flight.at) {
         flown.current = flight.at;
-        // A deck undocked mid-flight: the flight just ends and you stay.
-        if (decks.some((d) => d.id === flight.to)) {
+        // Switched deck some other way mid-flight, or the deck's gone: the flight just ends.
+        const ids = decks.map((d) => d.id);
+        if (flightOutcome(flight, deckId, ids) === "fly") {
           setArriving(true);
           choose(flight.to);
         }

@@ -40,6 +40,7 @@ const BOARD_HINTS = {
 export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
   const consoleId = useWorld((s) => s.consoleId);
   const atShip = useWorld((s) => s.atShip);
+  const aboard = useWorld((s) => s.flight !== null || s.arriving);
   const atFlightControl = useWorld((s) => s.atFlightControl);
   const atBoard = useWorld((s) => s.atBoard);
   const carrying = useWorld((s) => s.carrying);
@@ -68,7 +69,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
       </div>
     );
   }
-  if (atShip && consoleId === null) {
+  if (atShip && !aboard && consoleId === null) {
     return (
       <div className="hint" data-active>
         <span className="hint__what with-icon">

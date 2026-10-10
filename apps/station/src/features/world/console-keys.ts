@@ -92,14 +92,6 @@ function deliver(deckId: string, consoleId: number, member: CrewInfo | undefined
 export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Escape calls your ship's take-off off while it's still rumbling on the pad.
-      if (e.key === "Escape") {
-        const { flight, cancelFlight } = useWorld.getState();
-        if (canCancel(flight, Date.now())) {
-          e.preventDefault();
-          return cancelFlight();
-        }
-      }
       if (!gameKeysEnabled(e)) return;
       const { consoleId, atShip, atFlightControl, atBoard, open, carrying, carry, say } =
         useWorld.getState();
@@ -192,7 +184,21 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           return;
       }
     };
+    // Escape calls your ship's take-off off while it's still rumbling on the pad. It listens first
+    // (capture) and stops there, so the same press doesn't also close a window.
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const { flight, cancelFlight } = useWorld.getState();
+      if (!canCancel(flight, Date.now())) return;
+      e.preventDefault();
+      e.stopPropagation();
+      cancelFlight();
+    };
+    window.addEventListener("keydown", onEscape, true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onEscape, true);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [deckId, crew]);
 }

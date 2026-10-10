@@ -23,8 +23,8 @@ interface WorldState {
   consoleId: number | null;
   /** Standing in front of your ship. */
   atShip: boolean;
-  /** Your ship taking off for another deck (`at`: when you picked it, ms). */
-  flight: { to: string; at: number } | null;
+  /** Your ship taking off from deck `from` for deck `to` (`at`: when you picked it, ms). */
+  flight: { to: string; from: string | null; at: number } | null;
   /** Your ship has just flown you here and is coming down on the pad. */
   arriving: boolean;
   /** Standing at the Flight Control desk. */
@@ -42,7 +42,7 @@ interface WorldState {
   overlay: Overlay | null;
   setConsole: (id: number | null) => void;
   setAtShip: (atShip: boolean) => void;
-  startFlight: (to: string) => void;
+  startFlight: (to: string, from: string | null) => void;
   cancelFlight: () => void;
   endFlight: () => void;
   setArriving: (arriving: boolean) => void;
@@ -75,7 +75,7 @@ export const useWorld = create<WorldState>((set) => ({
   overlay: null,
   setConsole: (consoleId) => set((s) => (s.consoleId === consoleId ? s : { consoleId })),
   setAtShip: (atShip) => set((s) => (s.atShip === atShip ? s : { atShip })),
-  startFlight: (to) => set({ flight: { to, at: Date.now() } }),
+  startFlight: (to, from) => set({ flight: { to, from, at: Date.now() } }),
   cancelFlight: () => set({ flight: null }),
   endFlight: () => set({ flight: null }),
   setArriving: (arriving) => set({ arriving }),
@@ -96,11 +96,17 @@ export const useWorld = create<WorldState>((set) => ({
   say: (text, tone) => notify(text, tone),
 }));
 
+/** Aboard your ship: taking off, or coming down on a new deck. */
+export function aboard(): boolean {
+  const { flight, arriving } = useWorld.getState();
+  return flight !== null || arriving;
+}
+
 /** Game keys are ignored while typing or while a window is open (agent-office's guard). */
 export function gameKeysEnabled(event: KeyboardEvent): boolean {
-  const { overlay, paletteOpen, flight, arriving } = useWorld.getState();
+  const { overlay, paletteOpen } = useWorld.getState();
   // Aboard your ship you're not walking the deck.
-  if (overlay || paletteOpen || flight || arriving) return false;
+  if (overlay || paletteOpen || aboard()) return false;
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
   // Keys sent to the window or document (not an element) are game keys too.
   const target = event.target instanceof HTMLElement ? event.target : null;
