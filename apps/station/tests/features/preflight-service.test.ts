@@ -415,6 +415,26 @@ describe("PreflightService", () => {
     expect(service.history(unchanged.id)).toHaveLength(1);
   });
 
+  test("arming runs crew waiting on you too, not those working or asleep", async () => {
+    db.update(decks).set({ checksArmed: null }).run();
+    const waiting = await hireWithChange(0);
+    const idle = await hireWithChange(1);
+    const asleep = await hireWithChange(2);
+    crew.handleSignal({
+      crewId: waiting.id,
+      signal: { type: "needsInput", detail: "Claude is waiting for your input" },
+    });
+    crew.handleSignal({ crewId: idle.id, signal: { type: "idle" } });
+    crew.handleExit(asleep.id);
+
+    await service.arm("deck-1");
+    await settled(waiting.id);
+    await settled(idle.id);
+    expect(service.latest(waiting.id)).toMatchObject({ trigger: "stop", state: "go" });
+    expect(service.latest(idle.id)).toMatchObject({ trigger: "stop", state: "go" });
+    expect(service.latest(asleep.id)).toBeNull();
+  });
+
   /** Each run's checks wait here until released, or resolve as skipped when aborted. */
   function holdChecks() {
     const held: (() => void)[] = [];
@@ -508,6 +528,54 @@ describe("PreflightService", () => {
     signal(id, { type: "working" });
     expect(fuelOf(id)).toMatchObject({ flight: 2, fuel: 3 });
     expect(service.info(id)).toBeUndefined();
+  });
+
+  test("busy while a pre-flight runs, and while a hand-back is coming", async () => {
+    const { id } = await hireWithChange();
+    const signalAll = (sig: Parameters<CrewService["handleSignal"]>[0]["signal"]) => {
+      crew.handleSignal({ crewId: id, signal: sig });
+      service.handleSignal({ crewId: id, missionId: id, signal: sig });
+    };
+    expect(service.busy(id)).toBe(false);
+    const held = holdChecks();
+    signalAll({ type: "stopped" });
+    expect(service.busy(id)).toBe(true);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(service.busy(id)).toBe(true);
+    held.shift()!();
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    held.shift()!();
+    await settled(id);
+    // GO: through.
+    await vi.waitFor(() => expect(service.busy(id)).toBe(false));
+
+    // A NO-GO with fuel left: the hand-back is typed, and it's busy until it stops with a GO.
+    run = async (opts) => {
+      calls.push(opts);
+      return result(opts, verdicts.shift() ?? "go");
+    };
+    verdicts = ["go", "nogo"];
+    writeFileSync(join(crew.workdir(id).cwd, "change.txt"), "broken");
+    signalAll({ type: "stopped" });
+    await vi.waitFor(() => expect(service.history(id)).toHaveLength(2));
+    await settled(id);
+    await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(2));
+    expect(crew.member(id).status).toBe("done");
+    expect(service.busy(id)).toBe(true);
+    // Asleep, nothing is coming.
+    crew.handleExit(id);
+    expect(service.busy(id)).toBe(false);
+  });
+
+  test("not busy once out of fuel: it needs you", async () => {
+    const { id } = await hireWithChange();
+    db.update(crewTable).set({ fuel: 0 }).where(eq(crewTable.id, id)).run();
+    verdicts = ["nogo", "nogo"];
+    crew.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    stop(id);
+    await settled(id);
+    await vi.waitFor(() => expect(crew.member(id).status).toBe("needs_input"));
+    expect(service.busy(id)).toBe(false);
   });
 
   test("a manual run alone in a flight shows in info()", async () => {

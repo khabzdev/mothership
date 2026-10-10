@@ -23,6 +23,8 @@ let scratch: string;
 let crew: CrewService;
 let queue: QueueService;
 let claimed: number[];
+/** Crew a pre-flight is still busy with (running, or a hand-back on the way). */
+let unsettled: Set<string>;
 
 beforeEach(() => {
   scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-queue-")));
@@ -52,7 +54,13 @@ beforeEach(() => {
     broadcast: () => {},
   });
   claimed = [];
-  queue = new QueueService({ db, crew, claim: async (_d, n) => void claimed.push(n) });
+  unsettled = new Set();
+  queue = new QueueService({
+    db,
+    crew,
+    claim: async (_d, n) => void claimed.push(n),
+    isSettled: (id) => !unsettled.has(id),
+  });
 });
 
 afterEach(() => rmSync(scratch, { recursive: true, force: true }));
@@ -83,6 +91,20 @@ describe("task queue", () => {
     expect(queue.list("d").map((t) => t.state)).toEqual(["done", "running"]);
   });
 
+  test("crew that stopped aren't done while their pre-flight is busy", async () => {
+    await queue.setLimit("d", 1);
+    await add("one");
+    await add("two");
+    const first = queue.list("d")[0]!;
+    unsettled.add(first.crewId!);
+    crew.handleSignal({ crewId: first.crewId!, signal: { type: "stopped" } });
+    await queue.tick("d");
+    expect(queue.list("d").map((t) => t.state)).toEqual(["running", "queued"]);
+    unsettled.delete(first.crewId!);
+    await queue.tick("d");
+    expect(queue.list("d").map((t) => t.state)).toEqual(["done", "running"]);
+  });
+
   test("a limit of 0 pauses it, and an issue can't be queued twice", async () => {
     await queue.setLimit("d", 0);
     await add("one", 5);
@@ -96,7 +118,17 @@ describe("task queue", () => {
     await add("seventeen");
     expect(queue.list("d").at(-1)!.state).toBe("queued");
     const first = queue.list("d")[0]!;
+    // Paused, so its task is marked done without anyone taking the seat yet.
+    await queue.setLimit("d", 0);
     crew.handleSignal({ crewId: first.crewId!, signal: { type: "stopped" } });
+    await queue.tick("d");
+    expect(queue.list("d")[0]!.state).toBe("done");
+    // A pre-flight is busy with it again: it keeps its seat for now.
+    unsettled.add(first.crewId!);
+    await queue.setLimit("d", 16);
+    expect(queue.list("d").at(-1)!.state).toBe("queued");
+    expect(crew.roster("d").some((c) => c.id === first.crewId)).toBe(true);
+    unsettled.delete(first.crewId!);
     await queue.tick("d");
     expect(queue.list("d").at(-1)!.state).toBe("running");
     expect(crew.roster("d").some((c) => c.id === first.crewId)).toBe(false);

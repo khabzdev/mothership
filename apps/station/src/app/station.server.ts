@@ -66,6 +66,7 @@ export function getStation(): Station {
       home,
     });
     crew.describeWith((crewId) => preflight.info(crewId));
+    crew.busyWith((crewId) => preflight.busy(crewId));
     preflight.reconcile();
 
     onCrewSignal((event) => crew.handleSignal(event));
@@ -137,6 +138,7 @@ export function getStation(): Station {
       db: getDb(),
       crew,
       claim: (deckId, n) => boards.claimIssue(getDeck(getDb(), deckId).repoPath, n),
+      isSettled: (crewId) => !preflight.busy(crewId),
     });
     setInterval(() => void queue.tickAll(), 4000);
     return { crew, launcher, labels, clones, boards, queue, checks, preflight, diagnostics };

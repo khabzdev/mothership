@@ -175,14 +175,18 @@ export class PreflightService {
   }
 
   /**
-   * You said yes to the deck's checks: arm them, then run them for the agents that already
-   * stopped, as if they'd just stopped (so one with no change since its last run is skipped).
+   * You said yes to the deck's checks: arm them, then run them for the agents that aren't at work
+   * (stopped, idle, or waiting on you), as if they'd just stopped (so one with no change since its
+   * last run is skipped).
    */
   async arm(deckId: string): Promise<void> {
     this.#checks.arm(deckId, true);
     const stopped = this.#crew
       .roster(deckId)
-      .filter((member) => member.kind === "agent" && member.status === "done");
+      .filter(
+        (member) =>
+          member.kind === "agent" && member.status !== "working" && member.status !== "asleep",
+      );
     await Promise.all(stopped.map((member) => this.run(member.id, "stop")));
   }
 
@@ -195,6 +199,20 @@ export class PreflightService {
           `[preflight] couldn't detect checks for ${deckId}: ${(error as Error).message}`,
         ),
       );
+  }
+
+  /**
+   * Whether pre-flight isn't through with a crew member yet: a run is on the way (looking,
+   * queued, or running), or this flight's latest run is a stop NO-GO with a hand-back coming or
+   * just typed (fuel left, or the last one typed and the agent not yet back at work).
+   */
+  busy(crewId: string): boolean {
+    if (this.#busy.has(crewId)) return true;
+    const row = this.#crewRow(crewId);
+    if (!row || row.status === "asleep") return false;
+    const last = this.history(crewId)[0];
+    if (!last || last.trigger !== "stop" || last.state !== "nogo") return false;
+    return row.fuel > 0 || row.status === "done";
   }
 
   /** Stop a crew member's pre-flight: a queued one is dropped, a running one is cancelled. */

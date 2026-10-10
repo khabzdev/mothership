@@ -11,6 +11,11 @@ export interface QueueDeps {
   crew: Pick<CrewService, "roster" | "hire" | "sendHome">;
   /** Assign a queued issue on GitHub once crew start on it. */
   claim?: (deckId: string, issueNumber: number) => Promise<void>;
+  /**
+   * Whether a crew member that stopped is really through: no pre-flight running for it, and no
+   * hand-back on the way. Until then it isn't finished, and its seat isn't free.
+   */
+  isSettled?: (crewId: string) => boolean;
 }
 
 /** Statuses after which a crew member's queued task is finished. */
@@ -27,6 +32,10 @@ export class QueueService {
 
   constructor(deps: QueueDeps) {
     this.#deps = deps;
+  }
+
+  #finished(member: { id: string; status: string }): boolean {
+    return FINISHED.has(member.status) && (this.#deps.isSettled?.(member.id) ?? true);
   }
 
   list(deckId: string): QueueTask[] {
@@ -112,7 +121,7 @@ export class QueueService {
     // Running tasks whose crew finished (or went home) are done.
     for (const task of this.list(deckId).filter((t) => t.state === "running")) {
       const member = crew.roster(deckId).find((c) => c.id === task.crewId);
-      if (!member || FINISHED.has(member.status)) set(task.id, { state: "done" });
+      if (!member || this.#finished(member)) set(task.id, { state: "done" });
     }
 
     const limit = this.limit(deckId);
@@ -137,7 +146,7 @@ export class QueueService {
     const free = Array.from({ length: CONSOLE_COUNT }, (_, i) => i).find((i) => !taken.has(i));
     if (free !== undefined) return free;
     const finished = roster.find(
-      (c) => FINISHED.has(c.status) && tasks.some((t) => t.state === "done" && t.crewId === c.id),
+      (c) => this.#finished(c) && tasks.some((t) => t.state === "done" && t.crewId === c.id),
     );
     if (!finished) return undefined;
     await this.#deps.crew.sendHome(finished.id, "keep");
