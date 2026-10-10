@@ -61,3 +61,41 @@ describe("approval dialog reader", () => {
     expect(screenLines(frame)).toEqual(["Would you proceed?", "1. Yes, auto-accept"]);
   });
 });
+
+describe("only the last dialog's own options count", () => {
+  const PLAN_THEN_V1 = [
+    "Would you like to proceed? (my plan)",
+    "2. Enable auto-accept in settings",
+    "3. Skip the tests",
+    "",
+    ...V1,
+  ];
+
+  test("a plan's numbered list above the real dialog is ignored", () => {
+    expect(findOption(PLAN_THEN_V1, "approve")).toBe("1");
+    expect(findOption(PLAN_THEN_V1, "revise")).toBe("3");
+  });
+
+  test("a stale dialog above a live one: the live numbers win", () => {
+    const stacked = [...V2, "", ...V1];
+    expect(findOption(stacked, "approve")).toBe("1");
+    expect(findOption(stacked, "revise")).toBe("3");
+  });
+
+  test("a non-option line after the header ends the option block", () => {
+    const lines = [
+      "Would you like to proceed?",
+      "Pick one below:",
+      "1. auto-accept edits",
+      "3. keep planning",
+    ];
+    expect(findOption(lines, "approve")).toBeNull();
+    expect(findOption(lines, "revise")).toBeNull();
+  });
+
+  test("header present, only keep-planning under it", () => {
+    const lines = ["1. auto-accept foo", "Would you like to proceed?", "2. No, keep planning"];
+    expect(findOption(lines, "approve")).toBeNull();
+    expect(findOption(lines, "revise")).toBe("2");
+  });
+});

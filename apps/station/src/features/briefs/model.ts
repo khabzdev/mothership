@@ -9,8 +9,9 @@ const EMPTY = "(empty brief)";
 
 // Each pattern matches a Goal heading line; group 1 is any text on that same line.
 const GOAL_LINES = [
-  /^\s*#{1,6}\s*goal\s*:?\s*(.*)$/i,
+  /^\s*#{1,6}\s*goal\b\s*:?\s*(.*)$/i,
   /^\s*\*\*goal\*\*\s*:?\s*(.*)$/i,
+  /^\s*goal\s*:\s*(.+)$/i,
   /^\s*goal\s*:?\s*$/i,
 ];
 
@@ -40,6 +41,13 @@ function firstText(lines: string[], from: number): string {
   return "";
 }
 
+/** The first non-empty line after a Goal heading; "" when a heading comes first. */
+function sectionText(lines: string[], from: number): string {
+  const line = lines.slice(from).find((l) => l.trim() !== "");
+  if (line === undefined || /^\s*#/.test(line)) return "";
+  return clean(line);
+}
+
 /** Clips to GOAL_MAX characters, ending in an ellipsis when cut. */
 function clip(text: string): string {
   return text.length > GOAL_MAX ? `${text.slice(0, GOAL_MAX - 1)}…` : text;
@@ -49,7 +57,6 @@ function clip(text: string): string {
 export function goalOf(text: string): string {
   const lines = text.split("\n");
   const at = lines.findIndex((line) => goalHeading(line) !== null);
-  const found =
-    at === -1 ? firstText(lines, 0) : goalHeading(lines[at]!) || firstText(lines, at + 1);
-  return clip(found || EMPTY);
+  const found = at === -1 ? "" : goalHeading(lines[at]!) || sectionText(lines, at + 1);
+  return clip(found || firstText(lines, 0) || EMPTY);
 }

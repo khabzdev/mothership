@@ -25,3 +25,18 @@ describe("brief model", () => {
     expect(goalOf(`## Goal\n${"x".repeat(300)}`).endsWith("…")).toBe(true);
   });
 });
+
+describe("goal heading edges", () => {
+  test("a heading word that only starts with goal is not the Goal heading", () => {
+    expect(goalOf("## Goals and scope\nShip it")).toBe("Goals and scope");
+    expect(goalOf("## Goalkeeper\nShip it")).toBe("Goalkeeper");
+  });
+
+  test("plain Goal: line gives its text", () => {
+    expect(goalOf("Goal: Ship it")).toBe("Ship it");
+  });
+
+  test("a Goal heading followed by another heading does not return that heading", () => {
+    expect(goalOf("## Goal\n## Approach\nbody")).toBe("Goal");
+  });
+});

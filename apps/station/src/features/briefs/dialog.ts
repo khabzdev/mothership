@@ -20,14 +20,19 @@ export function dialogShown(lines: string[]): boolean {
   return lines.some((line) => PROCEED.test(line));
 }
 
-/** The numbered option lines after the dialog's question, in screen order. */
+/** The option block directly under the last dialog header; blank lines may sit between options. */
 function optionsUnder(lines: string[]): Option[] {
-  const start = lines.findIndex((line) => PROCEED.test(line));
-  if (start === -1) return [];
+  let header = -1;
+  lines.forEach((line, i) => {
+    if (PROCEED.test(line)) header = i;
+  });
+  if (header === -1) return [];
   const options: Option[] = [];
-  for (const line of lines.slice(start + 1)) {
+  for (const line of lines.slice(header + 1)) {
+    if (line.trim() === "") continue;
     const m = OPTION.exec(line);
-    if (m) options.push({ key: m[1]!, label: m[2]! });
+    if (!m) break;
+    options.push({ key: m[1]!, label: m[2]! });
   }
   return options;
 }
