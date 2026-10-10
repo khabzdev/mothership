@@ -15,7 +15,7 @@ import { afterVerdict } from "../preflight/flight";
 import type { PreflightService } from "../preflight/preflight.server";
 import { readInspectionDiff } from "./diff.server";
 import { flaggedDetail, inspectionHandBack, type Finding } from "./model";
-import { parseReview, reviewPrompt } from "./review";
+import { parseReview, reviewFailure, reviewPrompt } from "./review";
 import { REVIEW_TIMEOUT_MS, runReview, type RunReview } from "./runner.server";
 import { scopeCheck, type ChangedStat } from "./scope";
 
@@ -406,8 +406,11 @@ export class InspectionService {
       this.#settle(job, { state: "cancelled", reason: "worktree gone" });
       return;
     }
-    if (!review.ok) {
-      const why = review.error ?? `Exited with code ${review.exitCode}`;
+    // A run that exits 0 can still report it couldn't review (auth, credit, max turns).
+    const why = review.ok
+      ? reviewFailure(review.stdout)
+      : (review.error ?? `Exited with code ${review.exitCode}`);
+    if (why !== null) {
       this.#settle(job, { state: "cancelled", reason: `failed: ${why}` }, why);
       return;
     }

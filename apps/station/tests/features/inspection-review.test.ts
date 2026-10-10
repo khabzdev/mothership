@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { DIFF_CAP_BYTES, parseReview, reviewPrompt } from "../../src/features/inspection/review.ts";
+import {
+  DIFF_CAP_BYTES,
+  parseReview,
+  reviewFailure,
+  reviewPrompt,
+} from "../../src/features/inspection/review.ts";
 
 const input = { brief: null, task: "Fix login", checks: [], scope: [], diff: "diff" };
 const envelope = (result: string) => JSON.stringify({ type: "result", result });
@@ -94,5 +99,41 @@ describe("parseReview", () => {
     expect(out).toHaveLength(1);
     expect(out[0]!.title).toHaveLength(80);
     expect(out[0]!.title.endsWith("…")).toBe(true);
+  });
+});
+
+describe("reviewFailure", () => {
+  test("a successful envelope is no failure", () => {
+    expect(reviewFailure(envelope("ok"))).toBeNull();
+    expect(
+      reviewFailure(
+        JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "x" }),
+      ),
+    ).toBeNull();
+    expect(reviewFailure("garbage")).toBeNull();
+  });
+
+  test("an error envelope is a failure with its text", () => {
+    expect(
+      reviewFailure(
+        JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: true,
+          result: "  Invalid API key \n",
+        }),
+      ),
+    ).toBe("Invalid API key");
+    expect(
+      reviewFailure(
+        JSON.stringify({ type: "result", subtype: "error_max_turns", is_error: false }),
+      ),
+    ).toBe("error_max_turns");
+  });
+
+  test("long error text is clipped", () => {
+    const out = reviewFailure(JSON.stringify({ is_error: true, result: "e".repeat(1000) }))!;
+    expect(out.length).toBeLessThanOrEqual(200);
+    expect(out.endsWith("…")).toBe(true);
   });
 });

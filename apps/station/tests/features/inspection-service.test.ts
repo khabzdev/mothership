@@ -407,6 +407,38 @@ describe("InspectionService", () => {
     expect(pastes()).toEqual([]);
   });
 
+  test("a review whose envelope says it errored is cancelled as failed, spending nothing", async () => {
+    const { id } = await hire();
+    answers = [
+      {
+        ok: true,
+        stdout: JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: true,
+          result: "Credit balance is too low",
+        }),
+        exitCode: 0,
+        timedOut: false,
+        durationMs: 1,
+      },
+    ];
+    go(id);
+    await settled(id);
+    const record = service.latest(id)!;
+    expect(record).toMatchObject({
+      state: "cancelled",
+      reason: "failed: Credit balance is too low",
+      findings: [],
+    });
+    expect(inspectionMsgs().at(-1)).toMatchObject({
+      state: "cancelled",
+      failed: "Credit balance is too low",
+    });
+    expect(fuelOf(id).fuel).toBe(3);
+    expect(pastes()).toEqual([]);
+  });
+
   test("a diff that can't be read is cancelled as failed", async () => {
     const { id } = await hire();
     diffError = new Error("fatal: bad revision");

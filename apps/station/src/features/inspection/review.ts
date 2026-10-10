@@ -82,6 +82,30 @@ function toFinding(raw: unknown): Finding | null {
   return finding;
 }
 
+const FAILURE_MAX = 200;
+
+/**
+ * Why a `claude -p --output-format json` run couldn't review (an auth, credit or max-turns error,
+ * which still exits 0): its envelope's `is_error`, or a `subtype` other than "success". Null when
+ * it ran, or the output isn't an envelope at all.
+ */
+export function reviewFailure(stdout: string): string | null {
+  let envelope: { is_error?: unknown; subtype?: unknown; result?: unknown };
+  try {
+    envelope = JSON.parse(stdout) as typeof envelope;
+  } catch {
+    return null;
+  }
+  if (typeof envelope !== "object" || envelope === null) return null;
+  const subtype = typeof envelope.subtype === "string" ? envelope.subtype : undefined;
+  if (envelope.is_error !== true && (subtype === undefined || subtype === "success")) return null;
+  const text =
+    (typeof envelope.result === "string" && envelope.result.trim()) ||
+    (subtype !== "success" && subtype) ||
+    "the review reported an error";
+  return text.length > FAILURE_MAX ? `${text.slice(0, FAILURE_MAX - 1)}…` : text;
+}
+
 /** The findings in `claude -p --output-format json` output; unreadable output is one note. */
 export function parseReview(stdout: string): Finding[] {
   let result: unknown;
