@@ -8,11 +8,14 @@ import { labelsQuery } from "../../labels/queries";
 import { useDeckChoice } from "../deck-choice";
 import { SHIP_PAD } from "../layout";
 import { OUTPOST_SCALE, PAD_TOP } from "../outpost";
-import { flightOutcome, restingPose, shipPose } from "../ship";
+import { afterPrefetch, flightOutcome, restingPose, shipPose, withTimeout } from "../ship";
 import { useWorld } from "../store";
 import { stepOutOfShip } from "./Captain";
 import { GLOW } from "./materials";
 import { LANDER_PIECE, LANDING_PAD_PIECE, useProp } from "./models";
+
+/** How long (ms) to wait on the target deck's data before landing anyway. */
+const PREFETCH_TIMEOUT_MS = 4000;
 
 /** The engine's flame, bright enough to bloom. */
 const FLAME = new Color("#ffb020").multiplyScalar(GLOW);
@@ -31,8 +34,9 @@ export function ShipPad() {
   const queryClient = useQueryClient();
   const { deckId, choose } = useDeckChoice();
   const pose = useRef(restingPose());
-  /** The flight (by when it was picked) already flown, so the deck switches exactly once. */
-  const flown = useRef<number | null>(null);
+  /** The current deck, readable from the prefetch continuation (which outlives a render). */
+  const deckIdRef = useRef(deckId);
+  deckIdRef.current = deckId;
   /** When the landing began (ms). */
   const landing = useRef<number | null>(null);
 
@@ -42,25 +46,34 @@ export function ShipPad() {
     const p = pose.current;
     if (flight) {
       shipPose("takeoff", (now - flight.at) / 1000, p);
-      if (p.done && flown.current !== flight.at) {
-        flown.current = flight.at;
+      if (p.done && !flight.navigating) {
         // Switched deck some other way mid-flight, or the deck's gone: the flight just ends.
         const ids = decks.map((d) => d.id);
         if (flightOutcome(flight, deckId, ids) === "fly") {
           // Warm the target deck's data first so Game doesn't suspend (hiding the landing behind
           // the Boarding fallback). The flight stays up (ship out of sight) until then; if the
-          // prefetch fails, switch anyway rather than strand the flight.
-          const to = flight.to;
-          void Promise.all([
-            queryClient.ensureQueryData(rosterQuery(to)),
-            queryClient.ensureQueryData(labelsQuery(to)),
-          ])
-            .catch(() => undefined)
-            .then(() => {
-              useWorld.getState().setArriving(true);
+          // prefetch fails or hangs, switch anyway rather than strand the flight. Marked in the
+          // store so a remounted pad doesn't start a second prefetch.
+          const { to, at: startedAt } = flight;
+          useWorld.getState().markNavigating(startedAt);
+          void withTimeout(
+            Promise.all([
+              queryClient.ensureQueryData(rosterQuery(to)),
+              queryClient.ensureQueryData(labelsQuery(to)),
+            ]),
+            PREFETCH_TIMEOUT_MS,
+          ).then(() => {
+            const world = useWorld.getState();
+            const current = world.flight;
+            const stillOurs = current?.at === startedAt;
+            if (afterPrefetch(current, startedAt, deckIdRef.current) === "land") {
+              world.setArriving(true);
               choose(to);
-              useWorld.getState().endFlight();
-            });
+              world.endFlight();
+            } else if (stillOurs) {
+              world.endFlight();
+            }
+          });
         } else {
           endFlight();
         }

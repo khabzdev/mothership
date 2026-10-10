@@ -84,3 +84,29 @@ export function rideAction(
   if (id === current) return "stay";
   return fromShip ? "fly" : "choose";
 }
+
+/**
+ * After the target deck's data is warm: land on it only if the flight is still the one we started
+ * and you're still on the deck you left. Otherwise something else took over, so drop it.
+ */
+export function afterPrefetch(
+  flight: { at: number; from: string | null } | null,
+  startedAt: number,
+  currentDeckId: string | null,
+): "land" | "drop" {
+  return flight !== null && flight.at === startedAt && currentDeckId === flight.from
+    ? "land"
+    : "drop";
+}
+
+/** Settles with `promise`, or with `undefined` after `ms` (rejections count as settling too). */
+export function withTimeout(promise: Promise<unknown>, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    const done = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    promise.then(done, done);
+  });
+}

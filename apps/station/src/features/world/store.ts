@@ -24,7 +24,7 @@ interface WorldState {
   /** Standing in front of your ship. */
   atShip: boolean;
   /** Your ship taking off from deck `from` for deck `to` (`at`: when you picked it, ms). */
-  flight: { to: string; from: string | null; at: number } | null;
+  flight: { to: string; from: string | null; at: number; navigating?: boolean } | null;
   /** Your ship has just flown you here and is coming down on the pad. */
   arriving: boolean;
   /** Standing at the Flight Control desk. */
@@ -45,6 +45,8 @@ interface WorldState {
   startFlight: (to: string, from: string | null) => void;
   cancelFlight: () => void;
   endFlight: () => void;
+  /** The take-off ended and the deck switch is under way (so a remounted pad doesn't repeat it). */
+  markNavigating: (at: number) => void;
   setArriving: (arriving: boolean) => void;
   setAtFlightControl: (atFlightControl: boolean) => void;
   setAtBoard: (atBoard: BoardId | null) => void;
@@ -78,6 +80,8 @@ export const useWorld = create<WorldState>((set) => ({
   startFlight: (to, from) => set({ flight: { to, from, at: Date.now() } }),
   cancelFlight: () => set({ flight: null }),
   endFlight: () => set({ flight: null }),
+  markNavigating: (at) =>
+    set((s) => (s.flight?.at === at ? { flight: { ...s.flight, navigating: true } } : s)),
   setArriving: (arriving) => set({ arriving }),
   setAtFlightControl: (atFlightControl) =>
     set((s) => (s.atFlightControl === atFlightControl ? s : { atFlightControl })),

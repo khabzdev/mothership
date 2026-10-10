@@ -1,12 +1,14 @@
-import { afterEach, describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import { CONSOLES, SHIP_STOP, consoleSeat, shipInReach } from "../../src/features/world/layout.ts";
 import {
   CLIMB_HEIGHT,
   SHIP_TIMING,
+  afterPrefetch,
   canCancel,
   flightOutcome,
   rideAction,
   shipPose,
+  withTimeout,
 } from "../../src/features/world/ship.ts";
 import { useWorld } from "../../src/features/world/store.ts";
 
@@ -88,5 +90,60 @@ describe("flight state", () => {
     useWorld.getState().endFlight();
     expect(useWorld.getState().flight).toBeNull();
     expect(useWorld.getState().arriving).toBe(true);
+  });
+});
+
+describe("after the prefetch", () => {
+  const flight = { at: 100, from: "d1" };
+
+  test("lands when the flight is still ours and you're still on the deck you left", () => {
+    expect(afterPrefetch(flight, 100, "d1")).toBe("land");
+  });
+
+  test("drops when the flight was cancelled or replaced", () => {
+    expect(afterPrefetch(null, 100, "d1")).toBe("drop");
+    expect(afterPrefetch({ at: 200, from: "d1" }, 100, "d1")).toBe("drop");
+  });
+
+  test("drops when you switched deck meanwhile", () => {
+    expect(afterPrefetch(flight, 100, "d3")).toBe("drop");
+    expect(afterPrefetch(flight, 100, null)).toBe("drop");
+  });
+
+  test("marking a flight navigating is per flight and ignores a replaced one", () => {
+    useWorld.getState().startFlight("d2", "d1");
+    const at = useWorld.getState().flight!.at;
+    useWorld.getState().markNavigating(at + 1);
+    expect(useWorld.getState().flight?.navigating).toBeUndefined();
+    useWorld.getState().markNavigating(at);
+    expect(useWorld.getState().flight?.navigating).toBe(true);
+    useWorld.setState({ flight: null });
+  });
+});
+
+describe("withTimeout", () => {
+  test("gives up on a promise that never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      void withTimeout(new Promise(() => undefined), 4000).then(() => (settled = true));
+      await vi.advanceTimersByTimeAsync(3999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("settles early when the promise resolves or rejects", async () => {
+    vi.useFakeTimers();
+    try {
+      await withTimeout(Promise.resolve(1), 4000);
+      await withTimeout(Promise.reject(new Error("x")), 4000);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
