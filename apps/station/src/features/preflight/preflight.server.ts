@@ -183,9 +183,10 @@ export class PreflightService {
   }
 
   /**
-   * You said yes to the deck's checks: arm them, then run them for the agents that aren't at work
-   * (stopped, idle, or waiting on you), as if they'd just stopped (so one with no change since its
-   * last run is skipped).
+   * You said yes to the deck's checks: arm them, then run them for the agents sitting at their
+   * prompt (stopped, idle, or only idling there), as if they'd just stopped (so one with no change
+   * since its last run is skipped). Never one at a permission prompt: a hand-back typed there
+   * would answer it.
    */
   async arm(deckId: string): Promise<void> {
     this.#checks.arm(deckId, true);
@@ -193,7 +194,10 @@ export class PreflightService {
       .roster(deckId)
       .filter(
         (member) =>
-          member.kind === "agent" && member.status !== "working" && member.status !== "asleep",
+          member.kind === "agent" &&
+          (member.status === "done" ||
+            member.status === "idle" ||
+            (member.status === "needs_input" && this.#crew.waitingIdle(member.id))),
       );
     await Promise.all(stopped.map((member) => this.run(member.id, "stop")));
   }
@@ -218,6 +222,10 @@ export class PreflightService {
     if (this.#busy.has(crewId)) return true;
     const row = this.#crewRow(crewId);
     if (!row || row.status === "asleep") return false;
+    // Disarmed, or no checks on: no stop will run anything, so no hand-back is coming.
+    if (this.#checks.armed(row.deckId) !== true || this.#checks.enabled(row.deckId).length === 0) {
+      return false;
+    }
     const last = this.history(crewId)[0];
     if (!last || last.trigger !== "stop" || last.state !== "nogo") return false;
     return row.fuel > 0 || row.status === "done";
@@ -437,6 +445,8 @@ export class PreflightService {
       this.#crew.alert(job.crewId, outOfFuelDetail(names, outcome.attempts));
       return;
     }
+    // At a permission prompt, typing would answer it: leave it to you, spending nothing.
+    if (member.status === "needs_input" && !this.#crew.waitingIdle(job.crewId)) return;
     const message = handBackMessage(failures, outcome.attempt, outcome.maxAttempts);
     try {
       await this.#crew.prompt(job.crewId, message, "station");

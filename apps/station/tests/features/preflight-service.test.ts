@@ -457,7 +457,7 @@ describe("PreflightService", () => {
     const asleep = await hireWithChange(2);
     crew.handleSignal({
       crewId: waiting.id,
-      signal: { type: "needsInput", detail: "Claude is waiting for your input" },
+      signal: { type: "needsInput", detail: "Claude is waiting for your input", idle: true },
     });
     crew.handleSignal({ crewId: idle.id, signal: { type: "idle" } });
     crew.handleExit(asleep.id);
@@ -468,6 +468,48 @@ describe("PreflightService", () => {
     expect(service.latest(waiting.id)).toMatchObject({ trigger: "stop", state: "go" });
     expect(service.latest(idle.id)).toMatchObject({ trigger: "stop", state: "go" });
     expect(service.latest(asleep.id)).toBeNull();
+  });
+
+  test("arming skips crew at a permission prompt or still starting", async () => {
+    db.update(decks).set({ checksArmed: null }).run();
+    const permission = await hireWithChange(0);
+    const idleWait = await hireWithChange(1);
+    const starting = await hireWithChange(2);
+    crew.handleSignal({
+      crewId: permission.id,
+      signal: { type: "needsInput", detail: "Approve Bash: rm -rf dist" },
+    });
+    crew.handleSignal({
+      crewId: idleWait.id,
+      signal: { type: "needsInput", detail: "Claude is waiting for your input", idle: true },
+    });
+    expect(crew.member(starting.id).status).toBe("starting");
+
+    await service.arm("deck-1");
+    await settled(idleWait.id);
+    expect(service.latest(idleWait.id)).toMatchObject({ trigger: "stop", state: "go" });
+    expect(service.latest(permission.id)).toBeNull();
+    expect(service.latest(starting.id)).toBeNull();
+  });
+
+  test("a NO-GO is never typed into a permission prompt", async () => {
+    const { id } = await hireWithChange();
+    let release!: () => void;
+    run = async (opts) => {
+      calls.push(opts);
+      if (calls.length === 1) await new Promise<void>((r) => (release = r));
+      return result(opts, calls.length === 1 ? "go" : "nogo");
+    };
+    stop(id);
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    // A permission request comes up while the checks run.
+    crew.handleSignal({ crewId: id, signal: { type: "needsInput", detail: "Approve Bash: ls" } });
+    release();
+    await settled(id);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(pastes()).toEqual([]);
+    expect(fuelOf(id)?.fuel).toBe(3);
+    expect(crew.member(id)).toMatchObject({ status: "needs_input", detail: "Approve Bash: ls" });
   });
 
   /** Each run's checks wait here until released, or resolve as skipped when aborted. */
@@ -601,6 +643,22 @@ describe("PreflightService", () => {
     crew.handleExit(id);
     expect(service.busy(id)).toBe(false);
   });
+
+  test.each(["disarmed", "no checks"])(
+    "not busy after a NO-GO once the deck is %s",
+    async (how) => {
+      const { id } = await hireWithChange();
+      verdicts = ["nogo", "nogo"];
+      crew.handleSignal({ crewId: id, signal: { type: "stopped" } });
+      stop(id);
+      await settled(id);
+      await vi.waitFor(() => expect(fuelOf(id)?.fuel).toBe(2));
+      expect(service.busy(id)).toBe(true);
+      if (how === "disarmed") checks.arm("deck-1", false);
+      else db.update(deckChecks).set({ enabled: false }).run();
+      expect(service.busy(id)).toBe(false);
+    },
+  );
 
   test("not busy once out of fuel: it needs you", async () => {
     const { id } = await hireWithChange();

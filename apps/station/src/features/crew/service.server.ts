@@ -81,6 +81,8 @@ export class CrewService {
   readonly #submitting = new Set<string>();
   /** Crew under a station alert, which stands until they work again. */
   readonly #alerted = new Set<string>();
+  /** Crew whose "needs you" is only Claude idling at its prompt, not a question for you. */
+  readonly #idleWaiting = new Set<string>();
 
   constructor(deps: CrewServiceDeps) {
     this.#deps = deps;
@@ -106,6 +108,11 @@ export class CrewService {
     this.#busy = fn;
   }
 
+  /** Whether a crew member's "needs you" is only Claude idling at its prompt (safe to type into). */
+  waitingIdle(crewId: string): boolean {
+    return this.#idleWaiting.has(crewId);
+  }
+
   /** Send the deck's roster again, after something it describes has changed. */
   refresh(deckId: string): void {
     this.#broadcast(deckId);
@@ -115,6 +122,7 @@ export class CrewService {
   alert(crewId: string, detail: string): void {
     if (!this.#row(crewId)) return;
     this.#alerted.add(crewId);
+    this.#idleWaiting.delete(crewId);
     this.#update(crewId, "needs_input", { action: null, detail });
   }
 
@@ -269,6 +277,7 @@ export class CrewService {
     const deck = this.#deck(row.deckId);
     this.#submitting.delete(crewId);
     this.#alerted.delete(crewId);
+    this.#idleWaiting.delete(crewId);
     this.#deps.db.delete(crew).where(eq(crew.id, crewId)).run();
     this.#broadcast(row.deckId);
     for (const listener of this.#goneListeners) listener(crewId);
@@ -308,6 +317,8 @@ export class CrewService {
     else if (this.#alerted.has(crewId)) return;
     // Claude only waiting at its prompt while a pre-flight decides what's next: not yet you.
     else if (signal.type === "needsInput" && signal.idle && this.#busy(crewId)) return;
+    if (signal.type === "needsInput" && signal.idle) this.#idleWaiting.add(crewId);
+    else this.#idleWaiting.delete(crewId);
     const action =
       signal.type === "working" && signal.activity
         ? (toolAction(signal.activity.tool, signal.activity.command) ?? null)
@@ -324,6 +335,7 @@ export class CrewService {
 
   handleExit(crewId: string): void {
     this.#alerted.delete(crewId);
+    this.#idleWaiting.delete(crewId);
     this.#submitting.delete(crewId);
     this.#update(crewId, "asleep", { action: null, detail: null });
   }
