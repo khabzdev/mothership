@@ -1,4 +1,4 @@
-import { Badge, Banner, Button, Checkbox, Empty, InputArea, Select } from "@cloudflare/kumo";
+import { Badge, Banner, Button, Checkbox, Empty, Input, InputArea, Select } from "@cloudflare/kumo";
 import {
   AirplaneTakeOff01Icon,
   ArrowLeft01Icon,
@@ -20,6 +20,9 @@ import { resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { hireMutation, promptMutation, rosterQuery } from "../crew/queries";
 import { TerminalPanel } from "../crew/ui/TerminalPanel";
 import { decksQuery } from "../decks/queries";
+import { REASON_MAX } from "../briefs/model";
+import { approveBriefMutation, briefQuery, reviseBriefMutation } from "../briefs/queries";
+import { BriefText } from "../briefs/ui/BriefText";
 import { preflightChip } from "../preflight/model";
 import { preflightQuery, runPreflightMutation } from "../preflight/queries";
 import { useDeckChoice } from "../world/deck-choice";
@@ -87,6 +90,106 @@ function LitePreflight({ member }: { member: CrewInfo }) {
   );
 }
 
+const briefTone = (info: NonNullable<CrewInfo["brief"]>) =>
+  info.state === "waiting" ? "warning" : "neutral";
+
+type BriefResult = { ok: true } | { ok: false; message: string; openTerminal: boolean };
+
+/** The brief to read, and while it waits, approve or send back with a reason. */
+function LiteBrief({ member, brief }: { member: CrewInfo; brief: NonNullable<CrewInfo["brief"]> }) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery(briefQuery(member.id));
+  const approve = useMutation(approveBriefMutation(queryClient, member.id));
+  const revise = useMutation(reviseBriefMutation(queryClient, member.id));
+  const [open, setOpen] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const latest = data?.[0];
+  const waiting = brief.state === "waiting" && latest?.state === "waiting";
+  const busy = approve.isPending || revise.isPending;
+
+  const settle = (result: BriefResult, onOk?: () => void) => {
+    if (result.ok) {
+      setMessage(null);
+      onOk?.();
+    } else setMessage(result.message);
+  };
+
+  return (
+    <section className="lite-brief" aria-label="Brief">
+      <Button
+        variant="ghost"
+        className="lite-brief__chip"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <Badge variant={briefTone(brief)} appearance="dot">
+          Brief
+        </Badge>
+        <span className="muted">Rev {brief.revision}</span>
+      </Button>
+      {open && (
+        <div className="lite-brief__sheet">
+          {latest ? <BriefText text={latest.text} /> : <p className="muted">Loading…</p>}
+          {waiting &&
+            (revising ? (
+              <form
+                className="lite-brief__revise"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const text = reason.trim();
+                  if (!text || busy) return;
+                  revise.mutate(text, {
+                    onSuccess: (result) =>
+                      settle(result, () => {
+                        setRevising(false);
+                        setReason("");
+                      }),
+                  });
+                }}
+              >
+                <Input
+                  aria-label="What to change"
+                  placeholder="What should change?"
+                  maxLength={REASON_MAX}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={revise.isPending}
+                  disabled={!reason.trim()}
+                >
+                  Send
+                </Button>
+              </form>
+            ) : (
+              <div className="lite-brief__actions">
+                <Button variant="secondary" disabled={busy} onClick={() => setRevising(true)}>
+                  Revise
+                </Button>
+                <Button
+                  variant="primary"
+                  loading={approve.isPending}
+                  disabled={busy}
+                  onClick={() =>
+                    approve.mutate(undefined, { onSuccess: (result) => settle(result) })
+                  }
+                >
+                  Approve
+                </Button>
+              </div>
+            ))}
+          {message && <p className="lite-brief__note">{message}</p>}
+          <ErrorNote error={approve.error ?? revise.error} />
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) {
   const { client } = useRealtime();
   const prompt = useMutation(promptMutation());
@@ -131,6 +234,7 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
       <div className="lite-crew__term">
         <TerminalPanel crewId={member.id} />
       </div>
+      {member.brief && <LiteBrief member={member} brief={member.brief} />}
       {member.kind === "agent" && <LitePreflight member={member} />}
       <div className="lite-keys" role="toolbar" aria-label="Terminal keys">
         {KEYS.map(([label, data]) => (
@@ -335,6 +439,11 @@ function LiteDeck({
                   </span>
                   <span className="lite-list__badges">
                     <StatusBadge crew={c} />
+                    {c.brief && (
+                      <Badge variant={briefTone(c.brief)} appearance="dot">
+                        Brief
+                      </Badge>
+                    )}
                     <PreflightChip info={c.preflight} />
                   </span>
                 </button>

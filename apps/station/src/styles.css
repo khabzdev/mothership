@@ -1559,6 +1559,39 @@ kbd {
   gap: 0.5rem;
 }
 
+.lite-brief,
+.lite-brief__sheet {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lite-brief__chip {
+  justify-self: start;
+}
+
+.lite-brief__sheet {
+  overflow-wrap: anywhere;
+}
+
+.lite-brief__actions,
+.lite-brief__revise {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.lite-brief__revise > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.lite-brief__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-kumo-subtle);
+}
+
 .lite-list__who,
 .lite-crew__who {
   display: grid;
