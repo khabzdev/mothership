@@ -41,7 +41,7 @@ describe("database", () => {
       )
       .all()
       .map((row) => (row as { name: string }).name);
-    expect(tables).toEqual(["console_labels", "crew", "decks", "queue_tasks"]);
+    expect(tables).toEqual(["console_labels", "crew", "deck_checks", "decks", "queue_tasks"]);
   });
 
   test("enables foreign keys", () => {

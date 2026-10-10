@@ -5,6 +5,7 @@ import {
   type CloneInfo,
   type ConsoleLabel,
   type CrewInfo,
+  type DeckCheck,
   type Run,
   type ScreenFrame,
   type ServerMsg,
@@ -72,6 +73,13 @@ export function parseServerMsg(raw: string): ServerMsg | null {
       return isId(o.deckId) && Array.isArray(o.labels) && o.labels.every(isConsoleLabel)
         ? { type: o.type, deckId: o.deckId, labels: o.labels }
         : null;
+    case "deck.checks":
+      return isId(o.deckId) &&
+        (o.armed === null || typeof o.armed === "boolean") &&
+        Array.isArray(o.checks) &&
+        o.checks.every(isDeckCheck)
+        ? { type: o.type, deckId: o.deckId, armed: o.armed, checks: o.checks }
+        : null;
     case "deck.clones":
       return Array.isArray(o.clones) && o.clones.every(isCloneInfo)
         ? { type: o.type, clones: o.clones }
@@ -109,6 +117,18 @@ function isConsoleLabel(value: unknown): value is ConsoleLabel {
   if (typeof value !== "object" || value === null) return false;
   const l = value as Record<string, unknown>;
   return Number.isInteger(l.consoleId) && typeof l.text === "string" && typeof l.color === "string";
+}
+
+function isDeckCheck(value: unknown): value is DeckCheck {
+  if (typeof value !== "object" || value === null) return false;
+  const c = value as Record<string, unknown>;
+  return (
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    typeof c.command === "string" &&
+    typeof c.timeoutMs === "number" &&
+    typeof c.enabled === "boolean"
+  );
 }
 
 function isRun(value: unknown): value is Run {

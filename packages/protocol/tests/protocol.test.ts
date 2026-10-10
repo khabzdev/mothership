@@ -39,6 +39,7 @@ describe("types", () => {
       | "crew.roster"
       | "crew.screen"
       | "deck.labels"
+      | "deck.checks"
       | "deck.clones"
       | "pr.merged"
       | "error"
@@ -130,6 +131,12 @@ describe("parseServerMsg", () => {
       type: "deck.labels",
       deckId: "d1",
       labels: [{ consoleId: 2, text: "Ops", color: "#118ab2" }],
+    },
+    {
+      type: "deck.checks",
+      deckId: "d1",
+      armed: null,
+      checks: [{ id: "k1", name: "test", command: "vp test", timeoutMs: 300000, enabled: true }],
     },
     {
       type: "deck.clones",

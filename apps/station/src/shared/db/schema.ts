@@ -15,6 +15,8 @@ export const decks = sqliteTable("decks", {
   modules: text("modules", { mode: "json" }).$type<string[]>().notNull(),
   /** How many queued tasks may run at once on this deck (0 pauses the queue). */
   queueLimit: integer("queue_limit").notNull().default(3),
+  /** Whether pre-flight checks run on this deck: null until the user has been asked. */
+  checksArmed: integer("checks_armed", { mode: "boolean" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
 });
 
@@ -63,6 +65,19 @@ export const consoleLabels = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.deckId, t.consoleId] })],
 );
+
+/** A check a deck runs before its crew may hand work back (the pre-flight). */
+export const deckChecks = sqliteTable("deck_checks", {
+  id: text("id").primaryKey(),
+  deckId: text("deck_id")
+    .notNull()
+    .references(() => decks.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  command: text("command").notNull(),
+  timeoutMs: integer("timeout_ms").notNull().default(300000),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  position: integer("position").notNull(),
+});
 
 export const QUEUE_STATES = ["queued", "running", "done"] as const;
 

@@ -50,6 +50,15 @@ export interface CrewInfo {
   prUrl?: string;
 }
 
+/** One pre-flight check a deck runs before its crew may hand work back. */
+export interface DeckCheck {
+  id: string;
+  name: string;
+  command: string;
+  timeoutMs: number;
+  enabled: boolean;
+}
+
 /** A sign over a console (agent-office's desk label). */
 export interface ConsoleLabel {
   consoleId: number;
@@ -104,6 +113,7 @@ export type ServerMsg =
   | { type: "crew.roster"; deckId: DeckId; crew: CrewInfo[] }
   | { type: "crew.screen"; crewId: CrewId; frame: ScreenFrame }
   | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
+  | { type: "deck.checks"; deckId: DeckId; armed: boolean | null; checks: DeckCheck[] }
   | { type: "deck.clones"; clones: CloneInfo[] }
   /** A pull request merged: the launch klaxon. `crewId` is the crew member it came from, if known. */
   | { type: "pr.merged"; deckId: DeckId; number: number; title: string; crewId?: CrewId }
