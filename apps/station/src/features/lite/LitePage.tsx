@@ -234,7 +234,8 @@ function LiteInspection({ member }: { member: CrewInfo }) {
           {current?.reason && <p className="lite-inspection__note">{current.reason}</p>}
           <FindingList heading="Blockers" findings={blockers} />
           <FindingList heading="Notes" findings={notes} />
-          {data && current && !running && !blockers.length && !notes.length && (
+          {/* Only a run that finished can have found nothing; a failed or cancelled one has its reason. */}
+          {current?.state === "cleared" && !blockers.length && !notes.length && (
             <p className="lite-inspection__note">Nothing found.</p>
           )}
           <div className="lite-inspection__actions">
