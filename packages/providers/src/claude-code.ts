@@ -44,6 +44,9 @@ function launchPlan(options: LaunchOptions): LaunchPlan {
     args: [
       ...(options.model ? ["--model", options.model] : []),
       ...(options.resume ? ["--resume", options.resume] : []),
+      ...(options.plan
+        ? ["--permission-mode", "plan", "--append-system-prompt", options.plan.instructions]
+        : []),
       "--settings",
       JSON.stringify(hookSettings()),
       // End of options: a task starting with "-" must not be read as a flag.
@@ -72,6 +75,12 @@ function parseHook(payload: unknown): CrewSignal | null {
     }
     case "PermissionRequest": {
       if (typeof p.tool_name !== "string") return null;
+      if (p.tool_name === "ExitPlanMode") {
+        const input = (
+          typeof p.tool_input === "object" && p.tool_input !== null ? p.tool_input : {}
+        ) as Record<string, unknown>;
+        return { type: "plan", plan: typeof input.plan === "string" ? input.plan : "" };
+      }
       const { filePath, command } = activityOf(p.tool_name, p.tool_input);
       const target = command ?? filePath;
       return {

@@ -19,6 +19,42 @@ function settingsOf(args: string[]) {
 }
 
 describe("launchPlan", () => {
+  test("a briefed launch starts in plan mode with the brief instructions", () => {
+    const plan = claudeCode.launchPlan({
+      ...options,
+      prompt: "fix it",
+      plan: { instructions: "BRIEF" },
+    });
+    const i = plan.args.indexOf("--permission-mode");
+    expect(plan.args.slice(i, i + 2)).toEqual(["--permission-mode", "plan"]);
+    const j = plan.args.indexOf("--append-system-prompt");
+    expect(plan.args[j + 1]).toBe("BRIEF");
+    expect(plan.args.slice(-2)).toEqual(["--", "fix it"]); // options stay before "--"
+  });
+
+  test("an unbriefed launch has neither flag", () => {
+    const { args } = claudeCode.launchPlan({ ...options, prompt: "fix it" });
+    expect(args).not.toContain("--permission-mode");
+    expect(args).not.toContain("--append-system-prompt");
+  });
+
+  test("ExitPlanMode's permission request is the plan", () => {
+    expect(
+      claudeCode.parseHook({
+        hook_event_name: "PermissionRequest",
+        tool_name: "ExitPlanMode",
+        tool_input: { plan: "## Goal\nx" },
+      }),
+    ).toEqual({ type: "plan", plan: "## Goal\nx" });
+    expect(
+      claudeCode.parseHook({
+        hook_event_name: "PermissionRequest",
+        tool_name: "ExitPlanMode",
+        tool_input: {},
+      }),
+    ).toEqual({ type: "plan", plan: "" });
+  });
+
   test("runs claude with inline hook settings and the brief as the prompt", () => {
     const plan = claudeCode.launchPlan(options);
     expect(plan.command).toBe("claude");

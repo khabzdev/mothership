@@ -7,6 +7,8 @@ export type CrewSignal =
   | { type: "working"; activity?: CrewActivity }
   /** `idle`: only waiting at its prompt (Claude's idle_prompt), not asking for anything. */
   | { type: "needsInput"; detail: string; idle?: boolean }
+  /** Claude finished planning and asks to leave plan mode: `plan` is its brief (markdown). */
+  | { type: "plan"; plan: string }
   | { type: "stopped" }
   | { type: "ended"; reason: string };
 
@@ -21,6 +23,8 @@ export interface LaunchOptions {
   model?: string;
   /** Pick up this earlier session (from sessionOf) instead of starting a new one. */
   resume?: string;
+  /** Start in plan mode: `instructions` tell the agent how to write its plan. */
+  plan?: { instructions: string };
 }
 
 export interface LaunchPlan {

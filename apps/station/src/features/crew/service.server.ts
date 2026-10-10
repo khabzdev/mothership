@@ -36,6 +36,7 @@ const STATUS_FOR_SIGNAL: Record<CrewSignal["type"], CrewStatus> = {
   idle: "idle",
   working: "working",
   needsInput: "needs_input",
+  plan: "needs_input",
   stopped: "done",
   ended: "asleep",
 };
@@ -325,7 +326,12 @@ export class CrewService {
         : null;
     this.#update(crewId, STATUS_FOR_SIGNAL[signal.type], {
       action,
-      detail: signal.type === "needsInput" ? signal.detail : null,
+      detail:
+        signal.type === "needsInput"
+          ? signal.detail
+          : signal.type === "plan"
+            ? "Brief ready"
+            : null,
     });
     // Its submit hook: a prompt typed in the terminal is yours, unless prompt() typed it.
     if (signal.type === "working" && !signal.activity && !this.#submitting.delete(crewId)) {
