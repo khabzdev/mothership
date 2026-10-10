@@ -1,6 +1,19 @@
-import { CREW_ACTIONS, CREW_STATUSES } from "@mothership/protocol";
+import {
+  CHECK_VERDICTS,
+  CREW_ACTIONS,
+  CREW_STATUSES,
+  PREFLIGHT_STATES,
+} from "@mothership/protocol";
 import { sql } from "drizzle-orm";
-import { check, integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 const now = sql`(unixepoch('subsec') * 1000)`;
 
@@ -43,6 +56,10 @@ export const crew = sqliteTable(
     prUrl: text("pr_url"),
     /** The agent's own session, for resuming it after it exits (R). */
     sessionId: text("session_id"),
+    /** Which flight it's on: a new one starts each time you prompt it. */
+    flight: integer("flight").notNull().default(1),
+    /** Pre-flight hand-backs left this flight. */
+    fuel: integer("fuel").notNull().default(3),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   },
   (t) => [
@@ -99,4 +116,61 @@ export const queueTasks = sqliteTable(
     createdAt: integer("created_at").notNull().default(now),
   },
   () => [check("queue_tasks_state_check", oneOf("state", QUEUE_STATES))],
+);
+
+export const PREFLIGHT_TRIGGERS = ["stop", "manual"] as const;
+
+/**
+ * One pre-flight: a deck's checks run in a crew member's worktree. Kept after the crew member
+ * leaves, so the deck's history still shows it.
+ */
+export const preflights = sqliteTable(
+  "preflights",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    crewId: text("crew_id").notNull(),
+    flight: integer("flight").notNull(),
+    attempt: integer("attempt").notNull(),
+    state: text("state", { enum: PREFLIGHT_STATES }).notNull().default("running"),
+    trigger: text("trigger", { enum: PREFLIGHT_TRIGGERS }).notNull(),
+    /** HEAD when it started. */
+    commit: text("commit").notNull(),
+    /** What the worktree held when it started (see `fingerprint`). */
+    fingerprint: text("fingerprint").notNull(),
+    startedAt: integer("started_at").notNull().default(now),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => [
+    index("preflights_crew_idx").on(t.crewId, t.startedAt),
+    index("preflights_deck_idx").on(t.deckId, t.startedAt),
+    check("preflights_state_check", oneOf("state", PREFLIGHT_STATES)),
+    check("preflights_trigger_check", oneOf("trigger", PREFLIGHT_TRIGGERS)),
+  ],
+);
+
+/** How one check came out in a pre-flight; the full output is in its log file. */
+export const preflightResults = sqliteTable(
+  "preflight_results",
+  {
+    preflightId: text("preflight_id")
+      .notNull()
+      .references(() => preflights.id, { onDelete: "cascade" }),
+    checkId: text("check_id").notNull(),
+    position: integer("position").notNull(),
+    name: text("name").notNull(),
+    command: text("command").notNull(),
+    verdict: text("verdict", { enum: CHECK_VERDICTS }).notNull(),
+    exitCode: integer("exit_code"),
+    timedOut: integer("timed_out", { mode: "boolean" }).notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    /** The end of its output, plain text. */
+    tail: text("tail").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.preflightId, t.position] }),
+    check("preflight_results_verdict_check", oneOf("verdict", CHECK_VERDICTS)),
+  ],
 );

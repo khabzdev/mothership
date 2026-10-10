@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vite-plus/test";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
-import { crew, decks } from "../../src/shared/db/schema.ts";
+import { crew, decks, preflightResults, preflights } from "../../src/shared/db/schema.ts";
 
 const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
 let db: Db;
@@ -34,14 +34,22 @@ const member = (deckId: string, consoleId = 0) =>
     .get();
 
 describe("database", () => {
-  test("applies all migrations, leaving decks, crew, console labels and the task queue", () => {
+  test("applies all migrations, leaving decks, crew, labels, checks, pre-flights and the queue", () => {
     const tables = db.$client
       .prepare(
         "select name from sqlite_master where type = 'table' and name not like '\\_\\_%' escape '\\' and name not like 'sqlite_%' order by name",
       )
       .all()
       .map((row) => (row as { name: string }).name);
-    expect(tables).toEqual(["console_labels", "crew", "deck_checks", "decks", "queue_tasks"]);
+    expect(tables).toEqual([
+      "console_labels",
+      "crew",
+      "deck_checks",
+      "decks",
+      "preflight_results",
+      "preflights",
+      "queue_tasks",
+    ]);
   });
 
   test("enables foreign keys", () => {
@@ -60,6 +68,8 @@ describe("database", () => {
       task: "",
       action: null,
       provider: "claude-code",
+      flight: 1,
+      fuel: 3,
     });
     expect(m.statusSince).toBeGreaterThan(0);
   });
@@ -86,5 +96,45 @@ describe("database", () => {
     member(d.id);
     db.delete(decks).where(eq(decks.id, d.id)).run();
     expect(db.select().from(crew).all()).toEqual([]);
+  });
+
+  test("pre-flights outlive their crew member and go with their deck", () => {
+    const d = deck();
+    const m = member(d.id);
+    db.insert(preflights)
+      .values({
+        id: "p1",
+        deckId: d.id,
+        crewId: m.id,
+        flight: 1,
+        attempt: 1,
+        trigger: "stop",
+        commit: "abc",
+        fingerprint: "def",
+      })
+      .run();
+    db.insert(preflightResults)
+      .values({
+        preflightId: "p1",
+        checkId: "k1",
+        position: 0,
+        name: "test",
+        command: "vp test",
+        verdict: "go",
+        exitCode: 0,
+        timedOut: false,
+        durationMs: 1,
+        tail: "",
+      })
+      .run();
+    expect(db.select().from(preflights).get()?.state).toBe("running");
+    expect(() =>
+      db.$client.prepare("update preflight_results set verdict = 'maybe'").run(),
+    ).toThrow(/CHECK/);
+    db.delete(crew).where(eq(crew.id, m.id)).run();
+    expect(db.select().from(preflights).all()).toHaveLength(1);
+    db.delete(decks).where(eq(decks.id, d.id)).run();
+    expect(db.select().from(preflights).all()).toEqual([]);
+    expect(db.select().from(preflightResults).all()).toEqual([]);
   });
 });

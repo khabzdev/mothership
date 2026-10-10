@@ -9,6 +9,8 @@ import { GitHubBoards } from "../features/github/github.server";
 import { QueueService } from "../features/queue/queue.server";
 import { getDeck } from "../features/decks/decks.server";
 import { LabelService } from "../features/labels/labels.server";
+import { CheckService } from "../features/preflight/checks.server";
+import { PreflightService } from "../features/preflight/preflight.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
 import { getDb, mothershipHome } from "../shared/db/client.server";
@@ -29,6 +31,8 @@ interface Station {
   clones: CloneManager;
   boards: GitHubBoards;
   queue: QueueService;
+  checks: CheckService;
+  preflight: PreflightService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -52,8 +56,22 @@ export function getStation(): Station {
       home,
     });
 
+    // Pre-flight: the deck's checks run in a crew member's worktree when it stops.
+    const checks = new CheckService({ db: getDb(), broadcast: (msg) => hub.broadcast(msg) });
+    const preflight = new PreflightService({
+      db: getDb(),
+      crew,
+      checks,
+      broadcast: (msg) => hub.broadcast(msg),
+      home,
+    });
+    crew.describeWith((crewId) => preflight.info(crewId));
+    preflight.reconcile();
+
     onCrewSignal((event) => crew.handleSignal(event));
+    onCrewSignal((event) => preflight.handleSignal(event));
     launcher.onExit(({ crewId }) => crew.handleExit(crewId));
+    launcher.onExit(({ crewId }) => preflight.cancel(crewId));
     const screens = new ScreenRelay(launcher, (msg) => hub.broadcast(msg));
     screens.start();
     crew.onGone((crewId) => screens.forget(crewId));
@@ -121,7 +139,7 @@ export function getStation(): Station {
       claim: (deckId, n) => boards.claimIssue(getDeck(getDb(), deckId).repoPath, n),
     });
     setInterval(() => void queue.tickAll(), 4000);
-    return { crew, launcher, labels, clones, boards, queue, diagnostics };
+    return { crew, launcher, labels, clones, boards, queue, checks, preflight, diagnostics };
   })();
   return shared.__mothershipStation;
 }

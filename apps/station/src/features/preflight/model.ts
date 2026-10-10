@@ -1,3 +1,6 @@
+/** Hand-backs a crew member gets per flight, so at most this many plus one attempts. */
+export const DEFAULT_FUEL = 3;
+
 /** How long a check may run before it counts as NO-GO. */
 export const DEFAULT_TIMEOUT_MS = 300_000;
 

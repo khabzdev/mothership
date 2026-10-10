@@ -50,6 +50,13 @@
       "when": 1791592863310,
       "tag": "0006_deck_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791593952148,
+      "tag": "0007_preflights",
+      "breakpoints": true
     }
   ]
 }

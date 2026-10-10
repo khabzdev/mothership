@@ -29,6 +29,23 @@ export const CREW_KINDS = ["agent", "shell"] as const;
 /** An agent (Claude Code) or a plain shell opened at a console (agent-office's B). */
 export type CrewKind = (typeof CREW_KINDS)[number];
 
+export const CHECK_VERDICTS = ["go", "nogo", "skipped"] as const;
+/** How one pre-flight check came out. */
+export type CheckVerdict = (typeof CHECK_VERDICTS)[number];
+
+export const PREFLIGHT_STATES = ["running", "go", "nogo", "cancelled"] as const;
+
+/** A crew member's latest pre-flight this flight, as the roster shows it. */
+export interface PreflightInfo {
+  state: (typeof PREFLIGHT_STATES)[number];
+  /** Every check in the run, in order; `verdict` is missing until that check is done. */
+  checks: { name: string; verdict?: CheckVerdict }[];
+  attempt: number;
+  /** Hand-backs left this flight. */
+  fuel: number;
+  maxFuel: number;
+}
+
 /** A crew member at a console on a deck (agent-office's WorkerInfo). */
 export interface CrewInfo {
   id: CrewId;
@@ -48,6 +65,7 @@ export interface CrewInfo {
   statusSince: number;
   branch?: string;
   prUrl?: string;
+  preflight?: PreflightInfo;
 }
 
 /** One pre-flight check a deck runs before its crew may hand work back. */
@@ -112,6 +130,16 @@ export type ServerMsg =
   | { type: "terminal.exit"; crewId: CrewId; code: number | null }
   | { type: "crew.roster"; deckId: DeckId; crew: CrewInfo[] }
   | { type: "crew.screen"; crewId: CrewId; frame: ScreenFrame }
+  /** One pre-flight check finished; `done` is true on the run's last check. */
+  | {
+      type: "crew.preflight";
+      deckId: DeckId;
+      crewId: CrewId;
+      preflightId: string;
+      check: string;
+      verdict: CheckVerdict;
+      done: boolean;
+    }
   | { type: "deck.labels"; deckId: DeckId; labels: ConsoleLabel[] }
   | { type: "deck.checks"; deckId: DeckId; armed: boolean | null; checks: DeckCheck[] }
   | { type: "deck.clones"; clones: CloneInfo[] }

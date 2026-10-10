@@ -124,6 +124,34 @@ describe("applyServerMsg", () => {
     expect(qc.getQueryData(realtimeKeys.roster("d1"))).toEqual(crew);
   });
 
+  test("stores a deck's checks under its key", () => {
+    const qc = new QueryClient();
+    const checks = [
+      { id: "k1", name: "test", command: "vp test", timeoutMs: 300_000, enabled: true },
+    ];
+    applyServerMsg(qc, { type: "deck.checks", deckId: "d1", armed: true, checks });
+    expect(qc.getQueryData(realtimeKeys.checks("d1"))).toEqual({ armed: true, checks });
+    expect(realtimeKeys.checks("d1")).toEqual(["decks", "d1", "checks"]);
+  });
+
+  test("a finished pre-flight check makes its crew member's pre-flight stale", () => {
+    const qc = new QueryClient();
+    qc.setQueryData(realtimeKeys.preflight("c1"), { latest: null });
+    qc.setQueryData(realtimeKeys.preflight("c2"), { latest: null });
+    applyServerMsg(qc, {
+      type: "crew.preflight",
+      deckId: "d1",
+      crewId: "c1",
+      preflightId: "p1",
+      check: "test",
+      verdict: "go",
+      done: true,
+    });
+    expect(realtimeKeys.preflight("c1")).toEqual(["preflight", "c1"]);
+    expect(qc.getQueryState(realtimeKeys.preflight("c1"))?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(realtimeKeys.preflight("c2"))?.isInvalidated).toBe(false);
+  });
+
   test("ignores messages that don't belong in the cache", () => {
     const qc = new QueryClient();
     applyServerMsg(qc, { type: "terminal.output", crewId: "c1", data: "x" });

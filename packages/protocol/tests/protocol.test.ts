@@ -38,6 +38,7 @@ describe("types", () => {
       | "terminal.exit"
       | "crew.roster"
       | "crew.screen"
+      | "crew.preflight"
       | "deck.labels"
       | "deck.checks"
       | "deck.clones"
@@ -123,6 +124,31 @@ describe("parseServerMsg", () => {
     { type: "crew.roster", deckId: "d1", crew: [nova] },
     { type: "crew.roster", deckId: "d1", crew: [] },
     {
+      type: "crew.roster",
+      deckId: "d1",
+      crew: [
+        {
+          ...nova,
+          preflight: {
+            state: "running",
+            checks: [{ name: "check", verdict: "go" }, { name: "test" }],
+            attempt: 1,
+            fuel: 3,
+            maxFuel: 3,
+          },
+        },
+      ],
+    },
+    {
+      type: "crew.preflight",
+      deckId: "d1",
+      crewId: "c1",
+      preflightId: "p1",
+      check: "test",
+      verdict: "nogo",
+      done: true,
+    },
+    {
       type: "crew.screen",
       crewId: "c1",
       frame: { cols: 80, rows: 2, lines: [[["hi", -1, -1, 0]], []] },
@@ -159,6 +185,41 @@ describe("parseServerMsg", () => {
       crew: [{ ...nova, status: "asleep-ish" }],
     });
     expect(parseServerMsg(raw)).toBeNull();
+  });
+
+  test("rejects a roster with a malformed pre-flight summary", () => {
+    const preflight = { state: "flying", checks: [], attempt: 1, fuel: 3, maxFuel: 3 };
+    const raw = JSON.stringify({
+      type: "crew.roster",
+      deckId: "d1",
+      crew: [{ ...nova, preflight }],
+    });
+    expect(parseServerMsg(raw)).toBeNull();
+    const badCheck = { ...preflight, state: "go", checks: [{ name: "test", verdict: "maybe" }] };
+    expect(
+      parseServerMsg(
+        JSON.stringify({
+          type: "crew.roster",
+          deckId: "d1",
+          crew: [{ ...nova, preflight: badCheck }],
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  test("rejects a crew.preflight with an unknown verdict or no done flag", () => {
+    const msg = {
+      type: "crew.preflight",
+      deckId: "d1",
+      crewId: "c1",
+      preflightId: "p1",
+      check: "test",
+      verdict: "go",
+      done: false,
+    };
+    expect(parseServerMsg(JSON.stringify({ ...msg, verdict: "maybe" }))).toBeNull();
+    expect(parseServerMsg(JSON.stringify({ ...msg, done: undefined }))).toBeNull();
+    expect(parseServerMsg(JSON.stringify({ ...msg, preflightId: "" }))).toBeNull();
   });
 
   test("rejects a screen with a malformed run", () => {

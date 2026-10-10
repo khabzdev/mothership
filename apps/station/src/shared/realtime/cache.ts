@@ -5,6 +5,8 @@ import { setScreen } from "./screens";
 export const realtimeKeys = {
   roster: (deckId: string) => ["decks", deckId, "crew"] as const,
   labels: (deckId: string) => ["decks", deckId, "labels"] as const,
+  checks: (deckId: string) => ["decks", deckId, "checks"] as const,
+  preflight: (crewId: string) => ["preflight", crewId] as const,
   decks: ["decks"] as const,
   clones: ["clones"] as const,
 };
@@ -15,6 +17,13 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
     queryClient.setQueryData(realtimeKeys.roster(msg.deckId), msg.crew);
   else if (msg.type === "deck.labels")
     queryClient.setQueryData(realtimeKeys.labels(msg.deckId), msg.labels);
+  else if (msg.type === "deck.checks")
+    queryClient.setQueryData(realtimeKeys.checks(msg.deckId), {
+      armed: msg.armed,
+      checks: msg.checks,
+    });
+  else if (msg.type === "crew.preflight")
+    void queryClient.invalidateQueries({ queryKey: realtimeKeys.preflight(msg.crewId) });
   else if (msg.type === "deck.clones") {
     const known = queryClient.getQueryData<{ id: string }[]>(realtimeKeys.decks) ?? [];
     queryClient.setQueryData(realtimeKeys.clones, msg.clones);

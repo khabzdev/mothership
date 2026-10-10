@@ -209,6 +209,64 @@ describe("prompt", () => {
   test("unknown crew can't be prompted", async () => {
     await expect(service.prompt("ghost", "hi")).rejects.toThrow("No such crew member");
   });
+
+  test("tells listeners who typed it, you by default", async () => {
+    const { id } = await hire(0);
+    const heard: { crewId: string; from: string }[] = [];
+    const off = service.onPrompt((e) => heard.push(e));
+    await service.prompt(id, "Also add tests");
+    await service.prompt(id, "Pre-flight NO-GO", "station");
+    off();
+    await service.prompt(id, "Unheard");
+    expect(heard).toEqual([
+      { crewId: id, from: "you" },
+      { crewId: id, from: "station" },
+    ]);
+  });
+
+  test("a failed write tells nobody", async () => {
+    const { id } = await hire(0);
+    const heard: unknown[] = [];
+    service.onPrompt((e) => heard.push(e));
+    launcher.write = async () => {
+      throw new Error("PTY gone");
+    };
+    await expect(service.prompt(id, "hi")).rejects.toThrow("PTY gone");
+    expect(heard).toEqual([]);
+  });
+});
+
+describe("pre-flight hooks", () => {
+  test("describeWith adds a pre-flight summary to the roster", async () => {
+    const { id } = await hire(0);
+    const preflight = {
+      state: "go" as const,
+      checks: [{ name: "test", verdict: "go" as const }],
+      attempt: 1,
+      fuel: 3,
+      maxFuel: 3,
+    };
+    service.describeWith((crewId) => (crewId === id ? preflight : undefined));
+    expect(service.member(id).preflight).toEqual(preflight);
+    expect(service.roster("deck-1")[0]!.preflight).toEqual(preflight);
+  });
+
+  test("refresh re-broadcasts the roster", async () => {
+    await hire(0);
+    const before = rosters.length;
+    service.refresh("deck-1");
+    expect(rosters).toHaveLength(before + 1);
+  });
+
+  test("alert raises needs you with the detail", async () => {
+    const { id } = await hire(0);
+    service.handleSignal({ crewId: id, signal: { type: "stopped" } });
+    service.alert(id, "Out of fuel: test still NO-GO after 4 attempts");
+    expect(service.member(id)).toMatchObject({
+      status: "needs_input",
+      detail: "Out of fuel: test still NO-GO after 4 attempts",
+    });
+  });
 });
 
 describe("input parsing", () => {

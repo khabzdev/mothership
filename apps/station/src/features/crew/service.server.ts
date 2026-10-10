@@ -1,4 +1,4 @@
-import type { CrewInfo, CrewStatus, ServerMsg } from "@mothership/protocol";
+import type { CrewInfo, CrewStatus, PreflightInfo, ServerMsg } from "@mothership/protocol";
 import type { CrewSignal } from "@mothership/providers";
 import { and, asc, eq } from "drizzle-orm";
 import { existsSync } from "node:fs";
@@ -43,7 +43,13 @@ const STATUS_FOR_SIGNAL: Record<CrewSignal["type"], CrewStatus> = {
 /** Delay between pasting a prompt and pressing Enter (as agent-office does). */
 const SUBMIT_DELAY_MS = 120;
 
-function toInfo(row: Row): CrewInfo {
+/** Who typed a prompt: you, or the station handing pre-flight failures back. */
+export type PromptFrom = "you" | "station";
+
+type Describe = (crewId: string) => PreflightInfo | undefined;
+
+function toInfo(row: Row, describe?: Describe): CrewInfo {
+  const preflight = describe?.(row.id);
   return {
     id: row.id,
     kind: row.provider === "shell" ? "shell" : "agent",
@@ -59,6 +65,7 @@ function toInfo(row: Row): CrewInfo {
     ...(row.detail && { detail: row.detail }),
     ...(row.branch && { branch: row.branch }),
     ...(row.prUrl && { prUrl: row.prUrl }),
+    ...(preflight && { preflight }),
   };
 }
 
@@ -66,6 +73,8 @@ function toInfo(row: Row): CrewInfo {
 export class CrewService {
   readonly #deps: CrewServiceDeps;
   readonly #goneListeners = new Set<(crewId: string) => void>();
+  readonly #promptListeners = new Set<(e: { crewId: string; from: PromptFrom }) => void>();
+  #describe: Describe | undefined;
 
   constructor(deps: CrewServiceDeps) {
     this.#deps = deps;
@@ -78,13 +87,28 @@ export class CrewService {
       .where(eq(crew.deckId, deckId))
       .orderBy(asc(crew.consoleId))
       .all()
-      .map(toInfo);
+      .map((row) => this.#info(row));
+  }
+
+  /** Add each crew member's pre-flight summary to what the roster says about it. */
+  describeWith(fn: Describe): void {
+    this.#describe = fn;
+  }
+
+  /** Send the deck's roster again, after something it describes has changed. */
+  refresh(deckId: string): void {
+    this.#broadcast(deckId);
+  }
+
+  /** Raise "needs you" over a crew member, saying why. */
+  alert(crewId: string, detail: string): void {
+    this.#update(crewId, "needs_input", { action: null, detail });
   }
 
   member(crewId: string): CrewInfo {
     const row = this.#row(crewId);
     if (!row) throw new Error(`No such crew member: ${crewId}`);
-    return toInfo(row);
+    return this.#info(row);
   }
 
   /** Where a crew member works, and whether that's a worktree of its own or the deck's checkout. */
@@ -112,7 +136,7 @@ export class CrewService {
     const member = await this.#seat({ ...input, task: "", worktree: false }, "shell");
     // A shell has no hooks: it's ready as soon as it's running.
     this.#update(member.id, "idle", { action: null, detail: null });
-    return toInfo(this.#row(member.id)!);
+    return this.#info(this.#row(member.id)!);
   }
 
   /** Wake an asleep crew member: resume its agent's session, or restart its shell (R). */
@@ -136,7 +160,7 @@ export class CrewService {
       this.#update(crewId, "asleep", { action: null, detail: null });
       throw error;
     }
-    return toInfo(this.#row(crewId)!);
+    return this.#info(this.#row(crewId)!);
   }
 
   async #seat(input: HireInput, provider: string): Promise<CrewInfo> {
@@ -191,14 +215,21 @@ export class CrewService {
       this.#broadcast(deck.id);
       throw error;
     }
-    return toInfo(this.#row(id)!);
+    return this.#info(this.#row(id)!);
   }
 
   /** Paste a prompt into the crew member's input box, then submit it. */
-  async prompt(crewId: string, text: string): Promise<void> {
+  async prompt(crewId: string, text: string, from: PromptFrom = "you"): Promise<void> {
     if (!this.#row(crewId)) throw new Error(`No such crew member: ${crewId}`);
     await this.#deps.launcher.write(crewId, `\x1b[200~${text}\x1b[201~`);
     setTimeout(() => void this.#deps.launcher.write(crewId, "\r"), SUBMIT_DELAY_MS);
+    for (const listener of this.#promptListeners) listener({ crewId, from });
+  }
+
+  /** Called after a prompt is typed into a crew member's input box. */
+  onPrompt(listener: (e: { crewId: string; from: PromptFrom }) => void): () => void {
+    this.#promptListeners.add(listener);
+    return () => this.#promptListeners.delete(listener);
   }
 
   /** What its own worktree holds that sending it home could lose; null without one. */
@@ -276,6 +307,10 @@ export class CrewService {
     const deck = this.#deps.db.select().from(decks).where(eq(decks.id, id)).get();
     if (!deck) throw new Error(`No such deck: ${id}`);
     return deck;
+  }
+
+  #info(row: Row): CrewInfo {
+    return toInfo(row, this.#describe);
   }
 
   #row(id: string): Row | undefined {

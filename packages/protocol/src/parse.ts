@@ -1,11 +1,15 @@
 import {
+  CHECK_VERDICTS,
   CREW_KINDS,
   CREW_STATUSES,
   type ClientMsg,
   type CloneInfo,
   type ConsoleLabel,
+  type CheckVerdict,
   type CrewInfo,
   type DeckCheck,
+  PREFLIGHT_STATES,
+  type PreflightInfo,
   type Run,
   type ScreenFrame,
   type ServerMsg,
@@ -68,6 +72,23 @@ export function parseServerMsg(raw: string): ServerMsg | null {
     case "crew.screen":
       return isId(o.crewId) && isScreenFrame(o.frame)
         ? { type: o.type, crewId: o.crewId, frame: o.frame }
+        : null;
+    case "crew.preflight":
+      return isId(o.deckId) &&
+        isId(o.crewId) &&
+        isId(o.preflightId) &&
+        typeof o.check === "string" &&
+        isVerdict(o.verdict) &&
+        typeof o.done === "boolean"
+        ? {
+            type: o.type,
+            deckId: o.deckId,
+            crewId: o.crewId,
+            preflightId: o.preflightId,
+            check: o.check,
+            verdict: o.verdict,
+            done: o.done,
+          }
         : null;
     case "deck.labels":
       return isId(o.deckId) && Array.isArray(o.labels) && o.labels.every(isConsoleLabel)
@@ -179,6 +200,31 @@ function isCrewInfo(value: unknown): value is CrewInfo {
     CREW_KINDS.includes(c.kind as CrewInfo["kind"]) &&
     typeof c.consoleId === "number" &&
     typeof c.name === "string" &&
-    CREW_STATUSES.includes(c.status as CrewInfo["status"])
+    CREW_STATUSES.includes(c.status as CrewInfo["status"]) &&
+    (c.preflight === undefined || isPreflightInfo(c.preflight))
+  );
+}
+
+function isVerdict(value: unknown): value is CheckVerdict {
+  return CHECK_VERDICTS.includes(value as CheckVerdict);
+}
+
+function isPreflightInfo(value: unknown): value is PreflightInfo {
+  if (typeof value !== "object" || value === null) return false;
+  const p = value as Record<string, unknown>;
+  return (
+    PREFLIGHT_STATES.includes(p.state as PreflightInfo["state"]) &&
+    Array.isArray(p.checks) &&
+    p.checks.every(
+      (c: unknown) =>
+        typeof c === "object" &&
+        c !== null &&
+        typeof (c as Record<string, unknown>).name === "string" &&
+        ((c as Record<string, unknown>).verdict === undefined ||
+          isVerdict((c as Record<string, unknown>).verdict)),
+    ) &&
+    typeof p.attempt === "number" &&
+    typeof p.fuel === "number" &&
+    typeof p.maxFuel === "number"
   );
 }
