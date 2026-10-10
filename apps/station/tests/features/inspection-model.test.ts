@@ -1,3 +1,4 @@
+import type { InspectionRecord } from "../../src/features/inspection/inspection.server.ts";
 import { describe, expect, test } from "vite-plus/test";
 import {
   flaggedDetail,
@@ -6,6 +7,7 @@ import {
   parseCrewInspectInput,
   parseInspectorInput,
   prInspection,
+  windowSections,
   type Finding,
 } from "../../src/features/inspection/model.ts";
 
@@ -99,5 +101,51 @@ describe("inputs", () => {
     expect(parseInspectorInput({ deckId: "d", on: false })).toEqual({ deckId: "d", on: false });
     expect(() => parseInspectorInput({ deckId: "d", on: "yes" })).toThrow();
     expect(() => parseInspectorInput({ on: true })).toThrow();
+  });
+});
+
+describe("windowSections", () => {
+  const rec = (id: string, findings: Finding[], startedAt: number): InspectionRecord => ({
+    id,
+    crewId: "c1",
+    deckId: "d1",
+    flight: 1,
+    attempt: 1,
+    trigger: "stop",
+    state: "flagged",
+    fingerprint: "f",
+    commit: "abc",
+    findings,
+    startedAt,
+  });
+  const outside: Finding = {
+    severity: "blocker",
+    source: "scope",
+    title: "Outside the brief: src/x.ts",
+    why: "W",
+  };
+  const large: Finding = { ...note, title: "Large change: 512 lines" };
+
+  test("is empty without records", () => {
+    expect(windowSections([])).toEqual({
+      current: null,
+      blockers: [],
+      notes: [],
+      earlier: [],
+      outside: 0,
+      lines: 0,
+    });
+  });
+
+  test("takes the newest as current, blockers before notes, the rest as earlier", () => {
+    const newest = rec("b", [note, blocker, outside, large], 2);
+    const older = rec("a", [blocker], 1);
+    const s = windowSections([newest, older]);
+    expect(s.current).toBe(newest);
+    expect(s.blockers).toEqual([blocker, outside]);
+    expect(s.notes).toEqual([note, large]);
+    expect(s.earlier).toEqual([older]);
+    expect(s.outside).toBe(1);
+    expect(s.lines).toBe(512);
   });
 });

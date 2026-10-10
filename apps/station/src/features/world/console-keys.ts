@@ -163,6 +163,11 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           e.preventDefault();
           open({ kind: "preflight", crewId: member.id });
           return;
+        case "KeyI":
+          if (!member || member.kind !== "agent" || !member.inspection) return;
+          e.preventDefault();
+          open({ kind: "inspection", crewId: member.id });
+          return;
         case "KeyL":
           e.preventDefault();
           open({ kind: "label", consoleId });

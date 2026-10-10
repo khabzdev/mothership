@@ -7,6 +7,7 @@ import {
   Message01Icon,
   Rocket01Icon,
   Search01Icon,
+  SecurityCheckIcon,
   Target02Icon,
   TaskDaily01Icon,
   UserAdd01Icon,
@@ -16,6 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { FlightControlWindow } from "../../preflight/ui/FlightControl";
 import { LaunchCheck } from "../../preflight/ui/LaunchCheck";
+import { InspectionWindow } from "../../inspection/ui/InspectionWindow";
 import { BriefWindow } from "../../briefs/ui/BriefWindow";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
@@ -167,6 +169,18 @@ function BriefOverlay({ member }: { member: CrewInfo }) {
   );
 }
 
+function InspectionOverlay({ member }: { member: CrewInfo }) {
+  return (
+    <Modal
+      icon={SecurityCheckIcon}
+      title={`${member.name} · inspection`}
+      subtitle={<StatusBadge crew={member} />}
+    >
+      <InspectionWindow member={member} />
+    </Modal>
+  );
+}
+
 function PrWindow({ member }: { member: CrewInfo }) {
   const url = member.prUrl ?? "";
   const number = /\/pull\/(\d+)/.exec(url)?.[1];
@@ -233,6 +247,10 @@ export function Overlays({
     case "brief": {
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <BriefOverlay member={member} /> : null;
+    }
+    case "inspection": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <InspectionOverlay member={member} /> : null;
     }
     case "launchCheck": {
       const member = crew.find((c) => c.id === overlay.crewId);

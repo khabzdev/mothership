@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";
+import { InspectorSwitch } from "../../inspection/ui/InspectorSwitch";
 import { TIMEOUTS_MS } from "../model";
 import {
   armChecksMutation,
@@ -140,6 +141,7 @@ export function FlightControlWindow({ deckId, crew }: { deckId: string; crew: Cr
             }
           }}
         />
+        <InspectorSwitch deckId={deckId} />
         <Button
           variant="secondary"
           icon={<Icon icon={RefreshIcon} />}

@@ -1,4 +1,5 @@
 import type { InspectionInfo } from "@mothership/protocol";
+import type { InspectionRecord } from "./inspection.server";
 
 /** How serious a finding is: a blocker is handed back, a note is only shown. */
 export type Severity = "blocker" | "note";
@@ -112,4 +113,28 @@ export function inspectionChip(
   if (info.state === "cleared") return { label: "Cleared", tone: "success" };
   if (info.state === "flagged") return { label: "Flagged", tone: "error" };
   return null;
+}
+
+/** What the Inspection window shows from a crew member's history (newest first). */
+export function windowSections(records: InspectionRecord[]): {
+  current: InspectionRecord | null;
+  blockers: Finding[];
+  notes: Finding[];
+  earlier: InspectionRecord[];
+  outside: number;
+  lines: number;
+} {
+  const [current = null, ...earlier] = records;
+  const findings = current?.findings ?? [];
+  const large = findings.find((f) => f.source === "scope" && f.title.startsWith("Large change:"));
+  return {
+    current,
+    blockers: findings.filter((f) => f.severity === "blocker"),
+    notes: findings.filter((f) => f.severity !== "blocker"),
+    earlier,
+    outside: findings.filter(
+      (f) => f.source === "scope" && f.title.startsWith("Outside the brief:"),
+    ).length,
+    lines: Number(large?.title.match(/(\d+) lines/)?.[1] ?? 0),
+  };
 }
