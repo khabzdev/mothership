@@ -13,6 +13,7 @@ import {
   SHIP_STOP,
   FLIGHT_CONTROL,
   INSPECTOR_DOCK,
+  INSPECTOR_PAD,
   flightControlInReach,
   boardInReach,
   departurePath,
@@ -177,19 +178,67 @@ describe("deck layout", () => {
 });
 
 describe("Inspector dock", () => {
-  test("just east of Flight Control, on the deck and clear of every collider", () => {
+  const overlaps = (a: (typeof COLLIDERS)[number], b: (typeof COLLIDERS)[number]) =>
+    a.minX < b.maxX && b.minX < a.maxX && a.minZ < b.maxZ && b.minZ < a.maxZ;
+  const pad = COLLIDERS.find(
+    (b) =>
+      b.minX < INSPECTOR_DOCK.x &&
+      INSPECTOR_DOCK.x < b.maxX &&
+      b.minZ < INSPECTOR_DOCK.z &&
+      INSPECTOR_DOCK.z < b.maxZ,
+  );
+
+  test("just east of Flight Control, on the deck", () => {
     expect(INSPECTOR_DOCK).toEqual({ x: FLIGHT_CONTROL.x + 2.4, z: FLIGHT_CONTROL.z - 0.6 });
     expect(INSPECTOR_DOCK.x).toBeGreaterThan(DECK.minX);
     expect(INSPECTOR_DOCK.x).toBeLessThan(DECK.maxX);
     expect(INSPECTOR_DOCK.z).toBeGreaterThan(DECK.minZ);
     expect(INSPECTOR_DOCK.z).toBeLessThan(DECK.maxZ);
-    const inside = COLLIDERS.filter(
-      (b) =>
-        INSPECTOR_DOCK.x > b.minX &&
-        INSPECTOR_DOCK.x < b.maxX &&
-        INSPECTOR_DOCK.z > b.minZ &&
-        INSPECTOR_DOCK.z < b.maxZ,
-    );
-    expect(inside).toEqual([]);
+  });
+
+  test("its pad is solid, and overlaps no other collider", () => {
+    expect(pad).toEqual({
+      minX: INSPECTOR_DOCK.x - INSPECTOR_PAD,
+      maxX: INSPECTOR_DOCK.x + INSPECTOR_PAD,
+      minZ: INSPECTOR_DOCK.z - INSPECTOR_PAD,
+      maxZ: INSPECTOR_DOCK.z + INSPECTOR_PAD,
+    });
+    expect(COLLIDERS.filter((b) => b !== pad && overlaps(b, pad!))).toEqual([]);
+    // Walking at the pad from the west stops short of it.
+    const start = { x: INSPECTOR_DOCK.x - 1.2, z: INSPECTOR_DOCK.z };
+    expect(moveWithCollisions(start.x, start.z, 0, 0)).toEqual(start);
+    expect(moveWithCollisions(start.x, start.z, 0.6, 0).x).toBe(start.x);
+  });
+
+  test("the spawn, every console, Flight Control and the garage door are still reachable", () => {
+    // Flood the deck from the spawn in 0.25 m steps, walking as the Captain does.
+    const STEP = 0.25;
+    const key = (x: number, z: number) => `${Math.round(x / STEP)},${Math.round(z / STEP)}`;
+    const seen = new Set([key(SPAWN.x, SPAWN.z)]);
+    const reached: { x: number; z: number }[] = [];
+    const queue: { x: number; z: number }[] = [{ x: SPAWN.x, z: SPAWN.z }];
+    while (queue.length) {
+      const at = queue.pop()!;
+      reached.push(at);
+      for (const [dx, dz] of [
+        [STEP, 0],
+        [-STEP, 0],
+        [0, STEP],
+        [0, -STEP],
+      ] as const) {
+        const to = moveWithCollisions(at.x, at.z, dx, dz);
+        if (Math.abs(to.x - (at.x + dx)) > 1e-9 || Math.abs(to.z - (at.z + dz)) > 1e-9) continue;
+        const k = key(to.x, to.z);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        queue.push(to);
+      }
+    }
+    const near = (p: { x: number; z: number }) =>
+      reached.some((r) => Math.hypot(r.x - p.x, r.z - p.z) <= STEP);
+    expect(near(SPAWN)).toBe(true);
+    expect(near({ x: FLIGHT_CONTROL.x, z: FLIGHT_CONTROL.z - 1.4 })).toBe(true);
+    expect(near(GARAGE_DOOR)).toBe(true);
+    for (const c of CONSOLES) expect(near(consoleSeat(c, 1.25)), `console ${c.id}`).toBe(true);
   });
 });

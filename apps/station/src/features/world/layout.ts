@@ -66,6 +66,8 @@ export const FLIGHT_CONTROL_DESK = { width: 2.4, depth: 0.8, height: 0.9 } as co
 const SOUTH_EDGE = DECK.maxZ - 0.15;
 /** The Inspector drone's hover pad, just east of Flight Control's desk. */
 export const INSPECTOR_DOCK = { x: FLIGHT_CONTROL.x + 2.4, z: FLIGHT_CONTROL.z - 0.6 } as const;
+/** The pad's radius (m): it's solid, so the Captain walks round the resting drone. */
+export const INSPECTOR_PAD = 0.34;
 
 /** Standing in front of the Flight Control desk. */
 export function flightControlInReach(x: number, z: number, reach = 1.6): boolean {
@@ -85,6 +87,12 @@ export const COLLIDERS: Box[] = [
     maxX: FLIGHT_CONTROL.x + FLIGHT_CONTROL_DESK.width / 2,
     minZ: SOUTH_EDGE - FLIGHT_CONTROL_DESK.depth,
     maxZ: SOUTH_EDGE,
+  },
+  {
+    minX: INSPECTOR_DOCK.x - INSPECTOR_PAD,
+    maxX: INSPECTOR_DOCK.x + INSPECTOR_PAD,
+    minZ: INSPECTOR_DOCK.z - INSPECTOR_PAD,
+    maxZ: INSPECTOR_DOCK.z + INSPECTOR_PAD,
   },
 ];
 

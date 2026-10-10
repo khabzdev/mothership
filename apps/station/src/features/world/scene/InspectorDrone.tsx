@@ -26,7 +26,7 @@ import {
   type Verdict,
   type Vec3,
 } from "../drone";
-import { CONSOLES, INSPECTOR_DOCK } from "../layout";
+import { CONSOLES, INSPECTOR_DOCK, INSPECTOR_PAD } from "../layout";
 import { chime } from "../sound";
 import { GLOW, KIT, PAINTED } from "./materials";
 
@@ -68,7 +68,7 @@ export function InspectorDrone({ deckId, crew }: { deckId: string; crew: CrewInf
       body: new CapsuleGeometry(0.13, 0.14, 6, 14),
       ring: new TorusGeometry(0.23, 0.014, 8, 40),
       eye: new CapsuleGeometry(0.035, 0.05, 4, 8),
-      pad: new CircleGeometry(0.34, 32),
+      pad: new CircleGeometry(INSPECTOR_PAD, 32),
       cone,
       shell: new MeshStandardMaterial({ color: KIT.slate, ...PAINTED }),
       glow: new MeshStandardMaterial({
