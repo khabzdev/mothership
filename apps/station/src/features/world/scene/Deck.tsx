@@ -1,39 +1,9 @@
 import { Stars } from "@react-three/drei";
-import { useRef } from "react";
-import type { Object3D } from "three";
 import { DECK } from "../layout";
 import { Airlock } from "./Airlock";
 import { Furniture } from "./Furniture";
-import { KAYKIT_SCALE, useProp } from "./models";
 import { Island } from "./Island";
-import { useSolid } from "./solid";
-
-function Prop({
-  name,
-  position,
-  rotation = 0,
-  scale = KAYKIT_SCALE,
-  solid = false,
-}: {
-  name: string;
-  position: [number, number, number];
-  rotation?: number;
-  scale?: number;
-  solid?: boolean;
-}) {
-  const scene = useProp(name);
-  const ref = useRef<Object3D>(null);
-  useSolid(ref, solid);
-  return (
-    <primitive
-      ref={ref}
-      object={scene}
-      position={position}
-      rotation={[0, rotation, 0]}
-      scale={scale}
-    />
-  );
-}
+import { Outpost } from "./Outpost";
 
 /** The deck: its terrain island, the airlock, cargo and furniture. */
 export function Deck() {
@@ -42,17 +12,9 @@ export function Deck() {
       <Stars radius={120} depth={60} count={4000} factor={4} fade speed={0.4} />
 
       <Island />
+      <Outpost />
 
       <Airlock />
-
-      {/* Cargo bay corner (north-east). */}
-      <Prop
-        name="containers_A"
-        position={[DECK.maxX - 2.2, 0, DECK.minZ + 2]}
-        rotation={-Math.PI / 2}
-        solid
-      />
-      <Prop name="cargo_A_stacked" position={[DECK.maxX - 2, 0, DECK.minZ + 5]} solid />
 
       {/* Lounge (south-east), like agent-office's couches by the windows. */}
       <Furniture
@@ -90,7 +52,6 @@ export function Deck() {
         rotation={Math.PI / 2}
         solid
       />
-      <Prop name="lights" position={[DECK.minX + 4, 0, DECK.minZ + 1]} solid />
     </group>
   );
 }

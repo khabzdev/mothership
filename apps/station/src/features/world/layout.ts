@@ -7,6 +7,10 @@ export const DECK = { minX: -18, maxX: 18, minZ: -13, maxZ: 13 } as const;
 export const CONSOLE_PITCH = 2.2;
 /** The console's footprint: a KayKit desk slightly narrower than its slot. */
 export const CONSOLE_SIZE = { width: 2.1, depth: 1.1, height: 0.7 } as const;
+/** Landing pads outside the deck (centres): the ship's, the departure (east) and the launch (north-east). */
+export const SHIP_PAD = { x: 10.5, z: DECK.minZ - 2.5 } as const;
+export const DEPARTURE_PAD = { x: DECK.maxX + 3, z: 0 } as const;
+export const LAUNCH_PAD = { x: DECK.maxX + 1, z: DECK.minZ - 3 } as const;
 export const SPAWN = { x: 8, z: 7 } as const;
 
 export interface ConsoleDef {
