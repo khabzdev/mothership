@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   CONSOLES,
+  DECK,
   SPAWN,
   AIRLOCK,
   COLLIDERS,
@@ -79,6 +80,13 @@ describe("deck layout", () => {
     expect(liftInReach(SPAWN.x, SPAWN.z)).toBe(false);
     expect(consoleInReach(LIFT_STOP.x, LIFT_STOP.z)).toBeNull();
     expect(moveWithCollisions(LIFT_STOP.x, LIFT_STOP.z, 0, 0)).toEqual(LIFT_STOP);
+  });
+
+  test("boards stand on the island inside the play area", () => {
+    for (const b of Object.values(BOARDS)) {
+      expect(b.z).toBeGreaterThan(DECK.minZ);
+      expect(b.z).toBeLessThanOrEqual(DECK.minZ + 1);
+    }
   });
 
   test("you read a board standing in front of it, not from the consoles", () => {

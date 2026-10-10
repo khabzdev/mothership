@@ -1,6 +1,6 @@
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
-import { CanvasTexture, SRGBColorSpace } from "three";
+import { BoxGeometry, CanvasTexture, SRGBColorSpace } from "three";
 import { BOARDS, type BoardId } from "../layout";
 import { KIT, PAINTED } from "./materials";
 
@@ -15,6 +15,9 @@ export interface BoardCard {
 }
 
 const PX = 512;
+const BOARD_Y = 1.65;
+const POST_GEOMETRY = new BoxGeometry(0.12, BOARD_Y, 0.12);
+const PLATE_GEOMETRY = new BoxGeometry(1, 0.08, 0.7);
 const NOTE = { cols: 4, rows: 2, gap: 26 };
 const TITLES: Record<BoardId, string> = {
   mission: "MISSION BOARD",
@@ -111,7 +114,7 @@ function paint(
 }
 
 /**
- * A tack board on the north bulkhead (agent-office's Issues and PR boards): its open cards pinned
+ * A tack board standing on two posts (agent-office's Issues and PR boards): its open cards pinned
  * up as notes, in the deck's trim. E in front of it opens it.
  */
 export function Board({
@@ -147,8 +150,28 @@ export function Board({
   useEffect(() => () => surface.texture.dispose(), [surface]);
 
   return (
-    <group position={[b.x, 1.65, b.z + 0.15]}>
-      {/* A framed panel standing off the bulkhead, lit from a bar above. */}
+    <group position={[b.x, BOARD_Y, b.z + 0.15]}>
+      {/* Two posts and a base plate carry the panel from the ground. */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          geometry={POST_GEOMETRY}
+          position={[side * (b.width / 2 - 0.3), -BOARD_Y / 2, 0.04]}
+          castShadow
+        >
+          <meshStandardMaterial color={KIT.slate} {...PAINTED} />
+        </mesh>
+      ))}
+      <mesh
+        geometry={PLATE_GEOMETRY}
+        position={[0, 0.04 - BOARD_Y, 0.2]}
+        scale={[b.width + 0.3, 1, 1]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
+      </mesh>
+      {/* A framed panel, lit from a bar above. */}
       <RoundedBox
         args={[b.width + 0.16, b.height + 0.16, 0.08]}
         radius={0.03}

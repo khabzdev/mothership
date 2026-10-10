@@ -180,11 +180,11 @@ export function liftInReach(x: number, z: number, reach = 1.5): boolean {
 
 export type BoardId = "mission" | "launch" | "queue";
 
-/** The boards on the north bulkhead: issues (Mission board), pull requests (Launch board) and the task queue. */
+/** The boards, standing free on posts at the north edge of the island: issues (Mission board), pull requests (Launch board) and the task queue. */
 export const BOARDS: Record<BoardId, { x: number; z: number; width: number; height: number }> = {
-  mission: { x: -10.5, z: DECK.minZ, width: 4.2, height: 2.3 },
-  launch: { x: -4.5, z: DECK.minZ, width: 4.2, height: 2.3 },
-  queue: { x: 0.9, z: DECK.minZ, width: 2.8, height: 2.3 },
+  mission: { x: -10.5, z: DECK.minZ + 0.6, width: 4.2, height: 2.3 },
+  launch: { x: -4.5, z: DECK.minZ + 0.6, width: 4.2, height: 2.3 },
+  queue: { x: 0.9, z: DECK.minZ + 0.6, width: 2.8, height: 2.3 },
 };
 
 /** The board you're standing in front of, if any. */

@@ -1,14 +1,17 @@
 import type { ConsoleLabel } from "@mothership/protocol";
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
-import { CanvasTexture, SRGBColorSpace } from "three";
+import { CanvasTexture, CylinderGeometry, SRGBColorSpace } from "three";
 import { inkFor } from "../../labels/model";
 import { CONSOLE_SIZE, type ConsoleDef } from "../layout";
-import { DESK_TOP } from "./Console";
 import { KIT, PAINTED } from "./materials";
 
-/** The sign stands on two posts at the back of the desk, above the monitors. */
+/** The sign sits above the monitors at the back of the desk, held by a mast from the floor. */
 const BOARD = { w: 1.9, h: 0.46, y: 1.8 };
+
+/** The mast is one thin pole from the floor beside the console up to the sign's edge. */
+const MAST_GEOMETRY = new CylinderGeometry(0.03, 0.04, BOARD.y, 10);
+const MAST_X = BOARD.w / 2 + 0.08;
 
 /** The board's picture: rounded, in its colour, the text as big as it fits. */
 function paint(canvas: HTMLCanvasElement, label: ConsoleLabel): void {
@@ -34,7 +37,7 @@ function paint(canvas: HTMLCanvasElement, label: ConsoleLabel): void {
 }
 
 /**
- * agent-office's desk sign: hung from the deckhead over the far edge of the console, facing its
+ * agent-office's desk sign: on a mast beside the console, over the far edge of the console, facing its
  * chair. With no sign of its own on the console back to back, it says the same on the back too.
  */
 export function Sign({
@@ -69,7 +72,6 @@ export function Sign({
   useEffect(() => () => texture.dispose(), [texture]);
 
   const z = -CONSOLE_SIZE.depth / 2;
-  const post = BOARD.y - BOARD.h / 2 - DESK_TOP;
   return (
     <group position={[def.x, 0, def.z]} rotation={[0, def.rotY, 0]}>
       <group position={[0, BOARD.y, z]}>
@@ -100,17 +102,10 @@ export function Sign({
         <RoundedBox args={[BOARD.w - 0.06, BOARD.h - 0.06, 0.024]} radius={0.01} castShadow>
           <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
         </RoundedBox>
-        {[-1, 1].map((side) => (
-          <mesh
-            key={side}
-            position={[side * (BOARD.w / 2 - 0.15), -BOARD.h / 2 - post / 2, 0]}
-            castShadow
-          >
-            <cylinderGeometry args={[0.015, 0.015, post, 10]} />
-            <meshStandardMaterial color={KIT.slate} {...PAINTED} />
-          </mesh>
-        ))}
       </group>
+      <mesh geometry={MAST_GEOMETRY} position={[MAST_X, BOARD.y / 2, z]} castShadow>
+        <meshStandardMaterial color={KIT.slate} {...PAINTED} />
+      </mesh>
     </group>
   );
 }
