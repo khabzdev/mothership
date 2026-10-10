@@ -8,7 +8,8 @@ import {
   type InstancedMesh,
   type Mesh,
 } from "three";
-import { BOARDS, CONSOLES, DECK, consoleSeat } from "../layout";
+import { BOARDS, CONSOLES, LAUNCH_PAD, consoleSeat } from "../layout";
+import { OUTPOST_SCALE, PAD_TOP } from "../outpost";
 import { useWorld } from "../store";
 import type { CrewInfo } from "@mothership/protocol";
 import { useProp } from "./models";
@@ -18,7 +19,6 @@ const LIFTOFF = 1.7;
 const CLIMB = 6;
 /** The engine's flame, over 1 so it blooms. */
 const FLAME = new Color("#ffb020").multiplyScalar(3);
-const PAD = { x: (BOARDS.mission.x + BOARDS.launch.x) / 2, z: DECK.minZ - 5 };
 const CONFETTI = 160;
 const COLORS = ["#ff5f1f", "#ffd166", "#06d6a0", "#5aa9ff", "#ef476f", "#f8f3e6"].map(
   (c) => new Color(c),
@@ -27,8 +27,8 @@ const COLORS = ["#ff5f1f", "#ffd166", "#06d6a0", "#5aa9ff", "#ef476f", "#f8f3e6"
 const dummy = new Object3D();
 
 /**
- * A pull request just launched (agent-office's merge gong): a lander lifts off from behind the north
- * bulkhead into space, and confetti bursts over the console it came from (or the Launch board).
+ * A pull request just launched (agent-office's merge gong): a lander lifts off from the pad at the island's north-east
+ * into space, and confetti bursts over the console it came from (or the Launch board).
  */
 export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
   const launch = useWorld((s) => s.launch);
@@ -64,9 +64,9 @@ export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
       s.visible = t < LIFTOFF + CLIMB;
       // Rumbling on the pad, then accelerating up and away.
       s.position.set(
-        PAD.x + (climb > 0 ? 0 : Math.sin(t * 60) * 0.03),
-        climb * climb * 3,
-        PAD.z - climb * 1.5,
+        LAUNCH_PAD.x + (climb > 0 ? 0 : Math.sin(t * 60) * 0.03),
+        PAD_TOP + climb * climb * 3,
+        LAUNCH_PAD.z - climb * 1.5,
       );
       s.rotation.z = Math.sin(climb * 2) * 0.05;
     }
@@ -102,9 +102,9 @@ export function LaunchShow({ crew }: { crew: CrewInfo[] }) {
   if (!launch) return null;
   return (
     <>
-      <primitive object={pad} position={[PAD.x, 0, PAD.z]} scale={2.2} />
-      <group ref={ship} position={[PAD.x, 0, PAD.z]}>
-        <primitive object={lander} scale={2.2} />
+      <primitive object={pad} position={[LAUNCH_PAD.x, 0, LAUNCH_PAD.z]} scale={OUTPOST_SCALE} />
+      <group ref={ship} position={[LAUNCH_PAD.x, PAD_TOP, LAUNCH_PAD.z]}>
+        <primitive object={lander} scale={OUTPOST_SCALE} />
         <mesh ref={flame} position={[0, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
           <coneGeometry args={[0.5, 1.6, 16, 1, true]} />
           <meshBasicMaterial

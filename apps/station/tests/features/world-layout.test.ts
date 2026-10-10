@@ -1,3 +1,5 @@
+import { ISLAND } from "../../src/features/world/island.ts";
+import { PAD_CLEARINGS } from "../../src/features/world/outpost.ts";
 import { describe, expect, test } from "vite-plus/test";
 import {
   CONSOLES,
@@ -17,6 +19,8 @@ import {
   consoleInReach,
   consoleSeat,
   moveWithCollisions,
+  SHIP_PAD,
+  LAUNCH_PAD,
 } from "../../src/features/world/layout.ts";
 
 describe("deck layout", () => {
@@ -122,5 +126,21 @@ describe("deck layout", () => {
     expect(moveWithCollisions(stand.x, stand.z, 0, 0)).toEqual(stand);
     const pushed = moveWithCollisions(stand.x, stand.z, 0, 1);
     expect(pushed.z).toBe(stand.z);
+  });
+
+  test("the two pads stand apart on the island, outside the play area", () => {
+    const pads = [SHIP_PAD, LAUNCH_PAD];
+    for (const p of pads) {
+      expect(p.x).toBeGreaterThan(ISLAND.minX);
+      expect(p.x).toBeLessThan(ISLAND.maxX);
+      expect(p.z).toBeGreaterThan(ISLAND.minZ);
+      expect(p.z).toBeLessThan(ISLAND.maxZ);
+      const inDeck = p.x >= DECK.minX && p.x <= DECK.maxX && p.z >= DECK.minZ && p.z <= DECK.maxZ;
+      expect(inDeck).toBe(false);
+      expect(PAD_CLEARINGS.some((c) => c.x === p.x && c.z === p.z)).toBe(true);
+    }
+    expect(Math.hypot(SHIP_PAD.x - LAUNCH_PAD.x, SHIP_PAD.z - LAUNCH_PAD.z)).toBeGreaterThanOrEqual(
+      6,
+    );
   });
 });

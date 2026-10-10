@@ -8,6 +8,9 @@ import type { Placement } from "./placement";
 /** Every outpost piece is drawn at this scale (a base module is then ≈4.5 m wide: the flat ring is 4 m deep beside the play area). */
 export const OUTPOST_SCALE = 2;
 
+/** A landing pad's deck (m above the ground), where a lander stands. */
+export const PAD_TOP = 0.5 * OUTPOST_SCALE;
+
 /** Landing pads that later tasks draw: nothing of the outpost may stand within r of them. */
 export const PAD_CLEARINGS: { x: number; z: number; r: number }[] = [
   { ...SHIP_PAD, r: 4 },

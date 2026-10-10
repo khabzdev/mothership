@@ -5,15 +5,13 @@ import { AdditiveBlending, Color, type Group, type Mesh } from "three";
 import { decksQuery } from "../../decks/queries";
 import { useDeckChoice } from "../deck-choice";
 import { SHIP_PAD } from "../layout";
-import { OUTPOST_SCALE } from "../outpost";
+import { OUTPOST_SCALE, PAD_TOP } from "../outpost";
 import { flightOutcome, restingPose, shipPose } from "../ship";
 import { useWorld } from "../store";
 import { stepOutOfShip } from "./Captain";
 import { GLOW } from "./materials";
 import { useProp } from "./models";
 
-/** The pad's deck (m above the ground), where the lander stands. */
-const PAD_TOP = 0.5 * OUTPOST_SCALE;
 /** The engine's flame, bright enough to bloom. */
 const FLAME = new Color("#ffb020").multiplyScalar(GLOW);
 
