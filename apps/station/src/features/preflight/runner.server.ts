@@ -14,6 +14,8 @@ export interface CheckRun {
 }
 
 const OUTPUT_CAP = 256 * 1024;
+/** After the command exits, how long its output may keep coming before what's left is killed. */
+const EXIT_GRACE_MS = 250;
 
 export function runCheck(opts: {
   command: string;
@@ -62,10 +64,12 @@ export function runCheck(opts: {
       let timedOut = false;
       let aborted = false;
       let settled = false;
+      let grace: ReturnType<typeof setTimeout> | undefined;
       const done = (verdict: CheckRun["verdict"], exitCode: number | null) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        clearTimeout(grace);
         signal?.removeEventListener("abort", onAbort);
         void finish(verdict, exitCode, timedOut).then(resolve);
       };
@@ -98,10 +102,28 @@ export function runCheck(opts: {
         append(Buffer.from(`${err.message}\n`));
         done("nogo", null);
       });
-      child.on("close", (code) => {
+      const verdictOf = (code: number | null) => {
         if (aborted) done("skipped", code);
         else if (timedOut) done("nogo", code);
         else done(code === 0 ? "go" : "nogo", code);
+      };
+      // The command is through when it exits. Anything it left running in the background (and
+      // holding its output open) gets a moment to finish writing, then goes with its group.
+      child.on("exit", (code) => {
+        grace = setTimeout(() => {
+          killGroup();
+          child.stdout.destroy();
+          child.stderr.destroy();
+          verdictOf(code);
+        }, EXIT_GRACE_MS);
+      });
+      child.on("close", (code) => {
+        if (grace) {
+          // Leftovers that let go of the output may still be running: they go too.
+          clearTimeout(grace);
+          killGroup();
+        }
+        verdictOf(code);
       });
     });
   })();

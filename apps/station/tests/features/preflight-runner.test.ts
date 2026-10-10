@@ -66,6 +66,25 @@ describe("runCheck", () => {
     expect(gone).toBe(true);
   });
 
+  test("a background child holding stdout doesn't keep a passing check waiting", async () => {
+    const pidFile = join(dir, "bg.pid");
+    const started = Date.now();
+    const r = await run(`sh -c 'sleep 30 & echo $! > "${pidFile}"; exit 0'`, { timeoutMs: 5000 });
+    expect(r).toMatchObject({ verdict: "go", exitCode: 0, timedOut: false });
+    expect(Date.now() - started).toBeLessThan(2500);
+    const pid = Number((await readFile(pidFile, "utf8")).trim());
+    let gone = false;
+    for (let i = 0; i < 40 && !gone; i++) {
+      try {
+        process.kill(pid, 0);
+        await sleep(50);
+      } catch {
+        gone = true;
+      }
+    }
+    expect(gone).toBe(true);
+  });
+
   test("abort before finish is skipped", async () => {
     const ac = new AbortController();
     setTimeout(() => ac.abort(), 100);
