@@ -6,12 +6,13 @@ import { inkFor } from "../../labels/model";
 import { CONSOLE_SIZE, type ConsoleDef } from "../layout";
 import { KIT, PAINTED } from "./materials";
 
-/** The sign sits above the monitors at the back of the desk, held by a mast from the floor. */
+/** The sign sits above the monitors at the back of the desk, held by a mast from the floor at its edge. */
 const BOARD = { w: 1.9, h: 0.46, y: 1.8 };
 
-/** The mast is one thin pole from the floor beside the console up to the sign's edge. */
-const MAST_GEOMETRY = new CylinderGeometry(0.03, 0.04, BOARD.y, 10);
-const MAST_X = BOARD.w / 2 + 0.08;
+/** The mast is one thin pole from the floor up to the sign's top, overlapping the sign's frame edge. */
+const MAST_TOP = BOARD.y + BOARD.h / 2;
+const MAST_GEOMETRY = new CylinderGeometry(0.03, 0.04, MAST_TOP, 10);
+const MAST_X = BOARD.w / 2 - 0.03;
 
 /** The board's picture: rounded, in its colour, the text as big as it fits. */
 function paint(canvas: HTMLCanvasElement, label: ConsoleLabel): void {
@@ -103,7 +104,7 @@ export function Sign({
           <meshStandardMaterial color={KIT.charcoal} {...PAINTED} />
         </RoundedBox>
       </group>
-      <mesh geometry={MAST_GEOMETRY} position={[MAST_X, BOARD.y / 2, z]} castShadow>
+      <mesh geometry={MAST_GEOMETRY} position={[MAST_X, MAST_TOP / 2, z]} castShadow>
         <meshStandardMaterial color={KIT.slate} {...PAINTED} />
       </mesh>
     </group>

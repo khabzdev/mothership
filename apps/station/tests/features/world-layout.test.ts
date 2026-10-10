@@ -89,6 +89,15 @@ describe("deck layout", () => {
     }
   });
 
+  test("the captain can't walk into a board", () => {
+    for (const b of Object.values(BOARDS)) {
+      let p = { x: b.x, z: b.z + 1.5 };
+      for (let i = 0; i < 40; i++) p = moveWithCollisions(p.x, p.z, 0, -0.1);
+      expect(p.z).toBeGreaterThanOrEqual(b.z + 0.5 + 0.32 - 1e-9);
+      expect(boardInReach(p.x, p.z)).not.toBeNull();
+    }
+  });
+
   test("you read a board standing in front of it, not from the consoles", () => {
     expect(boardInReach(BOARDS.mission.x, BOARDS.mission.z + 1.5)).toBe("mission");
     expect(boardInReach(BOARDS.launch.x + 1, BOARDS.launch.z + 1)).toBe("launch");

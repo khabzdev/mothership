@@ -187,6 +187,15 @@ export const BOARDS: Record<BoardId, { x: number; z: number; width: number; heig
   queue: { x: 0.9, z: DECK.minZ + 0.6, width: 2.8, height: 2.3 },
 };
 
+/** Each board is solid: its base plate, posts and panel. */
+for (const b of Object.values(BOARDS))
+  COLLIDERS.push({
+    minX: b.x - b.width / 2,
+    maxX: b.x + b.width / 2,
+    minZ: b.z - 0.1,
+    maxZ: b.z + 0.5,
+  });
+
 /** The board you're standing in front of, if any. */
 export function boardInReach(x: number, z: number): BoardId | null {
   for (const [id, b] of Object.entries(BOARDS) as [BoardId, (typeof BOARDS)[BoardId]][]) {
