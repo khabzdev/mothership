@@ -28,6 +28,29 @@ describe("briefSection", () => {
     }
   });
 
+  test("a bold note between paths doesn't end the section", () => {
+    const text = "## Files\n- src/a.ts\n**Note:** keep the old API\n- src/b.ts\n## Proof\nrun it";
+    expect(briefPaths(text)).toEqual(["src/a.ts", "src/b.ts"]);
+  });
+
+  test("a brief heading in any style still ends the section", () => {
+    const styles = [
+      "## Proof",
+      "**Proof**",
+      "**Proof:** run it",
+      "**Proof**: run it",
+      "Proof: run it",
+    ];
+    for (const proof of styles) {
+      expect(briefSection(`## Files\n- src/a.ts\n${proof}\n- src/b.ts`, "Files")).toBe(
+        "- src/a.ts",
+      );
+    }
+    expect(briefSection("**Files**\n- src/a.ts\n### Notes\n- src/b.ts", "Files")).toBe(
+      "- src/a.ts",
+    );
+  });
+
   test("is empty when the heading is missing", () => {
     expect(briefSection("## Goal\nx", "Files")).toBe("");
   });

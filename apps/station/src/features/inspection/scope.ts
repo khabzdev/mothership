@@ -19,20 +19,17 @@ export const IGNORED_FILES = ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"
 const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.\w+$/;
 const MENTIONS_TESTS = /test|spec/i;
 
-// The headings a brief is asked for (see briefs/model.ts); these start a section even with text after them.
-const BRIEF_HEADINGS = "Goal|Approach|Files|Proof|Not doing";
+// The headings a brief is asked for (see briefs/model.ts).
+const BRIEF_HEADINGS = ["Goal", "Approach", "Files", "Proof", "Not doing"];
 
-// Any line that starts a section: `# X`, `**X**` / `**X:**` / `**X**:` (alone or with text), or `X:` on its own.
-const HEADING_LINES = [
-  /^\s*#{1,6}\s*\S/,
-  /^\s*\*\*[^*]+\*\*\s*:?\s*$/,
-  /^\s*\*\*[^*]+(?::\*\*|\*\*\s*:)/,
-  /^\s*[A-Za-z][A-Za-z ]{0,30}:\s*$/,
-  new RegExp(`^\\s*(?:${BRIEF_HEADINGS})\\s*:`, "i"),
-];
+const MARKDOWN_HEADING = /^\s*#{1,6}\s*\S/;
 
+// A section ends at a markdown `#` heading or one of the brief's own headings, in any style; a
+// bold aside like `**Note:** …` inside a section is just part of it.
 function isHeading(line: string): boolean {
-  return HEADING_LINES.some((re) => re.test(line));
+  return (
+    MARKDOWN_HEADING.test(line) || BRIEF_HEADINGS.some((name) => namedHeading(line, name) !== null)
+  );
 }
 
 // Each pattern matches a heading line for `name`; group 1 is any text on that same line.
