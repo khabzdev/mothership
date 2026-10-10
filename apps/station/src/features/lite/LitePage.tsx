@@ -1,5 +1,6 @@
 import { Badge, Banner, Button, Checkbox, Empty, InputArea, Select } from "@cloudflare/kumo";
 import {
+  AirplaneTakeOff01Icon,
   ArrowLeft01Icon,
   Logout03Icon,
   Notification03Icon,
@@ -9,7 +10,7 @@ import {
   ViewIcon,
 } from "@hugeicons/core-free-icons";
 import type { CrewInfo } from "@mothership/protocol";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
 import { useRealtime } from "../../shared/realtime/RealtimeProvider";
@@ -19,6 +20,8 @@ import { resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { hireMutation, promptMutation, rosterQuery } from "../crew/queries";
 import { TerminalPanel } from "../crew/ui/TerminalPanel";
 import { decksQuery } from "../decks/queries";
+import { preflightChip } from "../preflight/model";
+import { preflightQuery, runPreflightMutation } from "../preflight/queries";
 import { useDeckChoice } from "../world/deck-choice";
 import { CONSOLES } from "../world/layout";
 import { StatusBadge } from "../world/ui/StatusBadge";
@@ -38,6 +41,51 @@ const KEYS: [label: string, data: string][] = [
   ["Esc", "\x1b"],
   ["Ctrl+C", "\x03"],
 ];
+
+const RESULT_TONE = { go: "success", nogo: "error", skipped: "neutral" } as const;
+
+/** A manual pre-flight and the latest results, for crew in their own worktree. */
+function LitePreflight({ member }: { member: CrewInfo }) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    ...preflightQuery(member.id),
+    refetchInterval: (query) => (query.state.data?.latest?.state === "running" ? 2000 : false),
+  });
+  const run = useMutation(runPreflightMutation(queryClient, member.id));
+  const latest = data?.latest;
+  const running = latest?.state === "running" || member.preflight?.state === "running";
+  return (
+    <section className="lite-preflight" aria-label="Pre-flight">
+      <div className="lite-preflight__bar">
+        <Button
+          variant="outline"
+          icon={<Icon icon={AirplaneTakeOff01Icon} />}
+          loading={run.isPending}
+          disabled={running}
+          onClick={() => run.mutate()}
+        >
+          Run pre-flight
+        </Button>
+        {run.data?.id === null && (
+          <span className="muted">Needs its own worktree and armed checks on this deck.</span>
+        )}
+      </div>
+      {latest && latest.results.length > 0 && (
+        <ul className="lite-preflight__list">
+          {latest.results.map((r) => (
+            <li key={r.checkId}>
+              <Badge variant={RESULT_TONE[r.verdict]} appearance="dot">
+                {r.verdict === "go" ? "GO" : r.verdict === "nogo" ? "NO-GO" : "Skipped"}
+              </Badge>
+              <span>{r.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ErrorNote error={run.error} />
+    </section>
+  );
+}
 
 function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) {
   const { client } = useRealtime();
@@ -83,6 +131,7 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
       <div className="lite-crew__term">
         <TerminalPanel crewId={member.id} />
       </div>
+      {member.kind === "agent" && <LitePreflight member={member} />}
       <div className="lite-keys" role="toolbar" aria-label="Terminal keys">
         {KEYS.map(([label, data]) => (
           <Button
@@ -149,6 +198,17 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
       </div>
       <ErrorNote error={prompt.error ?? resume.error ?? home.error} />
     </section>
+  );
+}
+
+function PreflightChip({ info }: { info?: CrewInfo["preflight"] }) {
+  const chip = preflightChip(info);
+  return (
+    chip && (
+      <Badge variant={chip.tone} appearance="dot">
+        {chip.label}
+      </Badge>
+    )
   );
 }
 
@@ -273,7 +333,10 @@ function LiteDeck({
                         : c.task.split("\n")[0] || (c.kind === "shell" ? "Shell" : "No task")}
                     </span>
                   </span>
-                  <StatusBadge crew={c} />
+                  <span className="lite-list__badges">
+                    <StatusBadge crew={c} />
+                    <PreflightChip info={c.preflight} />
+                  </span>
                 </button>
               </li>
             ))}

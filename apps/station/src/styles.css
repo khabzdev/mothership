@@ -1526,6 +1526,39 @@ kbd {
   border-color: color-mix(in oklab, var(--color-kumo-danger) 60%, transparent);
 }
 
+.lite-list__badges {
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+}
+
+.lite-preflight {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.lite-preflight__bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.lite-preflight__list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.lite-preflight__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .lite-list__who,
 .lite-crew__who {
   display: grid;

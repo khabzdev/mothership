@@ -1,3 +1,5 @@
+import type { PreflightInfo } from "@mothership/protocol";
+
 /** How long a check may run before it counts as NO-GO. */
 export const DEFAULT_TIMEOUT_MS = 300_000;
 
@@ -68,4 +70,17 @@ function pathSafeId(o: Record<string, unknown>, key: string): string {
 export function parseLogInput(input: unknown): { preflightId: string; checkId: string } {
   const o = asRecord(input);
   return { preflightId: pathSafeId(o, "preflightId"), checkId: pathSafeId(o, "checkId") };
+}
+
+/** The chip on a crew row: nothing until a pre-flight has actually run (attempt 0 counts as not run). */
+export function preflightChip(
+  info?: PreflightInfo,
+): { label: string; tone: "warning" | "success" | "error" } | null {
+  if (!info || info.attempt === 0) return null;
+  if (info.state === "running") return { label: "Pre-flight…", tone: "warning" };
+  if (info.state === "go") return { label: "GO", tone: "success" };
+  if (info.state === "nogo") {
+    return { label: `NO-GO · fuel ${info.fuel}/${info.maxFuel}`, tone: "error" };
+  }
+  return null;
 }

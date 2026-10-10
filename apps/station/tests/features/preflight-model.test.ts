@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseLogInput } from "../../src/features/preflight/model.ts";
+import type { PreflightInfo } from "@mothership/protocol";
+import { parseLogInput, preflightChip } from "../../src/features/preflight/model.ts";
 
 describe("pre-flight log input", () => {
   test("parseLogInput rejects path tricks", () => {
@@ -12,5 +13,42 @@ describe("pre-flight log input", () => {
     expect(() => parseLogInput({ preflightId: "a/b", checkId: "x" })).toThrow();
     expect(() => parseLogInput({ preflightId: "abc", checkId: "" })).toThrow();
     expect(() => parseLogInput({ preflightId: "abc" })).toThrow();
+  });
+});
+
+describe("preflightChip", () => {
+  const info = (over: Partial<PreflightInfo>): PreflightInfo => ({
+    state: "go",
+    checks: [],
+    attempt: 1,
+    fuel: 3,
+    maxFuel: 3,
+    ...over,
+  });
+
+  test("shows nothing when there is no pre-flight", () => {
+    expect(preflightChip(undefined)).toBeNull();
+  });
+
+  test("shows nothing for attempt 0, which counts as not run", () => {
+    expect(preflightChip(info({ attempt: 0, state: "nogo" }))).toBeNull();
+  });
+
+  test("warns while running", () => {
+    expect(preflightChip(info({ state: "running" }))).toEqual({
+      label: "Pre-flight…",
+      tone: "warning",
+    });
+  });
+
+  test("says GO on success", () => {
+    expect(preflightChip(info({ state: "go" }))).toEqual({ label: "GO", tone: "success" });
+  });
+
+  test("says NO-GO with the fuel left", () => {
+    expect(preflightChip(info({ state: "nogo", fuel: 1, maxFuel: 3 }))).toEqual({
+      label: "NO-GO · fuel 1/3",
+      tone: "error",
+    });
   });
 });
