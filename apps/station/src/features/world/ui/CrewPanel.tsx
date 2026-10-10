@@ -89,8 +89,10 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                       </span>
                     )}
                   </span>
-                  <StatusBadge crew={c} />
-                  <InspectionChip info={c.inspection} />
+                  <span className="crew-panel__badges">
+                    <StatusBadge crew={c} />
+                    <InspectionChip info={c.inspection} />
+                  </span>
                   {needs && (
                     <span className="crew-panel__ask">
                       <Icon icon={Notification03Icon} size={12} />

@@ -794,6 +794,14 @@ kbd {
   font-weight: 600;
 }
 
+/* The status badge and the inspection chip, stacked in the row's last column. */
+.crew-panel__badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
 .crew-panel__sub {
   overflow: hidden;
   font-size: var(--text-xs);
