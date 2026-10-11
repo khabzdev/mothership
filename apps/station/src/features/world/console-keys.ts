@@ -118,6 +118,11 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
         e.preventDefault();
         return open({ kind: "flightControl" });
       }
+      // L at Flight Control is the Debrief (at a console, L labels it).
+      if (atFlightControl && consoleId === null && e.code === "KeyL") {
+        e.preventDefault();
+        return open({ kind: "debrief" });
+      }
       if (consoleId === null) return;
       const member = crew.find((c) => c.consoleId === consoleId);
       if (carrying && e.code === "KeyE") {

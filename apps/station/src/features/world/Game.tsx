@@ -37,6 +37,7 @@ import { usePreflightPoll } from "./usePreflightPoll";
 import { NeedsYouBanner, useCloneNews, useLaunchNews, useOtherDecksHeadsUp } from "./ui/NeedsYou";
 import { Overlays } from "./ui/Overlays";
 import { useInspectionNews } from "../inspection/ui/useInspectionNews";
+import { useDebriefNews } from "../debrief/ui/useDebriefNews";
 import { CAMERA_FAR } from "./sky";
 import { unlockSound } from "./sound";
 import { NextUp, waitingInOrder } from "./waiting";
@@ -135,6 +136,7 @@ export function Game({ deck }: { deck: Deck }) {
   useCloneNews();
   useLaunchNews(deck.id);
   useInspectionNews(deck.id, crew);
+  useDebriefNews(deck.id);
   usePreflightPoll(deck.id, deck.name);
 
   return (
@@ -154,7 +156,11 @@ export function Game({ deck }: { deck: Deck }) {
             <Board board="mission" trim={paint.trim} {...mission} />
             <Board board="launch" trim={paint.trim} {...launch} />
             <Board board="queue" trim={paint.trim} {...queued} />
-            <FlightControl armed={checks?.armed ?? null} checks={checks?.checks ?? NO_CHECKS} />
+            <FlightControl
+              armed={checks?.armed ?? null}
+              checks={checks?.checks ?? NO_CHECKS}
+              lessonsPending={checks?.lessonsPending ?? 0}
+            />
             {CONSOLES.map((def) => (
               <Console
                 key={def.id}
@@ -196,7 +202,7 @@ export function Game({ deck }: { deck: Deck }) {
             useWorld.getState().open({ kind: "terminal", crewId: member.id });
           }}
         />
-        <HintBar crew={crew} labels={labels} />
+        <HintBar crew={crew} labels={labels} lessonsPending={checks?.lessonsPending ?? 0} />
         <ArmCard deckId={deck.id} deckName={deck.name} crew={crew} />
         <Overlays deckId={deck.id} crew={crew} labels={labels} />
         <Palette deckId={deck.id} crew={crew} labels={labels} />

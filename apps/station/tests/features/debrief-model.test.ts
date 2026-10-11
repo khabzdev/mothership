@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   cleanLesson,
+  debriefToast,
   LESSON_MAX,
   lessonsPrompt,
   parseDeckInput,
   parseLessonInput,
+  promotionLine,
 } from "../../src/features/debrief/model.ts";
 
 describe("lessonsPrompt", () => {
@@ -75,4 +77,46 @@ describe("parseLessonInput", () => {
 
 test("reuses the preflight deck input", () => {
   expect(parseDeckInput({ deckId: "d1" })).toEqual({ deckId: "d1" });
+});
+
+describe("debriefToast", () => {
+  const base = { type: "deck.debrief", deckId: "d1", name: "Nova" } as const;
+
+  test("names the lessons drafted and who they came from", () => {
+    expect(debriefToast({ ...base, drafted: 2 })).toEqual({
+      text: "Debrief: 2 lessons from Nova to review",
+      tone: "default",
+    });
+    expect(debriefToast({ ...base, drafted: 1 })?.text).toBe(
+      "Debrief: 1 lesson from Nova to review",
+    );
+  });
+
+  test("a debrief that couldn't run is a warning with the reason", () => {
+    expect(debriefToast({ ...base, drafted: 0, failed: "timed out" })).toEqual({
+      text: "Debrief couldn't run for Nova: timed out",
+      tone: "warning",
+    });
+  });
+
+  test("nothing worth keeping is no toast", () => {
+    expect(debriefToast({ ...base, drafted: 0 })).toBeNull();
+  });
+});
+
+describe("promotionLine", () => {
+  const base = { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova" } as const;
+
+  test("a new rank", () => {
+    expect(promotionLine({ ...base, rank: "Ensign" })).toBe("Nova promoted to Ensign");
+  });
+
+  test("a patch, by its display name", () => {
+    expect(promotionLine({ ...base, patch: "steady-hand" })).toBe("Nova earned Steady Hand");
+  });
+
+  test("an unknown patch reads as its id; a message with neither is nothing", () => {
+    expect(promotionLine({ ...base, patch: "moonwalker" })).toBe("Nova earned moonwalker");
+    expect(promotionLine(base)).toBeNull();
+  });
 });

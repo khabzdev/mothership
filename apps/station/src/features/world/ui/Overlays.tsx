@@ -1,6 +1,7 @@
 import { Button, Checkbox, ClipboardText } from "@cloudflare/kumo";
 import {
   AirplaneTakeOff01Icon,
+  BookOpen01Icon,
   GitBranchIcon,
   GitPullRequestIcon,
   LinkSquare02Icon,
@@ -19,6 +20,7 @@ import { FlightControlWindow } from "../../preflight/ui/FlightControl";
 import { LaunchCheck } from "../../preflight/ui/LaunchCheck";
 import { InspectionWindow } from "../../inspection/ui/InspectionWindow";
 import { BriefWindow } from "../../briefs/ui/BriefWindow";
+import { DebriefWindow } from "../../debrief/ui/DebriefWindow";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
@@ -310,6 +312,16 @@ export function Overlays({
           subtitle="The checks that run in a crew member's worktree each time it stops."
         >
           <FlightControlWindow deckId={deckId} crew={crew} />
+        </Modal>
+      );
+    case "debrief":
+      return (
+        <Modal
+          icon={BookOpen01Icon}
+          title="Debrief"
+          subtitle="Lessons from missions that hit trouble. Kept ones go to every new crew member."
+        >
+          <DebriefWindow deckId={deckId} />
         </Modal>
       );
     case "search":

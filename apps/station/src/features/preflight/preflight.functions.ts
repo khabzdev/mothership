@@ -42,16 +42,19 @@ export interface DeckChecks {
   armed: boolean | null;
   checks: DeckCheck[];
   inspector: boolean;
+  /** Lessons waiting for review (the debrief's). */
+  lessonsPending: number;
 }
 
 export const getChecks = createServerFn()
   .validator(parseDeckInput)
   .handler(({ data }): DeckChecks => {
-    const { checks } = getStation();
+    const { checks, debrief } = getStation();
     return {
       armed: checks.armed(data.deckId),
       checks: checks.list(data.deckId),
       inspector: checks.inspector(data.deckId),
+      lessonsPending: debrief.pendingCount(data.deckId),
     };
   });
 

@@ -17,7 +17,8 @@ export type Overlay =
   | { kind: "board"; board: BoardId; open?: number }
   | { kind: "flight"; fromShip?: boolean }
   | { kind: "search" }
-  | { kind: "flightControl" };
+  | { kind: "flightControl" }
+  | { kind: "debrief" };
 
 interface WorldState {
   /** Console the Captain is standing at. */

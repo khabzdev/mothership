@@ -2,6 +2,7 @@ import { RoundedBox } from "@react-three/drei";
 import type { DeckCheck } from "@mothership/protocol";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, SRGBColorSpace } from "three";
+import { lessonsToReview } from "../../debrief/model";
 import { FLIGHT_CONTROL, FLIGHT_CONTROL_DESK } from "../layout";
 import { KIT, PAINTED } from "./materials";
 
@@ -9,7 +10,12 @@ const SCREEN = { width: 1.7, height: 0.72 } as const;
 const PX = { width: 768, height: Math.round((768 * SCREEN.height) / SCREEN.width) } as const;
 const MAX_ROWS = 4;
 
-function paint(canvas: HTMLCanvasElement, armed: boolean | null, checks: DeckCheck[]) {
+function paint(
+  canvas: HTMLCanvasElement,
+  armed: boolean | null,
+  checks: DeckCheck[],
+  lessonsPending: number,
+) {
   const c = canvas.getContext("2d")!;
   const { width: w, height: h } = canvas;
   c.fillStyle = "#14171e";
@@ -27,6 +33,15 @@ function paint(canvas: HTMLCanvasElement, armed: boolean | null, checks: DeckChe
   c.fillStyle = armed ? "#7bd88f" : KIT.amber;
   c.fillText(armed ? "ARMED" : "NOT ARMED", w - 28, 58);
   c.textAlign = "left";
+
+  // Lessons waiting at the Debrief (L), along the bottom on the right.
+  if (lessonsPending > 0) {
+    c.textAlign = "right";
+    c.font = '600 26px "Martian Mono", ui-monospace, monospace';
+    c.fillStyle = KIT.amber;
+    c.fillText(lessonsToReview(lessonsPending), w - 28, h - 28);
+    c.textAlign = "left";
+  }
 
   c.font = '500 28px "Martian Mono", ui-monospace, monospace';
   if (!checks.length) {
@@ -48,9 +63,18 @@ function paint(canvas: HTMLCanvasElement, armed: boolean | null, checks: DeckChe
 
 /**
  * Flight Control: a desk against the deck's south edge, whose screen shows the deck's pre-flight
- * checks and whether they're armed. E in front of it opens the Flight Control window.
+ * checks, whether they're armed and any lessons to review. E in front of it opens the Flight Control
+ * window, L the Debrief.
  */
-export function FlightControl({ armed, checks }: { armed: boolean | null; checks: DeckCheck[] }) {
+export function FlightControl({
+  armed,
+  checks,
+  lessonsPending,
+}: {
+  armed: boolean | null;
+  checks: DeckCheck[];
+  lessonsPending: number;
+}) {
   const surface = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = PX.width;
@@ -63,12 +87,12 @@ export function FlightControl({ armed, checks }: { armed: boolean | null; checks
 
   useEffect(() => {
     const draw = () => {
-      paint(surface.canvas, armed, checks);
+      paint(surface.canvas, armed, checks, lessonsPending);
       surface.texture.needsUpdate = true;
     };
     draw();
     void document.fonts?.ready.then(draw);
-  }, [surface, armed, checks]);
+  }, [surface, armed, checks, lessonsPending]);
   useEffect(() => () => surface.texture.dispose(), [surface]);
 
   const { width, depth, height } = FLIGHT_CONTROL_DESK;

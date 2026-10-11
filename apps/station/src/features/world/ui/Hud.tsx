@@ -37,7 +37,16 @@ const BOARD_HINTS = {
 } as const;
 
 /** What you're facing and what you can do there (agent-office's hint bar). */
-export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLabel[] }) {
+export function HintBar({
+  crew,
+  labels,
+  lessonsPending,
+}: {
+  crew: CrewInfo[];
+  labels: ConsoleLabel[];
+  /** Lessons waiting at Flight Control's Debrief. */
+  lessonsPending: number;
+}) {
   const consoleId = useWorld((s) => s.consoleId);
   const atShip = useWorld((s) => s.atShip);
   const aboard = useWorld((s) => s.flight !== null || s.arriving);
@@ -86,6 +95,7 @@ export function HintBar({ crew, labels }: { crew: CrewInfo[]; labels: ConsoleLab
           <Icon icon={AirplaneTakeOff01Icon} /> Flight Control
         </span>
         <Key k="E" label="Set the pre-flight checks" />
+        <Key k="L" label={lessonsPending ? `Debrief · ${lessonsPending} new` : "Debrief"} />
       </div>
     );
   }

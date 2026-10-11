@@ -2067,3 +2067,71 @@ kbd {
 .inspection__runs {
   margin-top: 0.6rem;
 }
+
+.debrief {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.debrief__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-kumo-subtle);
+}
+
+.debrief__heading {
+  margin: 0 0 0.4rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.debrief__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.debrief__lesson {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-kumo-recessed);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.debrief__lesson:hover {
+  background: var(--color-kumo-control);
+}
+
+.debrief__lesson[aria-selected="true"] {
+  background: var(--color-kumo-fill);
+}
+
+.debrief__text {
+  overflow-wrap: anywhere;
+}
+
+.debrief__meta,
+.debrief__evidence {
+  font-size: var(--text-xs);
+  color: var(--text-color-kumo-subtle);
+}
+
+.debrief__evidence {
+  overflow-wrap: anywhere;
+}
+
+.debrief__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

@@ -1,3 +1,6 @@
+import type { MsgOf, ServerMsg } from "@mothership/protocol";
+import { PATCHES } from "../ranks/model";
+
 export { parseDeckInput } from "../preflight/model";
 
 export const LESSON_STATES = ["pending", "kept", "dropped", "retired"] as const;
@@ -40,4 +43,35 @@ export function parseLessonInput(input: unknown): { lessonId: string } {
   const lessonId = typeof o.lessonId === "string" ? o.lessonId.trim() : "";
   if (!lessonId) throw new Error("lessonId is required");
   return { lessonId };
+}
+
+const lessonCount = (n: number) => `${n} ${n === 1 ? "lesson" : "lessons"}`;
+
+/** Flight Control's screen line while lessons wait: "n lessons to review". */
+export function lessonsToReview(n: number): string {
+  return `${lessonCount(n)} to review`;
+}
+
+/** The toast for a finished debrief; null when it found nothing worth keeping. */
+export function debriefToast(
+  msg: MsgOf<ServerMsg, "deck.debrief">,
+): { text: string; tone: "default" | "warning" } | null {
+  if (msg.failed !== undefined) {
+    return { text: `Debrief couldn't run for ${msg.name}: ${msg.failed}`, tone: "warning" };
+  }
+  if (msg.drafted === 0) return null;
+  return {
+    text: `Debrief: ${lessonCount(msg.drafted)} from ${msg.name} to review`,
+    tone: "default",
+  };
+}
+
+/** "<name> promoted to <Rank>" or "<name> earned <Patch name>"; null when it carries neither. */
+export function promotionLine(msg: MsgOf<ServerMsg, "crew.promoted">): string | null {
+  if (msg.rank) return `${msg.name} promoted to ${msg.rank}`;
+  if (msg.patch) {
+    const patch = PATCHES.find((p) => p.id === msg.patch)?.name ?? msg.patch;
+    return `${msg.name} earned ${patch}`;
+  }
+  return null;
 }
