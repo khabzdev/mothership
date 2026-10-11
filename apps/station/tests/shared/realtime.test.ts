@@ -135,13 +135,23 @@ describe("applyServerMsg", () => {
       armed: true,
       checks,
       inspector: false,
+      lessonsPending: 3,
     });
     expect(qc.getQueryData(realtimeKeys.checks("d1"))).toEqual({
       armed: true,
       checks,
       inspector: false,
+      lessonsPending: 3,
     });
     expect(realtimeKeys.checks("d1")).toEqual(["decks", "d1", "checks"]);
+  });
+
+  test("a deck.lessons makes that deck's lessons stale", () => {
+    const qc = new QueryClient();
+    qc.setQueryData(realtimeKeys.lessons("d1"), []);
+    applyServerMsg(qc, { type: "deck.lessons", deckId: "d1" });
+    expect(qc.getQueryState(realtimeKeys.lessons("d1"))?.isInvalidated).toBe(true);
+    expect(realtimeKeys.lessons("d1")).toEqual(["decks", "d1", "lessons"]);
   });
 
   test("a crew.inspection makes that crew member's inspection stale", () => {

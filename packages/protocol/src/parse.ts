@@ -14,6 +14,9 @@ import {
   type InspectionInfo,
   type InspectionState,
   PREFLIGHT_STATES,
+  RANK_TITLES,
+  type RankInfo,
+  type RankTitle,
   type PreflightInfo,
   type Run,
   type ScreenFrame,
@@ -123,13 +126,45 @@ export function parseServerMsg(raw: string): ServerMsg | null {
         (o.armed === null || typeof o.armed === "boolean") &&
         Array.isArray(o.checks) &&
         o.checks.every(isDeckCheck) &&
-        typeof o.inspector === "boolean"
+        typeof o.inspector === "boolean" &&
+        isCount(o.lessonsPending)
         ? {
             type: o.type,
             deckId: o.deckId,
             armed: o.armed,
             checks: o.checks,
             inspector: o.inspector,
+            lessonsPending: o.lessonsPending,
+          }
+        : null;
+    case "deck.lessons":
+      return isId(o.deckId) ? { type: o.type, deckId: o.deckId } : null;
+    case "crew.promoted":
+      return isId(o.deckId) &&
+        isId(o.crewId) &&
+        typeof o.name === "string" &&
+        (o.rank === undefined || RANK_TITLES.includes(o.rank as RankTitle)) &&
+        (o.patch === undefined || typeof o.patch === "string")
+        ? {
+            type: o.type,
+            deckId: o.deckId,
+            crewId: o.crewId,
+            name: o.name,
+            ...(o.rank !== undefined && { rank: o.rank as RankTitle }),
+            ...(o.patch !== undefined && { patch: o.patch as string }),
+          }
+        : null;
+    case "deck.debrief":
+      return isId(o.deckId) &&
+        typeof o.name === "string" &&
+        isCount(o.drafted) &&
+        (o.failed === undefined || typeof o.failed === "string")
+        ? {
+            type: o.type,
+            deckId: o.deckId,
+            name: o.name,
+            drafted: o.drafted,
+            ...(o.failed !== undefined && { failed: o.failed as string }),
           }
         : null;
     case "deck.clones":
@@ -235,8 +270,23 @@ function isCrewInfo(value: unknown): value is CrewInfo {
     (c.preflight === undefined || isPreflightInfo(c.preflight)) &&
     (c.brief === undefined || isBriefInfo(c.brief)) &&
     (c.inspection === undefined || isInspectionInfo(c.inspection)) &&
-    (c.cleanBriefs === undefined ||
-      (Number.isInteger(c.cleanBriefs) && (c.cleanBriefs as number) >= 0))
+    (c.rank === undefined || isRankInfo(c.rank)) &&
+    (c.patches === undefined ||
+      (Array.isArray(c.patches) && c.patches.every((p) => typeof p === "string")))
+  );
+}
+
+function isCount(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0;
+}
+
+function isRankInfo(value: unknown): value is RankInfo {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as Record<string, unknown>;
+  return (
+    RANK_TITLES.includes(r.title as RankTitle) &&
+    isCount(r.points) &&
+    (r.next === undefined || isCount(r.next))
   );
 }
 

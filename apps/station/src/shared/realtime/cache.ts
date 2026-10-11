@@ -6,6 +6,7 @@ export const realtimeKeys = {
   roster: (deckId: string) => ["decks", deckId, "crew"] as const,
   labels: (deckId: string) => ["decks", deckId, "labels"] as const,
   checks: (deckId: string) => ["decks", deckId, "checks"] as const,
+  lessons: (deckId: string) => ["decks", deckId, "lessons"] as const,
   preflight: (crewId: string) => ["preflight", crewId] as const,
   brief: (crewId: string) => ["brief", crewId] as const,
   inspection: (crewId: string) => ["inspection", crewId] as const,
@@ -24,7 +25,10 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
       armed: msg.armed,
       checks: msg.checks,
       inspector: msg.inspector,
+      lessonsPending: msg.lessonsPending,
     });
+  else if (msg.type === "deck.lessons")
+    void queryClient.invalidateQueries({ queryKey: realtimeKeys.lessons(msg.deckId) });
   else if (msg.type === "crew.preflight")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.preflight(msg.crewId) });
   else if (msg.type === "crew.brief")

@@ -1,4 +1,10 @@
+import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vite-plus/test";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
@@ -6,8 +12,11 @@ import {
   crew,
   decks,
   inspections,
+  lessons,
+  missionPrs,
   preflightResults,
   preflights,
+  serviceRecords,
 } from "../../src/shared/db/schema.ts";
 
 const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
@@ -54,9 +63,12 @@ describe("database", () => {
       "deck_checks",
       "decks",
       "inspections",
+      "lessons",
+      "mission_prs",
       "preflight_results",
       "preflights",
       "queue_tasks",
+      "service_records",
     ]);
   });
 
@@ -178,5 +190,98 @@ describe("database", () => {
     db.delete(decks).where(eq(decks.id, d.id)).run();
     expect(db.select().from(preflights).all()).toEqual([]);
     expect(db.select().from(preflightResults).all()).toEqual([]);
+  });
+
+  test("lessons check their state and go with their deck", () => {
+    const d = deck();
+    const row = { id: "l1", deckId: d.id, text: "Run vp check", fromName: "Nova" };
+    db.insert(lessons).values(row).run();
+    expect(db.select().from(lessons).get()?.state).toBe("pending");
+    expect(() =>
+      db
+        .insert(lessons)
+        .values({ ...row, id: "l2", state: "bogus" as never })
+        .run(),
+    ).toThrow(/CHECK/);
+    db.delete(decks).where(eq(decks.id, d.id)).run();
+    expect(db.select().from(lessons).all()).toEqual([]);
+  });
+
+  test("service records are one per call sign per deck and go with their deck", () => {
+    const d = deck();
+    db.insert(serviceRecords).values({ deckId: d.id, name: "Nova" }).run();
+    expect(db.select().from(serviceRecords).get()).toMatchObject({
+      missions: 0,
+      merged: 0,
+      firstTryGo: 0,
+      firstTryClear: 0,
+      cleanBriefs: 0,
+      lessonsKept: 0,
+      patches: "[]",
+    });
+    expect(() => db.insert(serviceRecords).values({ deckId: d.id, name: "Nova" }).run()).toThrow(
+      /UNIQUE|PRIMARY/,
+    );
+    db.delete(decks).where(eq(decks.id, d.id)).run();
+    expect(db.select().from(serviceRecords).all()).toEqual([]);
+  });
+
+  test("mission PRs are one per url and go with their deck", () => {
+    const d = deck();
+    const row = { url: "https://github.com/o/r/pull/1", deckId: d.id, name: "Nova" };
+    db.insert(missionPrs).values(row).run();
+    expect(() => db.insert(missionPrs).values(row).run()).toThrow(/UNIQUE|PRIMARY/);
+    db.delete(decks).where(eq(decks.id, d.id)).run();
+    expect(db.select().from(missionPrs).all()).toEqual([]);
+  });
+
+  test("a new crew member starts a mission at 0", () => {
+    expect(member(deck().id).missionSince).toBe(0);
+  });
+
+  test("migration 0011 folds clean briefs into service records and dates missions from hire", () => {
+    // Everything up to 0010, a crew member holding two clean briefs, then 0011.
+    const folder = mkdtempSync(join(tmpdir(), "migrations-"));
+    cpSync(migrationsFolder, folder, { recursive: true });
+    const journalPath = join(folder, "meta", "_journal.json");
+    const journal = JSON.parse(readFileSync(journalPath, "utf8"));
+    const full = JSON.stringify(journal);
+    journal.entries = journal.entries.filter((e: { tag: string }) => e.tag !== "0011_debrief");
+    expect(journal.entries.at(-1).tag).toBe("0010_brief_task");
+    writeFileSync(journalPath, JSON.stringify(journal));
+
+    const client = new Database(":memory:");
+    client.pragma("foreign_keys = ON");
+    const old = drizzle(client);
+    migrate(old, { migrationsFolder: folder });
+    client.exec(
+      `insert into decks (id, name, repo_path, modules) values ('d1', 'repo', '/r', '[]'), ('d2', 'other', '/o', '[]')`,
+    );
+    const insertCrew = client.prepare(
+      `insert into crew (id, deck_id, console_id, name, color, character, cwd, clean_briefs, created_at)
+       values (?, ?, ?, ?, '#fff', 'Knight', '/w', ?, ?)`,
+    );
+    insertCrew.run("c1", "d1", 0, "Nova", 2, 1234);
+    insertCrew.run("c2", "d2", 0, "Nova", 1, 5678);
+    insertCrew.run("c3", "d1", 1, "Rex", 0, 9);
+
+    writeFileSync(journalPath, full);
+    migrate(old, { migrationsFolder: folder });
+
+    const records = client
+      .prepare(
+        "select deck_id, name, clean_briefs, missions, patches from service_records order by deck_id",
+      )
+      .all();
+    expect(records).toEqual([
+      { deck_id: "d1", name: "Nova", clean_briefs: 2, missions: 0, patches: "[]" },
+      { deck_id: "d2", name: "Nova", clean_briefs: 1, missions: 0, patches: "[]" },
+    ]);
+    const since = client.prepare("select id, mission_since from crew order by id").all();
+    expect(since).toEqual([
+      { id: "c1", mission_since: 1234 },
+      { id: "c2", mission_since: 5678 },
+      { id: "c3", mission_since: 9 },
+    ]);
   });
 });

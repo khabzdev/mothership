@@ -83,11 +83,6 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                       </span>
                     )}
                     {sub && <span className="crew-panel__sub">{sub}</span>}
-                    {!!c.cleanBriefs && (
-                      <span className="crew-panel__sub meta">
-                        {c.cleanBriefs === 1 ? "1 clean brief" : `${c.cleanBriefs} clean briefs`}
-                      </span>
-                    )}
                   </span>
                   <span className="crew-panel__badges">
                     <StatusBadge crew={c} />

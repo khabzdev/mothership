@@ -16,6 +16,7 @@ import {
   text,
   unique,
 } from "drizzle-orm/sqlite-core";
+import { LESSON_STATES } from "../../features/debrief/model.ts";
 
 const now = sql`(unixepoch('subsec') * 1000)`;
 
@@ -64,8 +65,10 @@ export const crew = sqliteTable(
     flight: integer("flight").notNull().default(1),
     /** Pre-flight hand-backs left this flight. */
     fuel: integer("fuel").notNull().default(3),
-    /** A running total of its briefs approved as first written (at revision 1). */
+    /** Folded into `service_records` by migration 0011; no longer read or written after it. */
     cleanBriefs: integer("clean_briefs").notNull().default(0),
+    /** When the current mission started (ms): evidence and first-try counters read rows from then on. */
+    missionSince: integer("mission_since").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(now),
   },
   (t) => [
@@ -251,3 +254,61 @@ export const preflightResults = sqliteTable(
     check("preflight_results_verdict_check", oneOf("verdict", CHECK_VERDICTS)),
   ],
 );
+
+/**
+ * One lesson a debrief drafted from a finished mission. `kept` ones go to new crew; the rest are
+ * history.
+ */
+export const lessons = sqliteTable(
+  "lessons",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    state: text("state", { enum: LESSON_STATES }).notNull().default("pending"),
+    /** The call sign whose mission it came from. */
+    fromName: text("from_name").notNull(),
+    /** What it was drawn from, plain text. */
+    evidence: text("evidence").notNull().default(""),
+    createdAt: integer("created_at").notNull().default(now),
+    settledAt: integer("settled_at"),
+  },
+  (t) => [
+    index("lessons_deck_idx").on(t.deckId, t.state),
+    check("lessons_state_check", oneOf("state", LESSON_STATES)),
+  ],
+);
+
+/** A call sign's service record on one deck: it outlives the crew member and is inherited on re-hire. */
+export const serviceRecords = sqliteTable(
+  "service_records",
+  {
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    missions: integer("missions").notNull().default(0),
+    merged: integer("merged").notNull().default(0),
+    firstTryGo: integer("first_try_go").notNull().default(0),
+    firstTryClear: integer("first_try_clear").notNull().default(0),
+    cleanBriefs: integer("clean_briefs").notNull().default(0),
+    lessonsKept: integer("lessons_kept").notNull().default(0),
+    /** JSON `string[]` of patch ids earned. */
+    patches: text("patches").notNull().default("[]"),
+    updatedAt: integer("updated_at").notNull().default(now),
+  },
+  (t) => [primaryKey({ columns: [t.deckId, t.name] })],
+);
+
+/** A pull request a crew member opened, so a merge after it's sent home still credits its call sign. */
+export const missionPrs = sqliteTable("mission_prs", {
+  url: text("url").primaryKey(),
+  deckId: text("deck_id")
+    .notNull()
+    .references(() => decks.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  branch: text("branch"),
+  openedAt: integer("opened_at").notNull().default(now),
+});

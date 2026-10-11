@@ -172,7 +172,6 @@ describe("BriefService", () => {
     expect(service.history(id)[0]).toMatchObject({ state: "approved", approvedBy: "you" });
     expect(service.approved(id)).toMatchObject({ revision: 1, text: PLAN });
     expect(cleanBriefs(id)).toBe(1);
-    expect(crew.member(id).cleanBriefs).toBe(1);
 
     expect(await service.approve(id)).toEqual({
       ok: false,

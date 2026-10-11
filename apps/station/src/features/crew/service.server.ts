@@ -84,7 +84,6 @@ function toInfo(row: Row, describe?: Describe): CrewInfo {
     ...(preflight && { preflight }),
     ...(brief && { brief }),
     ...(inspection && { inspection }),
-    ...(row.cleanBriefs > 0 && { cleanBriefs: row.cleanBriefs }),
   };
 }
 

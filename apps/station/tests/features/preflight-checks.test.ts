@@ -51,7 +51,18 @@ describe("CheckService", () => {
       armed: true,
       checks: service.list("deck-1"),
       inspector: true,
+      lessonsPending: 0,
     });
+  });
+
+  test("the deck message carries the pending lesson count when one is injected", () => {
+    expect(service.message("deck-1")).toMatchObject({ lessonsPending: 0 });
+    const counted = new CheckService({
+      db,
+      broadcast: () => {},
+      pendingCount: (id) => (id === "deck-1" ? 4 : 0),
+    });
+    expect(counted.message("deck-1")).toMatchObject({ lessonsPending: 4 });
   });
 
   test("inspector is on by default and follows the deck row", async () => {

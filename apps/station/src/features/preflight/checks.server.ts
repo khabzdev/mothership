@@ -24,16 +24,20 @@ export async function readSnapshot(repoPath: string): Promise<RepoSnapshot> {
 interface Deps {
   db: Db;
   broadcast: (msg: ServerMsg) => void;
+  /** How many lessons a deck has waiting for review (none until the debrief is wired in). */
+  pendingCount?: (deckId: string) => number;
 }
 
 /** A deck's pre-flight checks: detected from its repo, editable, and armed by the user. */
 export class CheckService {
   readonly #db: Db;
   readonly #broadcast: (msg: ServerMsg) => void;
+  readonly #pendingCount: (deckId: string) => number;
 
-  constructor({ db, broadcast }: Deps) {
+  constructor({ db, broadcast, pendingCount = () => 0 }: Deps) {
     this.#db = db;
     this.#broadcast = broadcast;
+    this.#pendingCount = pendingCount;
   }
 
   list(deckId: string): DeckCheck[] {
@@ -129,6 +133,7 @@ export class CheckService {
       armed: this.armed(deckId),
       checks: this.list(deckId),
       inspector: this.inspector(deckId),
+      lessonsPending: this.#pendingCount(deckId),
     };
   }
 }

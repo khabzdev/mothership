@@ -44,6 +44,9 @@ describe("types", () => {
       | "deck.labels"
       | "deck.checks"
       | "deck.clones"
+      | "deck.lessons"
+      | "crew.promoted"
+      | "deck.debrief"
       | "pr.merged"
       | "error"
     >();
@@ -153,9 +156,7 @@ describe("parseServerMsg", () => {
     {
       type: "crew.roster",
       deckId: "d1",
-      crew: [
-        { ...nova, brief: { revision: 2, state: "waiting", goal: "Ship it" }, cleanBriefs: 3 },
-      ],
+      crew: [{ ...nova, brief: { revision: 2, state: "waiting", goal: "Ship it" } }],
     },
     { type: "crew.brief", deckId: "d1", crewId: "c1" },
     {
@@ -195,12 +196,30 @@ describe("parseServerMsg", () => {
       armed: null,
       checks: [{ id: "k1", name: "test", command: "vp test", timeoutMs: 300000, enabled: true }],
       inspector: true,
+      lessonsPending: 2,
     },
     {
       type: "deck.clones",
       clones: [{ id: "k1", spec: "o/r", name: "r", state: "cloning", progress: "Downloading 5%" }],
     },
     { type: "pr.merged", deckId: "d1", number: 7, title: "Add toggle", crewId: "c1" },
+    { type: "deck.lessons", deckId: "d1" },
+    { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", rank: "Ensign" },
+    { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", patch: "clean-sheet" },
+    { type: "deck.debrief", deckId: "d1", name: "Nova", drafted: 2 },
+    { type: "deck.debrief", deckId: "d1", name: "Nova", drafted: 0, failed: "no claude" },
+    {
+      type: "crew.roster",
+      deckId: "d1",
+      crew: [
+        {
+          ...nova,
+          rank: { title: "Ensign", points: 6, next: 15 },
+          patches: ["first-launch", "clean-sheet"],
+        },
+        { ...nova, id: "c2", rank: { title: "Captain", points: 80 } },
+      ],
+    },
     { type: "error", message: "boom" },
   ];
 
@@ -239,15 +258,51 @@ describe("parseServerMsg", () => {
     ).toBeNull();
   });
 
-  test("rejects a roster with a malformed brief or clean-brief count", () => {
+  test("rejects a roster with a malformed brief", () => {
     const roster = (extra: object) =>
       JSON.stringify({ type: "crew.roster", deckId: "d1", crew: [{ ...nova, ...extra }] });
     const brief = { revision: 1, state: "waiting", goal: "g" };
     expect(parseServerMsg(roster({ brief: { ...brief, state: "pondering" } }))).toBeNull();
     expect(parseServerMsg(roster({ brief: { ...brief, revision: 0 } }))).toBeNull();
     expect(parseServerMsg(roster({ brief: { ...brief, goal: 5 } }))).toBeNull();
-    expect(parseServerMsg(roster({ cleanBriefs: -1 }))).toBeNull();
-    expect(parseServerMsg(roster({ cleanBriefs: 1.5 }))).toBeNull();
+  });
+
+  test("rejects a roster with a malformed rank or patches", () => {
+    const roster = (extra: object) =>
+      JSON.stringify({ type: "crew.roster", deckId: "d1", crew: [{ ...nova, ...extra }] });
+    const rank = { title: "Ensign", points: 6, next: 15 };
+    expect(parseServerMsg(roster({ rank }))).not.toBeNull();
+    expect(parseServerMsg(roster({ rank: { ...rank, title: "Admiral" } }))).toBeNull();
+    expect(parseServerMsg(roster({ rank: { ...rank, points: -1 } }))).toBeNull();
+    expect(parseServerMsg(roster({ rank: { ...rank, points: 1.5 } }))).toBeNull();
+    expect(parseServerMsg(roster({ rank: { ...rank, next: "15" } }))).toBeNull();
+    expect(parseServerMsg(roster({ patches: ["clean-sheet", 5] }))).toBeNull();
+    expect(parseServerMsg(roster({ patches: "clean-sheet" }))).toBeNull();
+  });
+
+  test("rejects malformed debrief messages", () => {
+    const msg = (m: object) => JSON.stringify(m);
+    expect(parseServerMsg(msg({ type: "deck.lessons" }))).toBeNull();
+    expect(parseServerMsg(msg({ type: "crew.promoted", deckId: "d1", name: "Nova" }))).toBeNull();
+    expect(
+      parseServerMsg(
+        msg({ type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", rank: "Admiral" }),
+      ),
+    ).toBeNull();
+    expect(
+      parseServerMsg(
+        msg({ type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", patch: 3 }),
+      ),
+    ).toBeNull();
+    expect(parseServerMsg(msg({ type: "deck.debrief", deckId: "d1", name: "Nova" }))).toBeNull();
+    expect(
+      parseServerMsg(msg({ type: "deck.debrief", deckId: "d1", name: "Nova", drafted: -1 })),
+    ).toBeNull();
+    expect(
+      parseServerMsg(
+        msg({ type: "deck.debrief", deckId: "d1", name: "Nova", drafted: 1, failed: 2 }),
+      ),
+    ).toBeNull();
   });
 
   test("rejects a malformed inspection summary or crew.inspection", () => {
@@ -268,9 +323,18 @@ describe("parseServerMsg", () => {
     ).toBeNull();
   });
 
-  test("rejects a deck.checks without the inspector flag", () => {
+  test("rejects a deck.checks without the inspector flag or a lesson count", () => {
     const raw = JSON.stringify({ type: "deck.checks", deckId: "d1", armed: null, checks: [] });
     expect(parseServerMsg(raw)).toBeNull();
+    const noLessons = {
+      type: "deck.checks",
+      deckId: "d1",
+      armed: null,
+      checks: [],
+      inspector: true,
+    };
+    expect(parseServerMsg(JSON.stringify(noLessons))).toBeNull();
+    expect(parseServerMsg(JSON.stringify({ ...noLessons, lessonsPending: -1 }))).toBeNull();
   });
 
   test("rejects a crew.brief without a crewId", () => {

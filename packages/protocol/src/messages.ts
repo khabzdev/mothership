@@ -72,6 +72,17 @@ export interface InspectionInfo {
   failed?: true;
 }
 
+/** Rank titles, lowest first; the station's ranks model holds the points each starts at. */
+export const RANK_TITLES = ["Cadet", "Ensign", "Lieutenant", "Commander", "Captain"] as const;
+export type RankTitle = (typeof RANK_TITLES)[number];
+
+/** A call sign's rank on this deck: its points, and where the next rank starts (absent at the top). */
+export interface RankInfo {
+  title: RankTitle;
+  points: number;
+  next?: number;
+}
+
 /** A crew member at a console on a deck (agent-office's WorkerInfo). */
 export interface CrewInfo {
   id: CrewId;
@@ -94,8 +105,10 @@ export interface CrewInfo {
   preflight?: PreflightInfo;
   brief?: BriefInfo;
   inspection?: InspectionInfo;
-  /** A running total of briefs approved as first written, at revision 1 (omitted when 0). */
-  cleanBriefs?: number;
+  /** The call sign's rank on this deck. */
+  rank?: RankInfo;
+  /** Patch ids the call sign has earned on this deck. */
+  patches?: string[];
 }
 
 /** One pre-flight check a deck runs before its crew may hand work back. */
@@ -188,8 +201,23 @@ export type ServerMsg =
       armed: boolean | null;
       checks: DeckCheck[];
       inspector: boolean;
+      /** Lessons waiting for review. */
+      lessonsPending: number;
     }
   | { type: "deck.clones"; clones: CloneInfo[] }
+  /** A deck's lessons changed. */
+  | { type: "deck.lessons"; deckId: DeckId }
+  /** A call sign was promoted and/or earned a patch. */
+  | {
+      type: "crew.promoted";
+      deckId: DeckId;
+      crewId: CrewId;
+      name: string;
+      rank?: RankTitle;
+      patch?: string;
+    }
+  /** A debrief finished: `drafted` lessons to review, or `failed` says why it couldn't run. */
+  | { type: "deck.debrief"; deckId: DeckId; name: string; drafted: number; failed?: string }
   /** A pull request merged: the launch klaxon. `crewId` is the crew member it came from, if known. */
   | { type: "pr.merged"; deckId: DeckId; number: number; title: string; crewId?: CrewId }
   | { type: "error"; message: string };
