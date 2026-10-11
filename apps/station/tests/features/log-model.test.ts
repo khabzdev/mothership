@@ -11,12 +11,15 @@ import {
 
 const merged: VerdictInput = {
   outcome: "merged",
-  briefRevisions: 1,
+  briefRevised: false,
+  briefApproved: true,
   nogos: 0,
   flags: 0,
   firstGo: true,
   firstClear: true,
   inspectorFailed: false,
+  checksArmed: true,
+  inspectorOn: true,
 };
 
 describe("missionId", () => {
@@ -32,18 +35,25 @@ describe("missionVerdict", () => {
 
   test("no brief, no pre-flight and no inspection count as clean", () => {
     expect(
-      missionVerdict({ ...merged, briefRevisions: 0, firstGo: null, firstClear: null }),
+      missionVerdict({
+        ...merged,
+        briefApproved: null,
+        firstGo: null,
+        firstClear: null,
+        checksArmed: false,
+        inspectorOn: false,
+      }),
     ).toEqual({ kind: "clean", line: "Clean" });
   });
 
   test("merged after trouble is rework, naming each part", () => {
     expect(
-      missionVerdict({ ...merged, briefRevisions: 2, nogos: 2, flags: 1, firstGo: false }),
+      missionVerdict({ ...merged, briefRevised: true, nogos: 2, flags: 1, firstGo: false }),
     ).toEqual({
       kind: "rework",
       line: "Shipped after rework: 2 NO-GO · flagged 1× · brief revised",
     });
-    expect(missionVerdict({ ...merged, briefRevisions: 3 })).toEqual({
+    expect(missionVerdict({ ...merged, briefRevised: true })).toEqual({
       kind: "rework",
       line: "Shipped after rework: brief revised",
     });
@@ -70,11 +80,64 @@ describe("missionVerdict", () => {
       line: "Shipped after rework: Inspector couldn't run",
     });
     expect(
-      missionVerdict({ ...merged, flags: 1, briefRevisions: 2, inspectorFailed: true }).line,
+      missionVerdict({ ...merged, flags: 1, briefRevised: true, inspectorFailed: true }).line,
     ).toBe("Shipped after rework: flagged 1× · Inspector couldn't run · brief revised");
     expect(missionVerdict({ ...merged, outcome: "home", inspectorFailed: true })).toEqual({
       kind: "home",
       line: "Sent home: Inspector couldn't run",
+    });
+  });
+
+  test("a brief never approved keeps a merge from being clean", () => {
+    expect(missionVerdict({ ...merged, briefApproved: false })).toEqual({
+      kind: "rework",
+      line: "Shipped after rework",
+    });
+  });
+
+  test("gates that were on but never passed aren't clean, and say so", () => {
+    expect(missionVerdict({ ...merged, firstGo: null })).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: launched without a GO",
+    });
+    expect(missionVerdict({ ...merged, firstClear: null })).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: not inspected",
+    });
+    // An Inspector that couldn't run says that, not "not inspected".
+    expect(missionVerdict({ ...merged, firstClear: null, inspectorFailed: true }).line).toBe(
+      "Shipped after rework: Inspector couldn't run",
+    );
+    expect(
+      missionVerdict({
+        ...merged,
+        nogos: 1,
+        flags: 2,
+        firstGo: null,
+        firstClear: null,
+        briefRevised: true,
+      }).line,
+    ).toBe(
+      "Shipped after rework: 1 NO-GO · flagged 2× · launched without a GO · not inspected · brief revised",
+    );
+    // Gates that were off ask for nothing.
+    expect(
+      missionVerdict({
+        ...merged,
+        firstGo: null,
+        firstClear: null,
+        checksArmed: false,
+        inspectorOn: false,
+      }),
+    ).toEqual({ kind: "clean", line: "Clean" });
+    const home = { ...merged, outcome: "home" as const, firstGo: null, firstClear: null };
+    expect(missionVerdict(home)).toEqual({
+      kind: "home",
+      line: "Sent home: launched without a GO · not inspected",
+    });
+    expect(missionVerdict({ ...home, checksArmed: false, inspectorOn: false })).toEqual({
+      kind: "home",
+      line: "Sent home",
     });
   });
 

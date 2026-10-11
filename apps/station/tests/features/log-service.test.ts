@@ -37,6 +37,8 @@ let sent: ServerMsg[];
 let crew: CrewService;
 let ranks: RankService;
 let log: MissionLog;
+/** The deck's gates as the log snapshots them at a mission's end. */
+let gates: { checks: boolean; inspector: boolean };
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -65,7 +67,8 @@ beforeEach(() => {
   const broadcast = (msg: ServerMsg) => sent.push(msg);
   crew = new CrewService({ db, launcher: new FakeLauncher(), broadcast, home: join(scratch, "h") });
   ranks = new RankService({ db, broadcast, crew });
-  log = new MissionLog({ db, broadcast });
+  gates = { checks: false, inspector: false };
+  log = new MissionLog({ db, broadcast, gates: () => gates });
   crew.onMissionEnd((end) => ranks.onMissionEnd(end));
   crew.onMissionEnd((end) => log.onMissionEnd(end));
 });
@@ -156,7 +159,12 @@ function inspection(
   return id;
 }
 
-function brief(crewId: string, revision: number, state: "approved" | "revised", at: number) {
+function brief(
+  crewId: string,
+  revision: number,
+  state: "approved" | "revised" | "waiting" | "superseded",
+  at: number,
+) {
   db.insert(briefs)
     .values({
       id: `b${n++}`,
@@ -171,8 +179,11 @@ function brief(crewId: string, revision: number, state: "approved" | "revised", 
     .run();
 }
 
-const pr = (crewId: string, k = 1) =>
+/** O as the PR flow does it: the crew member keeps the PR's link, then its mission ends. */
+function pr(crewId: string, k = 1) {
+  crew.setPr(crewId, `https://gh/pr/${k}`);
   crew.endMission(crewId, "pr", { url: `https://gh/pr/${k}`, branch: `mothership/b${k}` });
+}
 const logged = () => sent.filter((m) => m.type === "deck.log");
 
 describe("MissionLog writing", () => {
@@ -194,6 +205,8 @@ describe("MissionLog writing", () => {
         how: "pr",
         prUrl: "https://gh/pr/1",
         branch: "mothership/b1",
+        checksArmed: false,
+        inspectorOn: false,
       },
     ]);
     expect(logged()).toEqual([{ type: "deck.log", deckId: "deck-1" }]);
@@ -307,6 +320,11 @@ describe("MissionLog entries", () => {
     expect(log.entry(first!.id)!.preflights.map((p) => p.id)).toEqual([early]);
     expect(log.entry(second!.id)!.preflights.map((p) => p.id)).toEqual([boundary, later]);
     expect(second!.verdict).toEqual({ kind: "home", line: "Sent home: 2 NO-GO" });
+    // The crew member still holds the first mission's PR; the sent-home one never had it.
+    expect(first!.prUrl).toBe("https://gh/pr/1");
+    expect(second).not.toHaveProperty("prUrl");
+    expect(log.entry(second!.id)).not.toHaveProperty("prUrl");
+    expect(log.entry(second!.id)!.outcome).toBe("home");
   });
 
   test("an entry carries its briefs, runs, inspections and hand-backs", async () => {
@@ -414,6 +432,105 @@ describe("MissionLog entries", () => {
     expect(log.entry(missionId(ada.id, T0 + 100))!.verdict).toEqual({
       kind: "clean",
       line: "Clean",
+    });
+  });
+
+  test("gates on at the mission's end that never passed keep a merge from being clean", async () => {
+    gates = { checks: true, inspector: false };
+    const nova = await hire();
+    vi.setSystemTime(T0 + 100);
+    pr(nova.id);
+    gates = { checks: false, inspector: true };
+    const ada = await hire(1);
+    preflight(ada.id, "go", T0 + 110);
+    vi.setSystemTime(T0 + 200);
+    pr(ada.id, 2);
+    // Gates switched off later don't change what the missions ended with.
+    gates = { checks: false, inspector: false };
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    ranks.onMerged("deck-1", { url: "https://gh/pr/2", branch: "" });
+    expect(log.entry(missionId(nova.id, T0))!.verdict).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: launched without a GO",
+    });
+    expect(log.entry(missionId(ada.id, T0 + 100))!.verdict).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: not inspected",
+    });
+  });
+
+  test("gates off ask for nothing: a merge with no runs is Clean", async () => {
+    const nova = await hire();
+    vi.setSystemTime(T0 + 100);
+    pr(nova.id);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    expect(log.entry(missionId(nova.id, T0))!.verdict).toEqual({ kind: "clean", line: "Clean" });
+  });
+
+  test("a log without gates treats them as off", async () => {
+    const bare = new MissionLog({ db, broadcast: () => {} });
+    const nova = await hire();
+    vi.setSystemTime(T0 + 100);
+    const end: MissionEnd = {
+      crewId: nova.id,
+      deckId: "deck-1",
+      name: nova.name,
+      task: "Add dark mode",
+      missionSince: T0,
+      endedAt: T0 + 100,
+      how: "pr",
+      prUrl: "https://gh/pr/7",
+      provider: "claude-code",
+      ownWorktree: true,
+    };
+    bare.onMissionEnd(end);
+    expect(db.select().from(missions).get()).toMatchObject({
+      checksArmed: false,
+      inspectorOn: false,
+    });
+  });
+
+  test("sent home with gates on and nothing passed says what was skipped", async () => {
+    gates = { checks: true, inspector: true };
+    const nova = await hire();
+    brief(nova.id, 1, "approved", T0 + 1);
+    vi.setSystemTime(T0 + 100);
+    await crew.sendHome(nova.id, "keep");
+    expect(log.list("deck-1")[0]!.verdict).toEqual({
+      kind: "home",
+      line: "Sent home: launched without a GO · not inspected",
+    });
+  });
+
+  test("a brief never approved keeps a merge from being clean", async () => {
+    const nova = await hire();
+    brief(nova.id, 1, "waiting", T0 + 1);
+    vi.setSystemTime(T0 + 100);
+    pr(nova.id);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    expect(log.entry(missionId(nova.id, T0))!.verdict).toEqual({
+      kind: "rework",
+      line: "Shipped after rework",
+    });
+  });
+
+  test("only a revised brief counts as revised; a superseded one doesn't", async () => {
+    const nova = await hire();
+    brief(nova.id, 1, "superseded", T0 + 1);
+    brief(nova.id, 2, "approved", T0 + 2);
+    vi.setSystemTime(T0 + 100);
+    pr(nova.id);
+    const ada = await hire(1);
+    brief(ada.id, 1, "revised", T0 + 101);
+    brief(ada.id, 2, "approved", T0 + 102);
+    vi.setSystemTime(T0 + 200);
+    pr(ada.id, 2);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    ranks.onMerged("deck-1", { url: "https://gh/pr/2", branch: "" });
+    expect(log.entry(missionId(nova.id, T0))!.verdict).toEqual({ kind: "clean", line: "Clean" });
+    expect(log.entry(missionId(ada.id, T0 + 100))!.verdict).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: brief revised",
     });
   });
 

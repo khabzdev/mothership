@@ -65,9 +65,14 @@ export type MissionEntry = MissionSummary & {
 
 type Row = typeof missions.$inferSelect;
 
+/** A deck's gates: whether its checks are armed and its Inspector is on. */
+export type Gates = (deckId: string) => { checks: boolean; inspector: boolean };
+
 interface Deps {
   db: Db;
   broadcast: (msg: ServerMsg) => void;
+  /** Snapshotted at each mission's end; without it both read as off. */
+  gates?: Gates;
 }
 
 /**
@@ -77,16 +82,19 @@ interface Deps {
 export class MissionLog {
   readonly #db: Db;
   readonly #broadcast: (msg: ServerMsg) => void;
+  readonly #gates: Gates;
 
   constructor(deps: Deps) {
     this.#db = deps.db;
     this.#broadcast = deps.broadcast;
+    this.#gates = deps.gates ?? (() => ({ checks: false, inspector: false }));
   }
 
   /** A mission ended: log it once. Sent home having done nothing since the last one isn't logged. */
   onMissionEnd(end: MissionEnd): void {
     if (end.provider === "shell" || !end.ownWorktree) return;
     if (end.how === "home" && !this.#hadWork(end)) return;
+    const gates = this.#gates(end.deckId);
     const { changes } = this.#db
       .insert(missions)
       .values({
@@ -98,8 +106,11 @@ export class MissionLog {
         startedAt: end.missionSince,
         endedAt: end.endedAt,
         how: end.how,
-        prUrl: end.prUrl ?? null,
+        // A send-home carries the crew member's last PR, which an earlier mission opened.
+        prUrl: end.how === "pr" ? (end.prUrl ?? null) : null,
         branch: end.branch ?? null,
+        checksArmed: gates.checks,
+        inspectorOn: gates.inspector,
       })
       .onConflictDoNothing()
       .run();
@@ -246,7 +257,8 @@ export class MissionLog {
     const firstReview = reviews.find((i) => i.trigger === "stop" && i.state !== "cancelled");
     const verdict = missionVerdict({
       outcome,
-      briefRevisions: revisions.length,
+      briefRevised: revisions.some((b) => b.state === "revised"),
+      briefApproved: revisions.length ? revisions.at(-1)!.state === "approved" : null,
       nogos: runs.filter((r) => r.trigger === "stop" && r.state === "nogo").length,
       flags: reviews.filter((i) => i.trigger === "stop" && i.state === "flagged").length,
       firstGo: firstRun ? firstRun.state === "go" : null,
@@ -254,6 +266,8 @@ export class MissionLog {
       inspectorFailed:
         reviews.some((i) => i.state === "cancelled" && i.reason?.startsWith("failed:")) &&
         !reviews.some((i) => i.state === "cleared" || i.state === "flagged"),
+      checksArmed: row.checksArmed,
+      inspectorOn: row.inspectorOn,
     });
     const summary: MissionSummary = {
       id: row.id,

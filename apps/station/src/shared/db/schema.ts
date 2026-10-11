@@ -343,6 +343,10 @@ export const missions = sqliteTable(
     how: text("how", { enum: MISSION_ENDS }).notNull(),
     prUrl: text("pr_url"),
     branch: text("branch"),
+    /** Whether the deck's checks were armed (with checks on) when the mission ended. */
+    checksArmed: integer("checks_armed", { mode: "boolean" }).notNull().default(false),
+    /** Whether the deck's Inspector was on when the mission ended. */
+    inspectorOn: integer("inspector_on", { mode: "boolean" }).notNull().default(false),
   },
   (t) => [
     unique("missions_crew_started_unique").on(t.crewId, t.startedAt),

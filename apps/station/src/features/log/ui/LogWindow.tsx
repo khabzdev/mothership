@@ -65,8 +65,8 @@ export function LogWindow({ deckId }: { deckId: string }) {
       const target = e.target instanceof HTMLElement ? e.target : null;
       if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))
         return;
-      // Enter on a link or the Older button does what it says.
-      if (enter && target?.closest("a, [data-native-enter]")) return;
+      // Enter on a link or any button but a mission row (Older, the window's close) does what it says.
+      if (enter && target?.closest("a, button:not([data-mission])")) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       const { selected, ids, hasNogo } = keys.current;
@@ -127,7 +127,6 @@ export function LogWindow({ deckId }: { deckId: string }) {
           <Button
             size="sm"
             variant="ghost"
-            data-native-enter
             loading={isFetchingNextPage}
             onClick={() => void fetchNextPage()}
           >

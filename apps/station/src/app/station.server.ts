@@ -105,7 +105,15 @@ export function getStation(): Station {
     const debriefs = debrief;
     crew.onMissionEnd((end) => debriefs.onMissionEnd(end));
     // The captain's log: each ended mission with its evidence, after ranks and the debrief.
-    const log = new MissionLog({ db: getDb(), broadcast: (msg) => hub.broadcast(msg) });
+    // It snapshots the deck's gates at each mission's end: checks armed with some on, Inspector on.
+    const log = new MissionLog({
+      db: getDb(),
+      broadcast: (msg) => hub.broadcast(msg),
+      gates: (deckId) => ({
+        checks: checks.armed(deckId) === true && checks.enabled(deckId).length > 0,
+        inspector: inspections.enabled(deckId),
+      }),
+    });
     crew.onMissionEnd((end) => log.onMissionEnd(end));
 
     // Briefs: the plans Claude submits in plan mode; Y and N answer its approval dialog.

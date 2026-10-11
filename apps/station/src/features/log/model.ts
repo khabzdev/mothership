@@ -47,8 +47,10 @@ export type VerdictKind = "clean" | "rework" | "open" | "home";
 /** What the verdict is drawn from; `null` firsts mean no such run happened. */
 export interface VerdictInput {
   outcome: Outcome;
-  /** Brief revisions this mission (0 without a brief). */
-  briefRevisions: number;
+  /** Whether you revised a brief this mission. */
+  briefRevised: boolean;
+  /** Whether the mission's last brief was approved (null without a brief). */
+  briefApproved: boolean | null;
   /** NO-GO stop pre-flights. */
   nogos: number;
   /** Flagged stop inspections. */
@@ -59,6 +61,10 @@ export interface VerdictInput {
   firstClear: boolean | null;
   /** The Inspector tried but no review could run (none cleared or flagged). */
   inspectorFailed: boolean;
+  /** Whether the deck's checks were armed when the mission ended. */
+  checksArmed: boolean;
+  /** Whether the deck's Inspector was on when the mission ended. */
+  inspectorOn: boolean;
 }
 
 /** The mission's verdict, one line: clean, shipped after rework, not merged, or sent home. */
@@ -67,14 +73,17 @@ export function missionVerdict(v: VerdictInput): { kind: VerdictKind; line: stri
     v.nogos > 0 && `${v.nogos} NO-GO`,
     v.flags > 0 && `flagged ${v.flags}×`,
     v.inspectorFailed && "Inspector couldn't run",
-    v.briefRevisions > 1 && "brief revised",
+    // A gate that was on but never passed: O forced past it, or it never ran.
+    v.firstGo === null && v.checksArmed && "launched without a GO",
+    v.firstClear === null && v.inspectorOn && !v.inspectorFailed && "not inspected",
+    v.briefRevised && "brief revised",
   ]
     .filter((p): p is string => !!p)
     .join(" · ");
   switch (v.outcome) {
     case "merged":
-      // Clean: nothing handed back, nothing revised, and every first try that ran passed.
-      return !parts && v.firstGo !== false && v.firstClear !== false
+      // Clean: nothing handed back, skipped or revised, the brief approved, and every first try passed.
+      return !parts && v.firstGo !== false && v.firstClear !== false && v.briefApproved !== false
         ? { kind: "clean", line: "Clean" }
         : {
             kind: "rework",

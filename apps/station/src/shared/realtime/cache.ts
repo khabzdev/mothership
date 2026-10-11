@@ -25,9 +25,11 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
     queryClient.setQueryData(realtimeKeys.roster(msg.deckId), msg.crew);
     // Counter changes always refresh the roster: an open service record is stale too.
     void queryClient.invalidateQueries({ queryKey: ranksFamily });
-  } else if (msg.type === "crew.promoted")
+  } else if (msg.type === "crew.promoted") {
     void queryClient.invalidateQueries({ queryKey: ranksFamily });
-  else if (msg.type === "deck.labels")
+    // The log shows each call sign's rank now.
+    void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
+  } else if (msg.type === "deck.labels")
     queryClient.setQueryData(realtimeKeys.labels(msg.deckId), msg.labels);
   else if (msg.type === "deck.checks")
     queryClient.setQueryData(realtimeKeys.checks(msg.deckId), {
@@ -42,13 +44,17 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
   } else if (msg.type === "deck.log")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
-  else if (msg.type === "crew.preflight")
+  else if (msg.type === "crew.preflight") {
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.preflight(msg.crewId) });
-  else if (msg.type === "crew.brief")
+    // A run that settles after its mission was logged changes that entry.
+    if (msg.done) void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
+  } else if (msg.type === "crew.brief")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.brief(msg.crewId) });
-  else if (msg.type === "crew.inspection")
+  else if (msg.type === "crew.inspection") {
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.inspection(msg.crewId) });
-  else if (msg.type === "deck.clones") {
+    if (msg.state !== "running")
+      void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
+  } else if (msg.type === "deck.clones") {
     const known = queryClient.getQueryData<{ id: string }[]>(realtimeKeys.decks) ?? [];
     queryClient.setQueryData(realtimeKeys.clones, msg.clones);
     // A clone that's done is a new deck: fetch the deck list again.

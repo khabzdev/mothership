@@ -229,6 +229,61 @@ describe("applyServerMsg", () => {
     }
   });
 
+  test("a settled pre-flight, a settled inspection or a promotion makes the deck's log stale", () => {
+    const msgs: ServerMsg[] = [
+      {
+        type: "crew.preflight",
+        deckId: "d1",
+        crewId: "c1",
+        preflightId: "p1",
+        check: "test",
+        verdict: "nogo",
+        done: true,
+      },
+      { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1", state: "cleared" },
+      { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1", state: "flagged" },
+      {
+        type: "crew.inspection",
+        deckId: "d1",
+        crewId: "c1",
+        inspectionId: "i1",
+        state: "cancelled",
+      },
+      { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", rank: "Ensign" },
+    ];
+    for (const msg of msgs) {
+      const qc = new QueryClient();
+      qc.setQueryData([...realtimeKeys.log("d1"), "mission", "m1"], {});
+      qc.setQueryData(realtimeKeys.log("d2"), []);
+      applyServerMsg(qc, msg);
+      expect(qc.getQueryState([...realtimeKeys.log("d1"), "mission", "m1"])?.isInvalidated).toBe(
+        true,
+      );
+      expect(qc.getQueryState(realtimeKeys.log("d2"))?.isInvalidated).toBe(false);
+    }
+  });
+
+  test("a pre-flight check mid-run or a running inspection leaves the log alone", () => {
+    const msgs: ServerMsg[] = [
+      {
+        type: "crew.preflight",
+        deckId: "d1",
+        crewId: "c1",
+        preflightId: "p1",
+        check: "test",
+        verdict: "go",
+        done: false,
+      },
+      { type: "crew.inspection", deckId: "d1", crewId: "c1", inspectionId: "i1", state: "running" },
+    ];
+    for (const msg of msgs) {
+      const qc = new QueryClient();
+      qc.setQueryData(realtimeKeys.log("d1"), []);
+      applyServerMsg(qc, msg);
+      expect(qc.getQueryState(realtimeKeys.log("d1"))?.isInvalidated).toBe(false);
+    }
+  });
+
   test("ignores messages that don't belong in the cache", () => {
     const qc = new QueryClient();
     applyServerMsg(qc, { type: "terminal.output", crewId: "c1", data: "x" });
