@@ -100,6 +100,7 @@ async function hooks(run: SmokeRun, h: Harness): Promise<Outcome> {
     // No Stop: the verdict says what arrived.
   }
   run.evidence(id, "hooks.jsonl", jsonLines(h.signals(CREW)));
+  if (h.answeredTrust(CREW)) run.evidence(id, "notes.txt", "answered the folder-trust prompt\n");
   await saveScreen(run, h, id);
   return hooksVerdict(h.signals(CREW));
 }

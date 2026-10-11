@@ -1,7 +1,7 @@
 import { claudeCode, type CrewSignal, type ProviderAdapter } from "@mothership/providers";
 import { readHostState } from "@mothership/ptyhost";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -47,6 +47,8 @@ export interface Harness {
   /** Paste and submit, exactly as the station prompts a crew member. */
   paste(crewId: string, text: string): Promise<void>;
   stop(crewId: string): Promise<void>;
+  /** Whether launch() answered Claude's folder-trust prompt for this crew member. */
+  answeredTrust(crewId: string): boolean;
   /** Hook tokens handed out: never written to results. */
   secrets(): string[];
   /** Stop every session, the PTY host and the receiver; delete the temp repo and launcher home. */
@@ -59,11 +61,16 @@ const CLAUDE = "claude-code";
 /** How long launch() watches for Claude's folder-trust prompt before its first hook. */
 const TRUST_WINDOW_MS = 15_000;
 const TRUST_PROMPT = /trust (the files in )?this folder/i;
+/**
+ * Always the same path, wiped before and after each run: trusting it leaves one entry in Claude
+ * Code's config, not one per run.
+ */
+const REPO = join(realpathSync(tmpdir()), "mothership-smoke-repo");
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** The station's registry class, but the harness's own instance, remembering tokens to redact. */
-class SmokeRegistry extends CrewRegistry {
+export class SmokeRegistry extends CrewRegistry {
   readonly tokens = new Set<string>();
 
   override register(crewId: string, entry: CrewEntry): { token: string } {
@@ -74,8 +81,9 @@ class SmokeRegistry extends CrewRegistry {
 }
 
 /** A throwaway repo: one commit with a package.json and a README. */
-function createRepo(): string {
-  const repo = realpathSync(mkdtempSync(join(tmpdir(), "mothership-smoke-")));
+function createRepo(repo: string): void {
+  rmSync(repo, { recursive: true, force: true });
+  mkdirSync(repo);
   writeFileSync(
     join(repo, "package.json"),
     `${JSON.stringify({ name: "smoke", scripts: { test: "node -e 0" } }, null, 2)}\n`,
@@ -84,6 +92,7 @@ function createRepo(): string {
   const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, stdio: "ignore" });
   git("init", "-q", "-b", "main");
   git("add", "package.json", "README.md");
+  // Fixed identity, no signing and no hooks: the user's git config can't fail the commit.
   git(
     "-c",
     "user.name=Mothership smoke",
@@ -91,12 +100,13 @@ function createRepo(): string {
     "user.email=smoke@mothership.invalid",
     "-c",
     "commit.gpgsign=false",
+    "-c",
+    "core.hooksPath=/dev/null",
     "commit",
     "-q",
     "-m",
     "smoke",
   );
-  return repo;
 }
 
 async function readBody(req: IncomingMessage): Promise<string> {
@@ -106,7 +116,7 @@ async function readBody(req: IncomingMessage): Promise<string> {
 }
 
 /** Stands in for the station's /api/hooks, through the station's own handler. */
-async function startReceiver(
+export async function startReceiver(
   registry: CrewRegistry,
   record: (crewId: string, signal: Signal) => void,
 ): Promise<{ server: Server; url: string }> {
@@ -154,15 +164,31 @@ async function startReceiver(
  * home, registry and PTY host are never touched.
  */
 export async function startHarness({ model }: { model: string }): Promise<Harness> {
-  const repo = createRepo();
-  const home = realpathSync(mkdtempSync(join(tmpdir(), "mothership-smoke-home-")));
-  const registry = new SmokeRegistry(join(home, "crew.json"));
+  const repo = REPO;
+  let home = "";
+  function removeTemp() {
+    rmSync(repo, { recursive: true, force: true });
+    if (home) rmSync(home, { recursive: true, force: true });
+  }
+
   const signals = new Map<string, Signal[]>();
   const waiters = new Set<() => void>();
-  const { server, url } = await startReceiver(registry, (crewId, signal) => {
-    signals.set(crewId, [...(signals.get(crewId) ?? []), signal]);
-    for (const wake of waiters) wake();
-  });
+  let registry: SmokeRegistry;
+  let receiver: { server: Server; url: string };
+  try {
+    createRepo(repo);
+    home = realpathSync(mkdtempSync(join(tmpdir(), "mothership-smoke-home-")));
+    registry = new SmokeRegistry(join(home, "crew.json"));
+    receiver = await startReceiver(registry, (crewId, signal) => {
+      signals.set(crewId, [...(signals.get(crewId) ?? []), signal]);
+      for (const wake of waiters) wake();
+    });
+  } catch (error) {
+    // A partial start leaves nothing behind.
+    removeTemp();
+    throw error;
+  }
+  const { server, url } = receiver;
   // The real provider, with the smoke's model as its launch option.
   const provider: ProviderAdapter = {
     ...claudeCode,
@@ -175,6 +201,7 @@ export async function startHarness({ model }: { model: string }): Promise<Harnes
     stationUrl: url,
   });
   const launched = new Set<string>();
+  const trusted = new Set<string>();
   const signalsOf = (crewId: string) => signals.get(crewId) ?? [];
   const screen = async (crewId: string) => screenLines(await launcher.screen(crewId));
 
@@ -185,21 +212,18 @@ export async function startHarness({ model }: { model: string }): Promise<Harnes
       if (TRUST_PROMPT.test((await screen(crewId)).join("\n"))) {
         console.log(`smoke: accepted Claude Code's folder-trust prompt for ${repo}`);
         await launcher.write(crewId, "\r");
+        trusted.add(crewId);
         return;
       }
       await sleep(250);
     }
   }
 
-  function removeTemp() {
-    rmSync(repo, { recursive: true, force: true });
-    rmSync(home, { recursive: true, force: true });
-  }
-
   return {
     repo,
     async launch({ crewId, task, plan, instructions }) {
       signals.delete(crewId);
+      trusted.delete(crewId);
       launched.add(crewId);
       await launcher.launch({
         crewId,
@@ -244,6 +268,7 @@ export async function startHarness({ model }: { model: string }): Promise<Harnes
       launched.delete(crewId);
       await launcher.stop(crewId);
     },
+    answeredTrust: (crewId) => trusted.has(crewId),
     secrets: () => [...registry.tokens],
     async close() {
       try {

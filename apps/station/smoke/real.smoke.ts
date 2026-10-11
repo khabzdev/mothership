@@ -33,20 +33,19 @@ function finish() {
   console.log(`\n${table(file)}\n\nWrote ${mothershipHome()}/smoke.json\n`);
 }
 
-// Interrupted: still record what ran, and leave nothing behind.
-for (const [signal, code] of [
-  ["SIGINT", 130],
-  ["SIGTERM", 143],
-] as const) {
-  process.once(signal, () => {
-    try {
-      finish();
-    } finally {
-      ctx.harness?.abort();
-      process.exit(code);
-    }
-  });
+/** Interrupted: still record what ran, and leave nothing behind. */
+function interrupted(code: number) {
+  try {
+    finish();
+  } finally {
+    ctx.harness?.abort();
+    process.exit(code);
+  }
 }
+process.once("SIGINT", () => interrupted(130));
+process.once("SIGTERM", () => interrupted(143));
+// The test runner went away (its worker channel closed).
+process.once("disconnect", () => interrupted(1));
 
 beforeAll(async () => {
   if (!ptyhostBuilt()) {

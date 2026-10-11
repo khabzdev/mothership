@@ -65,6 +65,23 @@ describe("SmokeRun.finish", () => {
   });
 });
 
+describe("emails", () => {
+  test("are redacted from details", () => {
+    const run = new SmokeRun({ home, model: "haiku" });
+    run.record({ id: "a", state: "failed", detail: "signed in as ada.l@example.co.uk" });
+    expect(run.finish({ claude: null, gh: null }, ["a"]).checks[0]!.detail).toBe(
+      "signed in as [redacted]",
+    );
+  });
+
+  test("are redacted from evidence", () => {
+    const run = new SmokeRun({ home, model: "haiku" });
+    run.evidence("claude.hooks", "screen.txt", " ada@example.com's Organization \n");
+    const text = readFileSync(join(home, "smoke", "claude.hooks", "screen.txt"), "utf8");
+    expect(text).toBe(" [redacted] Organization \n");
+  });
+});
+
 describe("SmokeRun.evidence", () => {
   test("writes the evidence under smoke/<id>/ with secrets redacted", () => {
     const run = new SmokeRun({ home, model: "haiku", secrets: () => ["s3cret-token"] });

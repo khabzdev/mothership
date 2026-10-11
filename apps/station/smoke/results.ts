@@ -26,11 +26,15 @@ export interface SmokeRunOptions {
   secrets?: () => string[];
 }
 
-/** Each secret replaced with "[redacted]". */
+/** Email-shaped text: Claude Code's screen shows the signed-in account's. */
+const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
+
+/** Each secret, and anything that looks like an email, replaced with "[redacted]". */
 export function redact(text: string, secrets: string[]): string {
   return secrets
     .filter(Boolean)
-    .reduce((out, secret) => out.split(secret).join("[redacted]"), text);
+    .reduce((out, secret) => out.split(secret).join("[redacted]"), text)
+    .replace(EMAIL, "[redacted]");
 }
 
 /** One line, at most 200 characters. */
