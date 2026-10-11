@@ -20,7 +20,13 @@ import {
   ViewIcon,
 } from "@hugeicons/core-free-icons";
 import type { CrewInfo } from "@mothership/protocol";
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
 import { diagnosticsQuery } from "../../app/queries";
@@ -37,6 +43,10 @@ import { lessonMutation, lessonsQuery, type LessonAction } from "../debrief/quer
 import type { Lesson } from "../debrief/debrief.server";
 import { useDebriefNews } from "../debrief/ui/useDebriefNews";
 import { decksQuery } from "../decks/queries";
+import { endedAgo } from "../log/model";
+import { logQuery, missionQuery } from "../log/queries";
+import type { MissionSummary } from "../log/log.server";
+import { MissionEntryView, VERDICT_TONE } from "../log/ui/MissionEntry";
 import { REASON_MAX } from "../briefs/model";
 import { approveBriefMutation, briefQuery, reviseBriefMutation } from "../briefs/queries";
 import { BriefText } from "../briefs/ui/BriefText";
@@ -396,6 +406,100 @@ function LiteLessons({ deckId }: { deckId: string }) {
   );
 }
 
+const NO_MISSIONS: MissionSummary[] = [];
+
+/** One mission's entry under its row, fetched when the row opens. */
+function LiteLogEntry({ deckId, missionId }: { deckId: string; missionId: string }) {
+  const { data, error } = useQuery(missionQuery(deckId, missionId));
+  const [showOutput, setShowOutput] = useState(false);
+  if (error) return <ErrorNote error={error} />;
+  if (data === undefined) return <p className="muted">Loading…</p>;
+  if (data === null) return <p className="muted">This mission isn't in the log.</p>;
+  const hasNogo = data.preflights.some((r) => r.state === "nogo");
+  return (
+    <div className="lite-log__entry">
+      {hasNogo && (
+        <Button size="sm" variant="secondary" onClick={() => setShowOutput(!showOutput)}>
+          {showOutput ? "Hide output" : "Show output"}
+        </Button>
+      )}
+      <MissionEntryView deckId={deckId} entry={data} showOutput={showOutput} />
+    </div>
+  );
+}
+
+/** The Captain's log: every mission that ended, newest first; tap one to read its evidence. */
+function LiteLog({ deckId }: { deckId: string }) {
+  const [open, setOpen] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  // The log is only read while the section is open.
+  const { data, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    ...logQuery(deckId),
+    enabled: open,
+  });
+  const missions = data?.pages.flat() ?? NO_MISSIONS;
+
+  return (
+    <section className="lite-log" aria-label="Captain's log">
+      <Button
+        variant="ghost"
+        className="lite-log__chip"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <strong>Log</strong>
+      </Button>
+      {open && (
+        <div className="lite-log__sheet">
+          {!data && !error && <p className="muted">Loading…</p>}
+          <ErrorNote error={error} />
+          {data && missions.length === 0 && (
+            <p className="muted">
+              No missions logged yet. Missions appear here when crew open a PR or go home.
+            </p>
+          )}
+          {missions.length > 0 && (
+            <ul className="lite-log__list">
+              {missions.map((m) => (
+                <li key={m.id} className="lite-log__item">
+                  <button
+                    type="button"
+                    className="lite-log__row"
+                    aria-expanded={openId === m.id}
+                    onClick={() => setOpenId(openId === m.id ? null : m.id)}
+                  >
+                    <span className="lite-log__who">
+                      <strong>{m.name}</strong>
+                      <RankChevrons title={m.rank?.title} />
+                      <span className="muted">{endedAgo(Date.now() - m.endedAt)}</span>
+                    </span>
+                    <span className="lite-log__task">{m.task}</span>
+                    <Badge variant={VERDICT_TONE[m.verdict.kind]} appearance="dot">
+                      {m.verdict.line}
+                    </Badge>
+                  </button>
+                  {openId === m.id && <LiteLogEntry deckId={deckId} missionId={m.id} />}
+                </li>
+              ))}
+            </ul>
+          )}
+          {hasNextPage && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="lite-log__chip"
+              loading={isFetchingNextPage}
+              onClick={() => void fetchNextPage()}
+            >
+              Older
+            </Button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** The call sign's service record on this deck, as a chip that opens it. */
 function LiteRecord({ member }: { member: CrewInfo }) {
   const [open, setOpen] = useState(false);
@@ -690,6 +794,7 @@ function LiteDeck({
             </section>
             <LiteSmoke />
             <LiteLessons deckId={deckId} />
+            <LiteLog deckId={deckId} />
             <HireForm deckId={deckId} crew={crew} />
           </>
         )}

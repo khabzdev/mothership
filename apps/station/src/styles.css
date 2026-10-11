@@ -1659,6 +1659,10 @@ kbd {
 .lite-lessons,
 .lite-lessons__sheet,
 .lite-lessons__list,
+.lite-log,
+.lite-log__sheet,
+.lite-log__list,
+.lite-log__entry,
 .lite-record {
   display: grid;
   gap: 0.5rem;
@@ -1666,11 +1670,13 @@ kbd {
 }
 
 .lite-lessons__chip,
+.lite-log__chip,
 .lite-record__chip {
   justify-self: start;
 }
 
-.lite-lessons__list {
+.lite-lessons__list,
+.lite-log__list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1686,6 +1692,45 @@ kbd {
 
 .lite-lessons__text,
 .lite-lessons__item .muted {
+  overflow-wrap: anywhere;
+}
+
+.lite-log__item {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-kumo-recessed);
+}
+
+.lite-log__row {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lite-log__who {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.lite-log__who .muted {
+  margin-left: auto;
+}
+
+.lite-log__task,
+.lite-log__entry {
   overflow-wrap: anywhere;
 }
 
