@@ -3,7 +3,7 @@ import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
-import { defineConfig, lazyPlugins } from "vite-plus";
+import { configDefaults, defineConfig, lazyPlugins } from "vite-plus";
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
@@ -26,5 +26,6 @@ export default defineConfig({
           viteReact(),
         ],
   ),
-  test: { environment: "node" },
+  // The real-claude smoke runs only through `vp run smoke:real` (smoke.config.ts).
+  test: { environment: "node", exclude: [...configDefaults.exclude, "smoke/**"] },
 });

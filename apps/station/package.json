@@ -12,6 +12,7 @@
     "start": "HOST=127.0.0.1 PORT=3000 node .output/server/index.mjs",
     "preview": "vp preview --host 127.0.0.1",
     "test": "vp test",
+    "smoke:real": "MOTHERSHIP_SMOKE=1 vp test --config smoke.config.ts",
     "db:generate": "drizzle-kit generate",
     "assets": "node scripts/fetch-assets.mjs"
   },

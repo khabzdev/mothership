@@ -51,7 +51,8 @@ async function checkGit({ exec }: DiagnosticsDeps): Promise<Check> {
   );
 }
 
-async function checkClaude({ exec }: DiagnosticsDeps): Promise<Check> {
+/** The installed Claude Code: its version (as "2.1.104") and whether it's signed in. */
+export async function checkClaude({ exec }: Pick<DiagnosticsDeps, "exec">): Promise<Check> {
   const label = "Claude Code";
   const version = await exec("claude", ["--version"]);
   const failed = failure("claude", label, "claude --version", version, FIX.claudeInstall);

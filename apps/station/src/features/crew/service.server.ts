@@ -24,6 +24,7 @@ import {
   type HireInput,
   type WorktreeChoice,
 } from "./model";
+import { SUBMIT_DELAY_MS, bracketedPaste } from "./paste";
 import {
   branchName,
   createWorktree,
@@ -50,9 +51,6 @@ const STATUS_FOR_SIGNAL: Record<CrewSignal["type"], CrewStatus> = {
   stopped: "done",
   ended: "asleep",
 };
-
-/** Delay between pasting a prompt and pressing Enter (as agent-office does). */
-const SUBMIT_DELAY_MS = 120;
 
 /**
  * A mission ending: its pull request opened (O), or the crew member sent home (X). Listeners
@@ -371,7 +369,7 @@ export class CrewService {
     if (from === "you" && this.#briefWaiting(crewId)) {
       throw new Error(`${row.name} has a brief waiting: Y to approve, N to revise`);
     }
-    await this.#deps.launcher.write(crewId, `\x1b[200~${text}\x1b[201~`);
+    await this.#deps.launcher.write(crewId, bracketedPaste(text));
     // Its submit hook (working, no tool) is this prompt, not another one typed in the terminal.
     this.#submitting.add(crewId);
     setTimeout(() => void this.#deps.launcher.write(crewId, "\r"), SUBMIT_DELAY_MS);
