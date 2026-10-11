@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROVIDERS } from "@mothership/providers";
+import { PROVIDERS } from "@spaceship/providers";
 import { BriefService } from "../features/briefs/briefs.server";
 import { CrewService } from "../features/crew/service.server";
 import { DebriefService } from "../features/debrief/debrief.server";
@@ -31,7 +31,7 @@ import { SMOKE_FILE } from "./smoke";
 
 /** Where crew hooks reach the station. */
 export function stationUrl(): string {
-  return process.env.MOTHERSHIP_STATION_URL ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`;
+  return process.env.SPACESHIP_STATION_URL ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`;
 }
 
 interface Station {
@@ -52,11 +52,11 @@ interface Station {
 }
 
 const DIAGNOSTICS_TTL_MS = 30_000;
-const shared = globalThis as typeof globalThis & { __mothershipStation?: Station };
+const shared = globalThis as typeof globalThis & { __spaceshipStation?: Station };
 
 /** The station: crew, PTY host, hooks and browser sockets, wired together once per process. */
 export function getStation(): Station {
-  shared.__mothershipStation ??= (() => {
+  shared.__spaceshipStation ??= (() => {
     const home = spaceshipHome();
     const launcher = new PtyCrewLauncher({
       home,
@@ -257,7 +257,7 @@ export function getStation(): Station {
       diagnostics,
     };
   })();
-  return shared.__mothershipStation;
+  return shared.__spaceshipStation;
 }
 
 /** Browser terminal traffic over the station socket. */

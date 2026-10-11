@@ -1,4 +1,4 @@
-import { claudeCode } from "@mothership/providers";
+import { claudeCode } from "@spaceship/providers";
 import { describe, expect, test } from "vite-plus/test";
 import {
   approveVerdict,

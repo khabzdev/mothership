@@ -1,4 +1,4 @@
-import type { PreflightInfo } from "@mothership/protocol";
+import type { PreflightInfo } from "@spaceship/protocol";
 import { useEffect, useRef, useState } from "react";
 import { isGo, isNoGo } from "../../preflight/poll";
 

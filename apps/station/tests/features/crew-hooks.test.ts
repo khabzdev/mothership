@@ -1,4 +1,4 @@
-import { claudeCode } from "@mothership/providers";
+import { claudeCode } from "@spaceship/providers";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -59,7 +59,7 @@ describe("CrewRegistry", () => {
 
 describe("CrewRegistry persistence", () => {
   test("survives a restart when backed by a file", () => {
-    const dir = mkdtempSync(join(tmpdir(), "mothership-crew-"));
+    const dir = mkdtempSync(join(tmpdir(), "spaceship-crew-"));
     try {
       const file = join(dir, "crew.json");
       const first = new CrewRegistry(file);
@@ -76,7 +76,7 @@ describe("CrewRegistry persistence", () => {
   });
 
   test("a corrupt file starts empty instead of crashing", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "mothership-crew-"));
+    const dir = mkdtempSync(join(tmpdir(), "spaceship-crew-"));
     try {
       const file = join(dir, "crew.json");
       (await import("node:fs")).writeFileSync(file, "{nope");
@@ -93,7 +93,7 @@ describe("handleHookRequest", () => {
     await handleHookRequest(
       post(
         { hook_event_name: "SessionStart", session_id: "sess-9" },
-        { "x-mothership-crew": "crew-1", "x-mothership-token": token },
+        { "x-spaceship-crew": "crew-1", "x-spaceship-token": token },
       ),
       deps,
     );
@@ -105,7 +105,7 @@ describe("handleHookRequest", () => {
   test("accepts an authenticated hook and publishes the crew signal", async () => {
     const { token, published, deps } = setup();
     const res = await handleHookRequest(
-      post(preToolUse, { "x-mothership-crew": "crew-1", "x-mothership-token": token }),
+      post(preToolUse, { "x-spaceship-crew": "crew-1", "x-spaceship-token": token }),
       deps,
     );
     expect(res.status).toBe(204);
@@ -123,7 +123,7 @@ describe("handleHookRequest", () => {
     const res = await handleHookRequest(
       post(
         { hook_event_name: "PostToolUse" },
-        { "x-mothership-crew": "crew-1", "x-mothership-token": token },
+        { "x-spaceship-crew": "crew-1", "x-spaceship-token": token },
       ),
       deps,
     );
@@ -133,8 +133,8 @@ describe("handleHookRequest", () => {
 
   test.each([
     ["no headers", {}],
-    ["a wrong token", { "x-mothership-crew": "crew-1", "x-mothership-token": "nope" }],
-    ["an unknown crew", { "x-mothership-crew": "crew-9", "x-mothership-token": "nope" }],
+    ["a wrong token", { "x-spaceship-crew": "crew-1", "x-spaceship-token": "nope" }],
+    ["an unknown crew", { "x-spaceship-crew": "crew-9", "x-spaceship-token": "nope" }],
   ])("rejects %s with 401", async (_, headers) => {
     const { published, deps } = setup();
     const res = await handleHookRequest(post(preToolUse, headers), deps);
@@ -145,7 +145,7 @@ describe("handleHookRequest", () => {
   test("rejects malformed JSON with 400", async () => {
     const { token, deps } = setup();
     const res = await handleHookRequest(
-      post("{nope", { "x-mothership-crew": "crew-1", "x-mothership-token": token }),
+      post("{nope", { "x-spaceship-crew": "crew-1", "x-spaceship-token": token }),
       deps,
     );
     expect(res.status).toBe(400);
@@ -157,8 +157,8 @@ describe("handleHookRequest", () => {
       post(
         { hook_event_name: "Stop", padding: "x".repeat(1_100_000) },
         {
-          "x-mothership-crew": "crew-1",
-          "x-mothership-token": token,
+          "x-spaceship-crew": "crew-1",
+          "x-spaceship-token": token,
         },
       ),
       deps,
@@ -172,7 +172,7 @@ describe("handleHookRequest", () => {
     const res = await handleHookRequest(
       post(
         { hook_event_name: "Stop" },
-        { "x-mothership-crew": "crew-1", "x-mothership-token": token },
+        { "x-spaceship-crew": "crew-1", "x-spaceship-token": token },
       ),
       {
         ...deps,

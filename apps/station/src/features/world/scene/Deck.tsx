@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { Stars } from "@react-three/drei";
 import { STARS } from "../sky";
 import { Garage } from "./Garage";

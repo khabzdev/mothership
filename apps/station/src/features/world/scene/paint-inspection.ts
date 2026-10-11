@@ -1,4 +1,4 @@
-import type { CrewStatus, InspectionInfo } from "@mothership/protocol";
+import type { CrewStatus, InspectionInfo } from "@spaceship/protocol";
 
 // The Inspector's panel for a console's holo screen: scanning, or its verdict.
 

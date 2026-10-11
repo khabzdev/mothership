@@ -1,4 +1,4 @@
-import type { CloneInfo, ServerMsg } from "@mothership/protocol";
+import type { CloneInfo, ServerMsg } from "@spaceship/protocol";
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
@@ -15,7 +15,7 @@ const TICK_MS = 250;
 
 /** Where cloned repos go: `<workspace>/<owner>/<repo>`. */
 export function workspaceDir(): string {
-  return process.env.MOTHERSHIP_WORKSPACE ?? join(homedir(), "Mothership");
+  return process.env.SPACESHIP_WORKSPACE ?? join(homedir(), "Spaceship");
 }
 
 export interface CloneTarget {

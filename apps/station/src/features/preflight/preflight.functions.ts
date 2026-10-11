@@ -1,4 +1,4 @@
-import type { DeckCheck } from "@mothership/protocol";
+import type { DeckCheck } from "@spaceship/protocol";
 import { createServerFn } from "@tanstack/react-start";
 import { getStation } from "../../app/station.server";
 import { parseCrewIdInput } from "../crew/model";

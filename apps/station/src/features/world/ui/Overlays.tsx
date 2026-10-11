@@ -15,7 +15,7 @@ import {
   TaskDaily01Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
-import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
+import type { ConsoleLabel, CrewInfo } from "@spaceship/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { FlightControlWindow } from "../../preflight/ui/FlightControl";
@@ -44,7 +44,7 @@ import { StatusBadge } from "./StatusBadge";
 import { TerminalDrawer } from "./TerminalDrawer";
 import { TaskBox } from "./TaskBox";
 
-const WORKTREE_PREF = "mothership.worktree";
+const WORKTREE_PREF = "spaceship.worktree";
 
 function readWorktreePref(): boolean {
   try {

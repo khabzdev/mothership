@@ -1,5 +1,5 @@
 import { Cancel01Icon, Notification03Icon } from "@hugeicons/core-free-icons";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { rosterQuery } from "../../crew/queries";

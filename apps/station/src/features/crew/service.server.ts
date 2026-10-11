@@ -6,8 +6,8 @@ import type {
   PreflightInfo,
   RankInfo,
   ServerMsg,
-} from "@mothership/protocol";
-import type { CrewSignal } from "@mothership/providers";
+} from "@spaceship/protocol";
+import type { CrewSignal } from "@spaceship/providers";
 import { and, asc, eq } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -37,7 +37,7 @@ export interface CrewServiceDeps {
   db: Db;
   launcher: CrewLauncher;
   broadcast: (msg: ServerMsg) => void;
-  /** Mothership home; worktrees live under `<home>/worktrees`. */
+  /** Spaceship home; worktrees live under `<home>/worktrees`. */
   home: string;
 }
 

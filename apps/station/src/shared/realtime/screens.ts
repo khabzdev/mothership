@@ -1,4 +1,4 @@
-import type { ScreenFrame } from "@mothership/protocol";
+import type { ScreenFrame } from "@spaceship/protocol";
 
 // The latest screen of each crew terminal, kept outside the Query cache: frames arrive several
 // times a second and are painted straight onto canvases, never rendered by React.

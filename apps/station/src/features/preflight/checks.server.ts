@@ -1,4 +1,4 @@
-import type { DeckCheck, ServerMsg } from "@mothership/protocol";
+import type { DeckCheck, ServerMsg } from "@spaceship/protocol";
 import { and, asc, eq } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";

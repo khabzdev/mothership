@@ -1,4 +1,4 @@
-import type { CloneInfo, ServerMsg } from "@mothership/protocol";
+import type { CloneInfo, ServerMsg } from "@spaceship/protocol";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -56,7 +56,7 @@ describe("CloneManager", () => {
   let clones: CloneManager;
 
   beforeEach(() => {
-    scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-clone-")));
+    scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-clone-")));
     const src = join(scratch, "src");
     execFileSync("git", ["init", "-q", src]);
     writeFileSync(join(src, "README.md"), "hi");

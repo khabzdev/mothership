@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const MAX_SLUG = 40;
 
-/** `mothership/<goal-slug>-<id6>`: readable, unique per mission. */
+/** `spaceship/<goal-slug>-<id6>`: readable, unique per mission. */
 export function branchName(goal: string, missionId: string): string {
   const slug =
     goal
@@ -15,7 +15,7 @@ export function branchName(goal: string, missionId: string): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, MAX_SLUG)
       .replace(/-+$/, "") || "mission";
-  return `mothership/${slug}-${missionId.slice(0, 6)}`;
+  return `spaceship/${slug}-${missionId.slice(0, 6)}`;
 }
 
 /** Create (or reuse) a git worktree at `path` on a new branch from HEAD. */

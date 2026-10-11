@@ -1,4 +1,4 @@
-import type { ConsoleLabel, ServerMsg } from "@mothership/protocol";
+import type { ConsoleLabel, ServerMsg } from "@spaceship/protocol";
 import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "../../shared/db/client.server";
 import { consoleLabels } from "../../shared/db/schema";

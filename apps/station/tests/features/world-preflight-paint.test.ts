@@ -1,4 +1,4 @@
-import type { BriefInfo, PreflightInfo } from "@mothership/protocol";
+import type { BriefInfo, PreflightInfo } from "@spaceship/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import { showsBriefPanel } from "../../src/features/world/scene/paint-brief.ts";
 import { lampStates, showsPreflightPanel } from "../../src/features/world/scene/paint-preflight.ts";

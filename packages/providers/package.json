@@ -1,8 +1,8 @@
 {
-  "name": "@mothership/providers",
+  "name": "@spaceship/providers",
   "version": "0.0.0",
   "private": true,
-  "description": "Agent CLI adapters for Mothership crew: launch plans and hook signals.",
+  "description": "Agent CLI adapters for Spaceship crew: launch plans and hook signals.",
   "files": [
     "dist"
   ],
@@ -18,7 +18,7 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@mothership/protocol": "workspace:*"
+    "@spaceship/protocol": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

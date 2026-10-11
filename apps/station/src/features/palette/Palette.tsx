@@ -14,7 +14,7 @@ import {
   UserAdd01Icon,
   WorkflowSquare03Icon,
 } from "@hugeicons/core-free-icons";
-import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
+import type { ConsoleLabel, CrewInfo } from "@spaceship/protocol";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon, type IconData } from "../../shared/ui/Icon";

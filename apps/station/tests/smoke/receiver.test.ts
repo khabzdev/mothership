@@ -27,8 +27,8 @@ function post(crewId: string, token: string, body: unknown) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-mothership-crew": crewId,
-      "x-mothership-token": token,
+      "x-spaceship-crew": crewId,
+      "x-spaceship-token": token,
     },
     body: JSON.stringify(body),
   });

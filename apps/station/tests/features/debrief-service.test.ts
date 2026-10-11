@@ -1,5 +1,5 @@
-import type { ServerMsg } from "@mothership/protocol";
-import { PROVIDERS } from "@mothership/providers";
+import type { ServerMsg } from "@spaceship/protocol";
+import { PROVIDERS } from "@spaceship/providers";
 import { eq } from "drizzle-orm";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -65,7 +65,7 @@ let run: RunReview;
 let debrief: DebriefService;
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-debrief-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-debrief-")));
   repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "README.md"), "hi");
@@ -158,7 +158,7 @@ function nogo(crewId: string, check = "test") {
 }
 
 const pr = (crewId: string, k = 1) =>
-  crew.endMission(crewId, "pr", { url: `https://gh/pr/${k}`, branch: `mothership/b${k}` });
+  crew.endMission(crewId, "pr", { url: `https://gh/pr/${k}`, branch: `spaceship/b${k}` });
 
 const debriefs = () =>
   sent.filter((m): m is Extract<ServerMsg, { type: "deck.debrief" }> => m.type === "deck.debrief");

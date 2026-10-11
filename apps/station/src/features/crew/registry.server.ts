@@ -59,9 +59,9 @@ export class CrewRegistry {
   }
 }
 
-const shared = globalThis as typeof globalThis & { __mothershipCrew?: CrewRegistry };
+const shared = globalThis as typeof globalThis & { __spaceshipCrew?: CrewRegistry };
 
 /** The station's crew registry (persisted in the station home), shared across reloads in dev. */
-export const crewRegistry: CrewRegistry = (shared.__mothershipCrew ??= new CrewRegistry(
+export const crewRegistry: CrewRegistry = (shared.__spaceshipCrew ??= new CrewRegistry(
   join(spaceshipHome(), "crew.json"),
 ));

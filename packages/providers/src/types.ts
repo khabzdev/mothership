@@ -1,4 +1,4 @@
-import type { CrewActivity } from "@mothership/protocol";
+import type { CrewActivity } from "@spaceship/protocol";
 
 /** What a crew member's hooks tell the station. */
 export type CrewSignal =

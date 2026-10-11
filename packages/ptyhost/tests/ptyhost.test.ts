@@ -55,7 +55,7 @@ const spawnSpec = (id: string, command: string, args: string[] = []) => ({
 });
 
 beforeEach(async () => {
-  home = realpathSync(mkdtempSync(join(tmpdir(), "mothership-pty-")));
+  home = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-pty-")));
   host = await startPtyHost({ home });
 });
 

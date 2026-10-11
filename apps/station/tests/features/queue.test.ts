@@ -27,7 +27,7 @@ let claimed: number[];
 let unsettled: Set<string>;
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-queue-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-queue-")));
   const repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "a"), "a");

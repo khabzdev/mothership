@@ -1,4 +1,4 @@
-import type { BriefInfo, BriefState, ServerMsg } from "@mothership/protocol";
+import type { BriefInfo, BriefState, ServerMsg } from "@spaceship/protocol";
 import { and, desc, eq } from "drizzle-orm";
 import { resolve, sep } from "node:path";
 import type { Db } from "../../shared/db/client.server";

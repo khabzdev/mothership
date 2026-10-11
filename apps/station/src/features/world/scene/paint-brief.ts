@@ -1,4 +1,4 @@
-import type { BriefInfo, CrewInfo } from "@mothership/protocol";
+import type { BriefInfo, CrewInfo } from "@spaceship/protocol";
 
 // The brief panel for a console's holo screen: the goal Claude plans to work toward, waiting on Y / N.
 

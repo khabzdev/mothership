@@ -19,7 +19,7 @@ import {
   UserAdd01Icon,
   ViewIcon,
 } from "@hugeicons/core-free-icons";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import {
   useInfiniteQuery,
   useMutation,

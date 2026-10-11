@@ -188,7 +188,7 @@ export function FlightPlan({
   if (standalone) {
     return (
       <main className="flightplan-screen">
-        <p className="section-label">Mothership</p>
+        <p className="section-label">Spaceship</p>
         <h1>Dock your first deck</h1>
         <p className="muted">Every repo is a deck. Crew work at its consoles.</p>
         {body}

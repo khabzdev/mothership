@@ -8,7 +8,7 @@ import { fingerprint } from "../../src/features/preflight/fingerprint.server.ts"
 let repo: string;
 
 beforeEach(() => {
-  repo = realpathSync(mkdtempSync(join(tmpdir(), "mothership-fingerprint-")));
+  repo = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-fingerprint-")));
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "README.md"), "hi");
   writeFileSync(join(repo, ".gitignore"), "dist/\n");

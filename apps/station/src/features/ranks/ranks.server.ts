@@ -1,4 +1,4 @@
-import type { RankInfo, ServerMsg } from "@mothership/protocol";
+import type { RankInfo, ServerMsg } from "@spaceship/protocol";
 import { and, asc, desc, eq, gte, isNull, ne } from "drizzle-orm";
 import type { Db } from "../../shared/db/client.server";
 import {

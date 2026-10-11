@@ -12,7 +12,7 @@ export interface PtyHost extends HostState {
 }
 
 export interface StartOptions {
-  /** Mothership home; the state file is written to `<home>/ptyhost.json`. */
+  /** Spaceship home; the state file is written to `<home>/ptyhost.json`. */
   home: string;
   /** Port to listen on (127.0.0.1). Defaults to a random free port. */
   port?: number;

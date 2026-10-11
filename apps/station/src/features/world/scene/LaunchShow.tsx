@@ -4,7 +4,7 @@ import { AdditiveBlending, Color, type Group, type Mesh } from "three";
 import { BOARDS, CONSOLES, LAUNCH_PAD, consoleSeat } from "../layout";
 import { OUTPOST_SCALE, PAD_TOP } from "../outpost";
 import { useWorld } from "../store";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { Confetti } from "./Confetti";
 import { GLOW } from "./materials";
 import { LANDER_PIECE, LANDING_PAD_PIECE, useProp } from "./models";

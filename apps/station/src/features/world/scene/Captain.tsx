@@ -58,7 +58,7 @@ export function stepOutOfShip(): void {
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
-  Object.assign(window, { __mothership: { captain, cameraView, jumpTo, poseDebug } });
+  Object.assign(window, { __spaceship: { captain, cameraView, jumpTo, poseDebug } });
 }
 
 const MOVE_KEYS: Record<string, [number, number]> = {

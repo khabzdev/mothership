@@ -1,4 +1,4 @@
-import type { BriefInfo, CrewInfo, InspectionInfo, PreflightInfo } from "@mothership/protocol";
+import type { BriefInfo, CrewInfo, InspectionInfo, PreflightInfo } from "@spaceship/protocol";
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {

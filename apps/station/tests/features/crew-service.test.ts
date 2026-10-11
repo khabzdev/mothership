@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -40,7 +40,7 @@ let rosters: Extract<ServerMsg, { type: "crew.roster" }>[];
 let service: CrewService;
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-crew-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-crew-")));
   repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "README.md"), "hi");
@@ -106,7 +106,7 @@ describe("hire", () => {
 
   test("with a worktree, works on its own branch", async () => {
     const nova = await hire(2, "Add dark mode", true);
-    expect(nova.branch).toMatch(/^mothership\/add-dark-mode-/);
+    expect(nova.branch).toMatch(/^spaceship\/add-dark-mode-/);
     expect(launcher.launches[0]!.cwd).toContain(join(scratch, "home", "worktrees"));
   });
 

@@ -1,4 +1,4 @@
-import type { InspectionInfo } from "@mothership/protocol";
+import type { InspectionInfo } from "@spaceship/protocol";
 import type { InspectionRecord } from "./inspection.server";
 
 /** How serious a finding is: a blocker is handed back, a note is only shown. */

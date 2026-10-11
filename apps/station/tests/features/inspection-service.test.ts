@@ -1,5 +1,5 @@
-import type { ServerMsg } from "@mothership/protocol";
-import { PROVIDERS } from "@mothership/providers";
+import type { ServerMsg } from "@spaceship/protocol";
+import { PROVIDERS } from "@spaceship/providers";
 import { eq } from "drizzle-orm";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -106,7 +106,7 @@ function make(overrides: Partial<InspectionDeps> = {}) {
 }
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-inspection-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-inspection-")));
   home = join(scratch, "home");
   repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);

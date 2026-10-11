@@ -1,6 +1,6 @@
 import { Badge, Button, Input, Select, Switch } from "@cloudflare/kumo";
 import { RefreshIcon } from "@hugeicons/core-free-icons";
-import type { CrewInfo, DeckCheck } from "@mothership/protocol";
+import type { CrewInfo, DeckCheck } from "@spaceship/protocol";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { diagnosticsQuery } from "../../../app/queries";
@@ -19,7 +19,7 @@ import {
 import { RUN_TONE } from "./PreflightWindow";
 
 /** Whether the station reads the go/no-go poll aloud (chimes play either way). */
-export const POLL_VOICE_KEY = "mothership.poll.voice";
+export const POLL_VOICE_KEY = "spaceship.poll.voice";
 
 export function pollVoiceOn(): boolean {
   try {

@@ -1,5 +1,5 @@
 import { RoundedBox } from "@react-three/drei";
-import type { DeckCheck } from "@mothership/protocol";
+import type { DeckCheck } from "@spaceship/protocol";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { lessonsToReview } from "../../debrief/model";

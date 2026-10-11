@@ -5,7 +5,7 @@ import {
   RGB_FLAG,
   type Run,
   type ScreenFrame,
-} from "@mothership/protocol";
+} from "@spaceship/protocol";
 
 // Paints a crew terminal's screen onto a canvas for a console's holo screen: agent-office's
 // paintScreen (features/workers/laptop.ts), in the deck's holo colours.

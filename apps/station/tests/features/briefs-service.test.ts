@@ -1,5 +1,5 @@
-import type { ScreenFrame, ServerMsg } from "@mothership/protocol";
-import type { CrewSignal } from "@mothership/providers";
+import type { ScreenFrame, ServerMsg } from "@spaceship/protocol";
+import type { CrewSignal } from "@spaceship/providers";
 import { eq } from "drizzle-orm";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -71,7 +71,7 @@ const frame = (lines: string[]): ScreenFrame => ({
 });
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-briefs-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-briefs-")));
   repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "README.md"), "hi");

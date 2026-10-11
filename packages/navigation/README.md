@@ -1,4 +1,4 @@
-# @mothership/navigation
+# @spaceship/navigation
 
 Pure (no I/O, browser-safe) navigation logic for crew on a deck.
 

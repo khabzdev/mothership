@@ -5,13 +5,13 @@ import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import { SUN_LIGHT } from "../sky";
 
-/** Dev only: the renderer and scene on window.__mothership.three, for profiling from the console. */
+/** Dev only: the renderer and scene on window.__spaceship.three, for profiling from the console. */
 function DevHandle() {
   const get = useThree((s) => s.get);
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const w = window as unknown as { __mothership?: Record<string, unknown> };
-    w.__mothership = { ...w.__mothership, three: get };
+    const w = window as unknown as { __spaceship?: Record<string, unknown> };
+    w.__spaceship = { ...w.__spaceship, three: get };
   }, [get]);
   return null;
 }

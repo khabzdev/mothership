@@ -25,7 +25,7 @@ function makeRepo(name: string, dirs: string[], gitignore = ""): string {
 
 beforeEach(() => {
   db = createDb(":memory:", { migrationsFolder });
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-decks-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-decks-")));
 });
 
 afterEach(() => {

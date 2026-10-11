@@ -1,5 +1,5 @@
-import type { ServerMsg } from "@mothership/protocol";
-import type { AttachResult } from "@mothership/ptyhost";
+import type { ServerMsg } from "@spaceship/protocol";
+import type { AttachResult } from "@spaceship/ptyhost";
 import type { Peer } from "../../shared/realtime/hub.server";
 
 /** Where crew terminals live (the PTY host, via the launcher). */

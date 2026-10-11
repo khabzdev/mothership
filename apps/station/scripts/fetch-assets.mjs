@@ -1,4 +1,4 @@
-// Downloads the KayKit (CC0, by Kay Lousberg) models Mothership uses into public/models, and the
+// Downloads the KayKit (CC0, by Kay Lousberg) models Spaceship uses into public/models, and the
 // three.js (MIT) planet maps for the orbit sky into public/textures/planets.
 // Pinned to exact commits so builds are reproducible. Run: vp run assets
 import { mkdir, writeFile, access } from "node:fs/promises";

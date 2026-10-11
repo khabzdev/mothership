@@ -1,4 +1,4 @@
-import type { CrewInfo, ServerMsg } from "@mothership/protocol";
+import type { CrewInfo, ServerMsg } from "@spaceship/protocol";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import {

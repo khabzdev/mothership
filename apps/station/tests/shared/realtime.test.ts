@@ -1,4 +1,4 @@
-import { encode, PROTOCOL_VERSION, type ClientMsg, type ServerMsg } from "@mothership/protocol";
+import { encode, PROTOCOL_VERSION, type ClientMsg, type ServerMsg } from "@spaceship/protocol";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, test, vi } from "vite-plus/test";
 import { applyServerMsg, realtimeKeys } from "../../src/shared/realtime/cache.ts";

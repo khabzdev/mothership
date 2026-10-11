@@ -1,4 +1,4 @@
-import type { CrewAction, CrewInfo } from "@mothership/protocol";
+import type { CrewAction, CrewInfo } from "@spaceship/protocol";
 
 // What a seated crew member acts out (agent-office's worker-stance acts): typing while it works,
 // or its latest tool call: reading papers, typing flat out, leaning back on a test run, watching

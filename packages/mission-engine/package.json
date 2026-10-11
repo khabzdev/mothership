@@ -1,8 +1,8 @@
 {
-  "name": "@mothership/mission-engine",
+  "name": "@spaceship/mission-engine",
   "version": "0.0.0",
   "private": true,
-  "description": "Pure mission state machine for Mothership: brief → build → pre-flight → launch.",
+  "description": "Pure mission state machine for Spaceship: brief → build → pre-flight → launch.",
   "files": [
     "dist"
   ],

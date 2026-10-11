@@ -1,4 +1,4 @@
-import type { CheckVerdict } from "@mothership/protocol";
+import type { CheckVerdict } from "@spaceship/protocol";
 
 /** Hand-backs a crew member gets per flight, so at most this many plus one attempts. */
 export const DEFAULT_FUEL = 3;

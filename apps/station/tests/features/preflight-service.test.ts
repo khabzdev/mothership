@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -55,7 +55,7 @@ const result = (opts: RunOpts, verdict: CheckRun["verdict"]): CheckRun => ({
 });
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-preflight-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-preflight-")));
   home = join(scratch, "home");
   repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);

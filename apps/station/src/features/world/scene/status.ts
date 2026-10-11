@@ -1,4 +1,4 @@
-import type { CrewInfo, CrewStatus } from "@mothership/protocol";
+import type { CrewInfo, CrewStatus } from "@spaceship/protocol";
 
 /** Helmet-light colours: agent-office's antenna bulb colours. */
 export const STATUS_COLORS: Record<CrewStatus, string> = {

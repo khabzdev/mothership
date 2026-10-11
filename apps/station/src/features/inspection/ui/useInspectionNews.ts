@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useEffect, useRef } from "react";
 import { useRealtime } from "../../../shared/realtime/RealtimeProvider";
 import { notify } from "../../../shared/ui/toasts";

@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 
 /** Rank titles and the points each starts at. */
 export const RANKS = [

@@ -1,4 +1,4 @@
-import type { ConsoleLabel } from "@mothership/protocol";
+import type { ConsoleLabel } from "@spaceship/protocol";
 import { RoundedBox } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, CylinderGeometry, SRGBColorSpace } from "three";

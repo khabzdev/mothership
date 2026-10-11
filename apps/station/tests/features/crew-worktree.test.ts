@@ -9,7 +9,7 @@ let scratch: string;
 let repo: string;
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-wt-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-wt-")));
   repo = join(scratch, "repo");
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "README.md"), "hi");
@@ -32,35 +32,35 @@ afterEach(() => rmSync(scratch, { recursive: true, force: true }));
 describe("branchName", () => {
   test("slugs the goal and suffixes the mission id", () => {
     expect(branchName("Add a Dark-Mode toggle!", "1234567890ab")).toBe(
-      "mothership/add-a-dark-mode-toggle-123456",
+      "spaceship/add-a-dark-mode-toggle-123456",
     );
   });
 
   test("caps the slug length and handles empty slugs", () => {
     expect(branchName("x".repeat(100), "abcdef99").length).toBeLessThanOrEqual(11 + 40 + 7);
-    expect(branchName("!!!", "abcdef99")).toBe("mothership/mission-abcdef");
+    expect(branchName("!!!", "abcdef99")).toBe("spaceship/mission-abcdef");
   });
 });
 
 describe("createWorktree", () => {
   test("creates a worktree on a new branch from HEAD", async () => {
     const path = join(scratch, "worktrees", "m1");
-    const result = await createWorktree({ repoPath: repo, path, branch: "mothership/test-m1" });
-    expect(result).toEqual({ path, branch: "mothership/test-m1" });
+    const result = await createWorktree({ repoPath: repo, path, branch: "spaceship/test-m1" });
+    expect(result).toEqual({ path, branch: "spaceship/test-m1" });
     expect(existsSync(join(path, "README.md"))).toBe(true);
     expect(execFileSync("git", ["-C", path, "branch", "--show-current"]).toString().trim()).toBe(
-      "mothership/test-m1",
+      "spaceship/test-m1",
     );
   });
 
   test("reuses an existing worktree for the same branch", async () => {
     const path = join(scratch, "worktrees", "m1");
-    await createWorktree({ repoPath: repo, path, branch: "mothership/test-m1" });
+    await createWorktree({ repoPath: repo, path, branch: "spaceship/test-m1" });
     await expect(
-      createWorktree({ repoPath: repo, path, branch: "mothership/test-m1" }),
+      createWorktree({ repoPath: repo, path, branch: "spaceship/test-m1" }),
     ).resolves.toEqual({
       path,
-      branch: "mothership/test-m1",
+      branch: "spaceship/test-m1",
     });
   });
 
@@ -68,7 +68,7 @@ describe("createWorktree", () => {
     const empty = join(scratch, "empty");
     execFileSync("git", ["init", "-q", empty]);
     await expect(
-      createWorktree({ repoPath: empty, path: join(scratch, "wt"), branch: "mothership/x" }),
+      createWorktree({ repoPath: empty, path: join(scratch, "wt"), branch: "spaceship/x" }),
     ).rejects.toThrow(/needs at least one commit/);
   });
 });

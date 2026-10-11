@@ -1,5 +1,5 @@
-import { claudeCode, type CrewSignal, type ProviderAdapter } from "@mothership/providers";
-import { readHostState } from "@mothership/ptyhost";
+import { claudeCode, type CrewSignal, type ProviderAdapter } from "@spaceship/providers";
+import { readHostState } from "@spaceship/ptyhost";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
@@ -65,7 +65,7 @@ const TRUST_PROMPT = /trust (the files in )?this folder/i;
  * Always the same path, wiped before and after each run: trusting it leaves one entry in Claude
  * Code's config, not one per run.
  */
-const REPO = join(realpathSync(tmpdir()), "mothership-smoke-repo");
+const REPO = join(realpathSync(tmpdir()), "spaceship-smoke-repo");
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -88,16 +88,16 @@ function createRepo(repo: string): void {
     join(repo, "package.json"),
     `${JSON.stringify({ name: "smoke", scripts: { test: "node -e 0" } }, null, 2)}\n`,
   );
-  writeFileSync(join(repo, "README.md"), "# smoke\n\nA throwaway repo for the Mothership smoke.\n");
+  writeFileSync(join(repo, "README.md"), "# smoke\n\nA throwaway repo for the Spaceship smoke.\n");
   const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, stdio: "ignore" });
   git("init", "-q", "-b", "main");
   git("add", "package.json", "README.md");
   // Fixed identity, no signing and no hooks: the user's git config can't fail the commit.
   git(
     "-c",
-    "user.name=Mothership smoke",
+    "user.name=Spaceship smoke",
     "-c",
-    "user.email=smoke@mothership.invalid",
+    "user.email=smoke@spaceship.invalid",
     "-c",
     "commit.gpgsign=false",
     "-c",
@@ -139,7 +139,7 @@ export async function startReceiver(
         const payload: unknown = JSON.parse(body);
         const event = (payload as { hook_event_name?: unknown }).hook_event_name;
         const sessionId = claudeCode.sessionOf?.(payload);
-        record(headers.get("x-mothership-crew") ?? "", {
+        record(headers.get("x-spaceship-crew") ?? "", {
           event: typeof event === "string" ? event : "unknown",
           signal: published?.signal ?? null,
           ...(sessionId && { sessionId }),
@@ -177,7 +177,7 @@ export async function startHarness({ model }: { model: string }): Promise<Harnes
   let receiver: { server: Server; url: string };
   try {
     createRepo(repo);
-    home = realpathSync(mkdtempSync(join(tmpdir(), "mothership-smoke-home-")));
+    home = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-smoke-home-")));
     registry = new SmokeRegistry(join(home, "crew.json"));
     receiver = await startReceiver(registry, (crewId, signal) => {
       signals.set(crewId, [...(signals.get(crewId) ?? []), signal]);

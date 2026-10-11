@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { consoleSeat, INSPECTOR_DOCK, type ConsoleDef } from "./layout";
 
 // The Inspector drone's moves: where it goes, how it flies there and how it reacts to a verdict.

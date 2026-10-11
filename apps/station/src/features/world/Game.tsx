@@ -1,4 +1,4 @@
-import type { CrewInfo, DeckCheck } from "@mothership/protocol";
+import type { CrewInfo, DeckCheck } from "@spaceship/protocol";
 import { useInfiniteQuery, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
@@ -118,7 +118,7 @@ function Ready({ onReady }: { onReady: () => void }) {
   return null;
 }
 
-/** One deck of the Mothership: walk it, hire crew at consoles, watch them work. */
+/** One deck of the Spaceship: walk it, hire crew at consoles, watch them work. */
 export function Game({ deck }: { deck: Deck }) {
   const { data: crew } = useSuspenseQuery(rosterQuery(deck.id));
   const { data: labels } = useSuspenseQuery(labelsQuery(deck.id));

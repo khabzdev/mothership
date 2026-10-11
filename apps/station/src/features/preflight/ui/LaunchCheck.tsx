@@ -1,6 +1,6 @@
 import { Button } from "@cloudflare/kumo";
 import { AirplaneTakeOff01Icon, GitPullRequestIcon } from "@hugeicons/core-free-icons";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { reinspectMutation } from "../../inspection/queries";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";

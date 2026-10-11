@@ -1,5 +1,5 @@
-import type { InspectionInfo, InspectionState, ServerMsg } from "@mothership/protocol";
-import type { LaunchPlan, ProviderAdapter } from "@mothership/providers";
+import type { InspectionInfo, InspectionState, ServerMsg } from "@spaceship/protocol";
+import type { LaunchPlan, ProviderAdapter } from "@spaceship/providers";
 import { and, desc, eq, notInArray, sql, type SQL } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import type { Db } from "../../shared/db/client.server";

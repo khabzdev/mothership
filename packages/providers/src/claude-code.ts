@@ -1,4 +1,4 @@
-import type { CrewActivity } from "@mothership/protocol";
+import type { CrewActivity } from "@spaceship/protocol";
 import type {
   CrewSignal,
   LaunchOptions,
@@ -31,9 +31,9 @@ const MAX_DETAIL = 200;
 const POST_HOOK = [
   "curl -s -m 2 -o /dev/null -X POST",
   "-H 'content-type: application/json'",
-  '-H "x-mothership-crew: $MOTHERSHIP_CREW_ID"',
-  '-H "x-mothership-token: $MOTHERSHIP_HOOK_TOKEN"',
-  '--data-binary @- "$MOTHERSHIP_HOOK_URL"',
+  '-H "x-spaceship-crew: $SPACESHIP_CREW_ID"',
+  '-H "x-spaceship-token: $SPACESHIP_HOOK_TOKEN"',
+  '--data-binary @- "$SPACESHIP_HOOK_URL"',
   "|| true",
 ].join(" ");
 
@@ -64,9 +64,9 @@ function launchPlan(options: LaunchOptions): LaunchPlan {
     ],
     cwd: options.cwd,
     env: {
-      MOTHERSHIP_CREW_ID: options.crewId,
-      MOTHERSHIP_HOOK_URL: options.hookUrl,
-      MOTHERSHIP_HOOK_TOKEN: options.hookToken,
+      SPACESHIP_CREW_ID: options.crewId,
+      SPACESHIP_HOOK_URL: options.hookUrl,
+      SPACESHIP_HOOK_TOKEN: options.hookToken,
     },
   };
 }

@@ -1,4 +1,4 @@
-import type { PreflightInfo } from "@mothership/protocol";
+import type { PreflightInfo } from "@spaceship/protocol";
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import { Color, Matrix4, type InstancedMesh } from "three";

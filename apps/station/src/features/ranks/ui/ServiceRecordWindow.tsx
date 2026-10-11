@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useQuery } from "@tanstack/react-query";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";

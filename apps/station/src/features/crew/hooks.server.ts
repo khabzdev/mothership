@@ -1,4 +1,4 @@
-import { PROVIDERS, type CrewSignal, type ProviderAdapter } from "@mothership/providers";
+import { PROVIDERS, type CrewSignal, type ProviderAdapter } from "@spaceship/providers";
 import { crewRegistry, type CrewRegistry } from "./registry.server";
 
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -19,8 +19,8 @@ export interface HookDeps {
 
 /** POST /api/hooks: a crew member's CLI hook reporting what it's doing. */
 export async function handleHookRequest(request: Request, deps: HookDeps): Promise<Response> {
-  const crewId = request.headers.get("x-mothership-crew") ?? "";
-  const crew = deps.registry.verify(crewId, request.headers.get("x-mothership-token") ?? "");
+  const crewId = request.headers.get("x-spaceship-crew") ?? "";
+  const crew = deps.registry.verify(crewId, request.headers.get("x-spaceship-token") ?? "");
   if (!crew) return new Response("Unauthorized", { status: 401 });
 
   const body = await request.text();
@@ -48,8 +48,8 @@ export async function handleHookRequest(request: Request, deps: HookDeps): Promi
 }
 
 type Listener = (event: CrewSignalEvent) => void;
-const shared = globalThis as typeof globalThis & { __mothershipSignals?: Set<Listener> };
-const listeners: Set<Listener> = (shared.__mothershipSignals ??= new Set());
+const shared = globalThis as typeof globalThis & { __spaceshipSignals?: Set<Listener> };
+const listeners: Set<Listener> = (shared.__spaceshipSignals ??= new Set());
 
 /** Subscribe to crew signals (missions use this to drive the mission engine). */
 export function onCrewSignal(listener: Listener): () => void {

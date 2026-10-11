@@ -5,7 +5,7 @@ import {
   CREW_STATUSES,
   INSPECTION_STATES,
   PREFLIGHT_STATES,
-} from "@mothership/protocol";
+} from "@spaceship/protocol";
 import { sql } from "drizzle-orm";
 import {
   check,

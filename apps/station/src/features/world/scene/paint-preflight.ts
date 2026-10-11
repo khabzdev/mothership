@@ -1,4 +1,4 @@
-import type { CrewInfo, PreflightInfo } from "@mothership/protocol";
+import type { CrewInfo, PreflightInfo } from "@spaceship/protocol";
 
 // The Go/No-Go panel for a console's holo screen, and the lamp states along its desk.
 

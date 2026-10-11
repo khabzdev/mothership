@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { LaunchPlan } from "@mothership/providers";
+import type { LaunchPlan } from "@spaceship/providers";
 
 /** How long one review may run. */
 export const REVIEW_TIMEOUT_MS = 300_000;
@@ -88,7 +88,7 @@ export function runReview(opts: {
     // The station's own secrets stay out of the agent's environment.
     const env: Record<string, string | undefined> = {};
     for (const [key, value] of Object.entries(process.env)) {
-      if (!key.startsWith("MOTHERSHIP_")) env[key] = value;
+      if (!key.startsWith("SPACESHIP_")) env[key] = value;
     }
     Object.assign(env, plan.env);
 

@@ -1,4 +1,4 @@
-import type { CheckVerdict, DeckCheck, PreflightInfo, ServerMsg } from "@mothership/protocol";
+import type { CheckVerdict, DeckCheck, PreflightInfo, ServerMsg } from "@spaceship/protocol";
 import { and, asc, desc, eq, inArray, ne, notInArray, sql, type SQL } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -48,7 +48,7 @@ interface Deps {
   crew: CrewService;
   checks: CheckService;
   broadcast: (msg: ServerMsg) => void;
-  /** Mothership home; logs go to `<home>/preflight/<preflightId>/<checkId>.log`. */
+  /** Spaceship home; logs go to `<home>/preflight/<preflightId>/<checkId>.log`. */
   home: string;
   run?: RunCheck;
   fingerprint?: typeof worktreeFingerprint;

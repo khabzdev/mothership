@@ -1,5 +1,5 @@
-import type { ServerMsg } from "@mothership/protocol";
-import type { AttachResult } from "@mothership/ptyhost";
+import type { ServerMsg } from "@spaceship/protocol";
+import type { AttachResult } from "@spaceship/ptyhost";
 import { describe, expect, test } from "vite-plus/test";
 import { TerminalRelay, type TerminalSource } from "../../src/features/crew/terminals.server.ts";
 import type { Peer } from "../../src/shared/realtime/hub.server.ts";

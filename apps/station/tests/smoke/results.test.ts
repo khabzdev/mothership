@@ -8,7 +8,7 @@ import { SmokeRun, redact, runCheck, table } from "../../smoke/results.ts";
 let home: string;
 
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), "mothership-smoke-results-"));
+  home = mkdtempSync(join(tmpdir(), "spaceship-smoke-results-"));
 });
 
 afterEach(() => {

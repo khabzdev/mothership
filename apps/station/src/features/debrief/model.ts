@@ -1,4 +1,4 @@
-import type { MsgOf, ServerMsg } from "@mothership/protocol";
+import type { MsgOf, ServerMsg } from "@spaceship/protocol";
 import { PATCHES } from "../ranks/model";
 
 export { parseDeckInput } from "../preflight/model";

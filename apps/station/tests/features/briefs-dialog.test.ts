@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { ScreenFrame } from "@mothership/protocol";
+import type { ScreenFrame } from "@spaceship/protocol";
 import { dialogShown, findOption, screenLines } from "../../src/features/briefs/dialog.ts";
 
 const V1 = [

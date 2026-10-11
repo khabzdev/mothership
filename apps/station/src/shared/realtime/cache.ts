@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import type { QueryClient } from "@tanstack/react-query";
 import { setScreen } from "./screens";
 

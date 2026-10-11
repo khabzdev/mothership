@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useEffect } from "react";
 import { openShell, resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { giveIssue, handIssue } from "../github/github.functions";

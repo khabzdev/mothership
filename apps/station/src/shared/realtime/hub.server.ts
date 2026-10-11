@@ -5,7 +5,7 @@ import {
   type ClientMsg,
   type MsgOf,
   type ServerMsg,
-} from "@mothership/protocol";
+} from "@spaceship/protocol";
 
 export interface Peer {
   id: string;
@@ -90,7 +90,7 @@ export function isSameOrigin(request: Request): boolean {
   }
 }
 
-const shared = globalThis as typeof globalThis & { __mothershipHub?: RealtimeHub };
+const shared = globalThis as typeof globalThis & { __spaceshipHub?: RealtimeHub };
 
 /** The station's hub, shared across module reloads in dev. */
-export const hub: RealtimeHub = (shared.__mothershipHub ??= new RealtimeHub());
+export const hub: RealtimeHub = (shared.__spaceshipHub ??= new RealtimeHub());

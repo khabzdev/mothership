@@ -1,4 +1,4 @@
-import type { CrewInfo, CrewStatus } from "@mothership/protocol";
+import type { CrewInfo, CrewStatus } from "@spaceship/protocol";
 
 // Who's waiting on you, in what order, and what the needs-you banner says about them: agent-office's
 // nextup.ts and needsyou/logic.ts. No three.js and no DOM, so the tests run it as it is.

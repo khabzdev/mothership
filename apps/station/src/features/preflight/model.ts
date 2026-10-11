@@ -1,4 +1,4 @@
-import type { PreflightInfo } from "@mothership/protocol";
+import type { PreflightInfo } from "@spaceship/protocol";
 
 /** How long a check may run before it counts as NO-GO. */
 export const DEFAULT_TIMEOUT_MS = 300_000;

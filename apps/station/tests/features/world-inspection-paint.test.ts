@@ -1,4 +1,4 @@
-import type { InspectionInfo } from "@mothership/protocol";
+import type { InspectionInfo } from "@spaceship/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import {
   paintInspection,

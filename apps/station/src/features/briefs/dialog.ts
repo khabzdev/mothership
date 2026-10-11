@@ -1,4 +1,4 @@
-import type { ScreenFrame } from "@mothership/protocol";
+import type { ScreenFrame } from "@spaceship/protocol";
 
 export type Choice = "approve" | "revise";
 

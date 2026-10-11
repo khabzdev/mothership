@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import { eq } from "drizzle-orm";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,7 +16,7 @@ let sent: ServerMsg[];
 let service: CheckService;
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-checks-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-checks-")));
   repo = scratch;
   db = createDb(":memory:", {
     migrationsFolder: fileURLToPath(new URL("../../drizzle", import.meta.url)),

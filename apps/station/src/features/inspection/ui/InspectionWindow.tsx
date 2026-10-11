@@ -1,5 +1,5 @@
 import { Badge, Button } from "@cloudflare/kumo";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";

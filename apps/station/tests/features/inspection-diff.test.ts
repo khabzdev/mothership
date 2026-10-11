@@ -15,7 +15,7 @@ const git = (cwd: string, ...args: string[]) =>
   });
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-inspection-diff-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-inspection-diff-")));
   repo = join(scratch, "shop");
   tree = join(scratch, "tree");
   execFileSync("git", ["init", "-q", repo]);
@@ -24,7 +24,7 @@ beforeEach(() => {
   git(repo, "add", ".");
   git(repo, "commit", "-qm", "init");
   home = git(repo, "rev-parse", "HEAD").trim();
-  git(repo, "worktree", "add", "-q", "-b", "mothership/x", tree);
+  git(repo, "worktree", "add", "-q", "-b", "spaceship/x", tree);
 });
 
 afterEach(() => rmSync(scratch, { recursive: true, force: true }));

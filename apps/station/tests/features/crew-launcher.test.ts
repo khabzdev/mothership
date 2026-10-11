@@ -1,4 +1,4 @@
-import type { ProviderAdapter } from "@mothership/providers";
+import type { ProviderAdapter } from "@spaceship/providers";
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,15 +13,15 @@ const fakeProvider: ProviderAdapter = {
     command: "/bin/sh",
     args: [
       "-c",
-      'printf "prompt=%s crew=%s hook=%s\\n" "$1" "$MOTHERSHIP_CREW_ID" "$MOTHERSHIP_HOOK_URL"; cat',
+      'printf "prompt=%s crew=%s hook=%s\\n" "$1" "$SPACESHIP_CREW_ID" "$SPACESHIP_HOOK_URL"; cat',
       "sh",
       o.prompt,
     ],
     cwd: o.cwd,
     env: {
-      MOTHERSHIP_CREW_ID: o.crewId,
-      MOTHERSHIP_HOOK_URL: o.hookUrl,
-      MOTHERSHIP_HOOK_TOKEN: o.hookToken,
+      SPACESHIP_CREW_ID: o.crewId,
+      SPACESHIP_HOOK_URL: o.hookUrl,
+      SPACESHIP_HOOK_TOKEN: o.hookToken,
     },
   }),
   parseHook: () => null,
@@ -32,7 +32,7 @@ let launcher: PtyCrewLauncher;
 let registry: CrewRegistry;
 
 beforeEach(() => {
-  home = realpathSync(mkdtempSync(join(tmpdir(), "mothership-launch-")));
+  home = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-launch-")));
   registry = new CrewRegistry();
   launcher = new PtyCrewLauncher({
     home,

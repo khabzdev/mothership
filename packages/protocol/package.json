@@ -1,8 +1,8 @@
 {
-  "name": "@mothership/protocol",
+  "name": "@spaceship/protocol",
   "version": "0.0.0",
   "private": true,
-  "description": "Typed WebSocket messages between the Mothership station UI and server.",
+  "description": "Typed WebSocket messages between the Spaceship station UI and server.",
   "files": [
     "dist"
   ],

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { PreflightInfo } from "@mothership/protocol";
+import type { PreflightInfo } from "@spaceship/protocol";
 import { parseLogInput, preflightChip } from "../../src/features/preflight/model.ts";
 
 describe("pre-flight log input", () => {

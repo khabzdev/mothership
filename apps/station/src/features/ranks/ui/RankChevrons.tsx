@@ -1,5 +1,5 @@
 import { ChevronUpIcon, StarIcon } from "@hugeicons/core-free-icons";
-import type { RankTitle } from "@mothership/protocol";
+import type { RankTitle } from "@spaceship/protocol";
 import { Icon } from "../../../shared/ui/Icon";
 import { chevronsFor } from "../model";
 

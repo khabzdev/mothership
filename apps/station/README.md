@@ -1,6 +1,6 @@
-# @mothership/station
+# @spaceship/station
 
-The Mothership app: TanStack Start + TanStack Query, served by Nitro on 127.0.0.1 only.
+The Spaceship app: TanStack Start + TanStack Query, served by Nitro on 127.0.0.1 only.
 
 ```
 src/

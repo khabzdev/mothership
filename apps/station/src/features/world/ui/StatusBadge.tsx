@@ -1,5 +1,5 @@
 import { Badge } from "@cloudflare/kumo";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { statusOf } from "../scene/status";
 
 /** A crew member's status as a Kumo dot badge. */

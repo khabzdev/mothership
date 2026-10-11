@@ -1,5 +1,5 @@
-import type { ServerMsg } from "@mothership/protocol";
-import type { ProviderAdapter } from "@mothership/providers";
+import type { ServerMsg } from "@spaceship/protocol";
+import type { ProviderAdapter } from "@spaceship/providers";
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "../../shared/db/client.server";
 import { briefs, inspections, lessons, preflightResults, preflights } from "../../shared/db/schema";

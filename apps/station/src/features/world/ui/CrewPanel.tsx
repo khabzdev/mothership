@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { Badge } from "@cloudflare/kumo";
 import { useEffect, useState, type CSSProperties } from "react";
 import {
@@ -16,7 +16,7 @@ import { RankChevrons } from "../../ranks/ui/RankChevrons";
 import { StatusBadge } from "./StatusBadge";
 import { needyFirst, waited } from "../waiting";
 
-const COLLAPSED_KEY = "mothership.crewPanel.collapsed";
+const COLLAPSED_KEY = "spaceship.crewPanel.collapsed";
 
 /**
  * agent-office's Workers panel: every crew member on the deck and what it's on. One that needs you

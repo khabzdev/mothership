@@ -1,6 +1,6 @@
-# @mothership/mission-engine
+# @spaceship/mission-engine
 
-Pure (no I/O) mission state machine for Mothership: `briefing → building → preflight → launching → launched | redAlert`.
+Pure (no I/O) mission state machine for Spaceship: `briefing → building → preflight → launching → launched | redAlert`.
 
 ```bash
 vp test   # unit tests

@@ -1,4 +1,4 @@
-import { claudeCode } from "@mothership/providers";
+import { claudeCode } from "@spaceship/providers";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";

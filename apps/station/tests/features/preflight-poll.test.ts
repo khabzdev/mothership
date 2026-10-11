@@ -1,4 +1,4 @@
-import type { PreflightInfo, ServerMsg } from "@mothership/protocol";
+import type { PreflightInfo, ServerMsg } from "@spaceship/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import { forDeck, isGo, isNoGo, pollLine } from "../../src/features/preflight/poll.ts";
 

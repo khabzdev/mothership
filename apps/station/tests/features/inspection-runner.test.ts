@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
-import type { LaunchPlan } from "@mothership/providers";
+import type { LaunchPlan } from "@spaceship/providers";
 import { REVIEW_OUTPUT_CAP, runReview } from "../../src/features/inspection/runner.server.ts";
 
 const node = (script: string, extra: Partial<LaunchPlan> = {}): LaunchPlan => ({
@@ -17,11 +17,11 @@ const ECHO = "process.stdin.pipe(process.stdout)";
 
 let savedToken: string | undefined;
 beforeEach(() => {
-  savedToken = process.env.MOTHERSHIP_HOOK_TOKEN;
+  savedToken = process.env.SPACESHIP_HOOK_TOKEN;
 });
 afterEach(() => {
-  if (savedToken === undefined) delete process.env.MOTHERSHIP_HOOK_TOKEN;
-  else process.env.MOTHERSHIP_HOOK_TOKEN = savedToken;
+  if (savedToken === undefined) delete process.env.SPACESHIP_HOOK_TOKEN;
+  else process.env.SPACESHIP_HOOK_TOKEN = savedToken;
 });
 
 const alive = (pid: number) => {
@@ -65,15 +65,15 @@ describe("runReview", () => {
     expect(r.timedOut).toBe(false);
   });
 
-  test("the station's own MOTHERSHIP_ variables never reach the command", async () => {
-    process.env.MOTHERSHIP_HOOK_TOKEN = "x";
+  test("the station's own SPACESHIP_ variables never reach the command", async () => {
+    process.env.SPACESHIP_HOOK_TOKEN = "x";
     const r = await runReview({
       plan: node("console.log(Object.keys(process.env).join(' '))", { env: { KEEP_ME: "1" } }),
       prompt: "",
       timeoutMs: 10_000,
     });
     expect(r.ok).toBe(true);
-    expect(r.stdout).not.toContain("MOTHERSHIP_");
+    expect(r.stdout).not.toContain("SPACESHIP_");
     expect(r.stdout).toContain("KEEP_ME");
   });
 

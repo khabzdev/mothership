@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCallback, useSyncExternalStore } from "react";
 import { decksQuery } from "../decks/queries";
 
-const KEY = "mothership.deck";
+const KEY = "spaceship.deck";
 const listeners = new Set<() => void>();
 
 function read(): string | null {

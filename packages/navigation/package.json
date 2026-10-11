@@ -1,8 +1,8 @@
 {
-  "name": "@mothership/navigation",
+  "name": "@spaceship/navigation",
   "version": "0.0.0",
   "private": true,
-  "description": "Pure crew navigation for Mothership decks: waypoints, dwell, layout, pathfinding.",
+  "description": "Pure crew navigation for Spaceship decks: waypoints, dwell, layout, pathfinding.",
   "files": [
     "dist"
   ],
@@ -18,7 +18,7 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@mothership/protocol": "workspace:*"
+    "@spaceship/protocol": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

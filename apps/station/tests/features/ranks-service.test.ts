@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import { eq } from "drizzle-orm";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -32,7 +32,7 @@ let crew: CrewService;
 let ranks: RankService;
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-ranks-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-ranks-")));
   db = createDb(":memory:", {
     migrationsFolder: fileURLToPath(new URL("../../drizzle", import.meta.url)),
   });
@@ -107,7 +107,7 @@ function since(crewId: string) {
 
 const promoted = () => sent.filter((m) => m.type === "crew.promoted");
 const pr = (crewId: string, n = 1) =>
-  crew.endMission(crewId, "pr", { url: `https://gh/pr/${n}`, branch: `mothership/b${n}` });
+  crew.endMission(crewId, "pr", { url: `https://gh/pr/${n}`, branch: `spaceship/b${n}` });
 
 describe("RankService", () => {
   test("a fresh call sign has a zero record and no patches", async () => {
@@ -159,7 +159,7 @@ describe("RankService", () => {
         url: "https://gh/pr/1",
         deckId: "deck-1",
         name: "Nova",
-        branch: "mothership/b1",
+        branch: "spaceship/b1",
       }),
     ]);
   });
@@ -259,12 +259,12 @@ describe("RankService", () => {
   test("a merge is matched by branch when the url isn't known", async () => {
     const nova = await hire();
     pr(nova.id, 7);
-    expect(ranks.onMerged("deck-2", { url: "https://gh/pr/x", branch: "mothership/b7" })).toBe(
+    expect(ranks.onMerged("deck-2", { url: "https://gh/pr/x", branch: "spaceship/b7" })).toBe(
       false,
     );
     expect(ranks.record("deck-1", "Nova").merged).toBe(0);
     expect(
-      ranks.onMerged("deck-1", { url: "https://gh/pr/x", branch: "mothership/b7", mergedAt: 77 }),
+      ranks.onMerged("deck-1", { url: "https://gh/pr/x", branch: "spaceship/b7", mergedAt: 77 }),
     ).toBe(true);
     expect(db.select().from(missionPrs).get()?.mergedAt).toBe(77);
     expect(ranks.record("deck-1", "Nova").merged).toBe(1);

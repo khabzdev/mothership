@@ -1,4 +1,4 @@
-import { encode, parseServerMsg, type ClientMsg, type ServerMsg } from "@mothership/protocol";
+import { encode, parseServerMsg, type ClientMsg, type ServerMsg } from "@spaceship/protocol";
 
 export type ConnectionState = "connecting" | "open" | "closed";
 

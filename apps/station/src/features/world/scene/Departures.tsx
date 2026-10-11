@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useEffect, useRef, useState } from "react";
 import { CONSOLES, departurePath } from "../layout";
 import { Departing } from "./Departing";

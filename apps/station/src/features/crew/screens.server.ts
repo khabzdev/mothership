@@ -1,4 +1,4 @@
-import type { ScreenFrame, ServerMsg } from "@mothership/protocol";
+import type { ScreenFrame, ServerMsg } from "@spaceship/protocol";
 
 /** Where crew screens are read from (the PTY host, via the launcher). */
 export interface ScreenSource {

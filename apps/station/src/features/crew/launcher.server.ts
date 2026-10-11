@@ -4,9 +4,9 @@ import {
   readHostState,
   type AttachResult,
   type HostState,
-} from "@mothership/ptyhost";
-import type { ScreenFrame } from "@mothership/protocol";
-import type { ProviderAdapter } from "@mothership/providers";
+} from "@spaceship/ptyhost";
+import type { ScreenFrame } from "@spaceship/protocol";
+import type { ProviderAdapter } from "@spaceship/providers";
 import { createRequire } from "node:module";
 import type { CrewRegistry } from "./registry.server";
 import type { ScreenSource } from "./screens.server";
@@ -40,7 +40,7 @@ export interface PtyCrewLauncherOptions {
   providers: Record<string, ProviderAdapter>;
   /** Base URL the crew's hooks post to, e.g. http://127.0.0.1:3000. */
   stationUrl: string;
-  /** PTY host entry script; defaults to the built @mothership/ptyhost bin. */
+  /** PTY host entry script; defaults to the built @spaceship/ptyhost bin. */
   ptyhostEntry?: string;
 }
 
@@ -191,7 +191,7 @@ export class PtyCrewLauncher implements CrewLauncher, TerminalSource, ScreenSour
     this.#client ??= (async () => {
       const entry =
         this.#options.ptyhostEntry ??
-        createRequire(import.meta.url).resolve("@mothership/ptyhost/bin");
+        createRequire(import.meta.url).resolve("@spaceship/ptyhost/bin");
       const state = await ensurePtyHost({ home: this.#options.home, entry });
       const client = await PtyHostClient.connect(state);
       this.#hostState = state;

@@ -1,4 +1,4 @@
-# @mothership/protocol
+# @spaceship/protocol
 
 Typed WebSocket messages between the station UI (client) and the station server.
 

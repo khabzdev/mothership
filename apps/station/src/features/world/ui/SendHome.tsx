@@ -2,7 +2,7 @@ import { Button, Loader, Radio } from "@cloudflare/kumo";
 import { Alert02Icon, CheckmarkCircle02Icon, Logout03Icon } from "@hugeicons/core-free-icons";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { WorktreeChoice } from "../../crew/model";

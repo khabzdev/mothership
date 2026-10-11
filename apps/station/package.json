@@ -1,5 +1,5 @@
 {
-  "name": "@mothership/station",
+  "name": "@spaceship/station",
   "private": true,
   "type": "module",
   "imports": {
@@ -12,7 +12,7 @@
     "start": "HOST=127.0.0.1 PORT=3000 node .output/server/index.mjs",
     "preview": "vp preview --host 127.0.0.1",
     "test": "vp test",
-    "smoke:real": "MOTHERSHIP_SMOKE=1 vp test --config smoke.config.ts",
+    "smoke:real": "SPACESHIP_SMOKE=1 vp test --config smoke.config.ts",
     "db:generate": "drizzle-kit generate",
     "assets": "node scripts/fetch-assets.mjs"
   },
@@ -20,13 +20,13 @@
     "@cloudflare/kumo": "catalog:",
     "@hugeicons/core-free-icons": "catalog:",
     "@hugeicons/react": "catalog:",
-    "@mothership/protocol": "workspace:*",
-    "@mothership/providers": "workspace:*",
-    "@mothership/ptyhost": "workspace:*",
     "@phosphor-icons/react": "catalog:",
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
     "@react-three/postprocessing": "catalog:",
+    "@spaceship/protocol": "workspace:*",
+    "@spaceship/providers": "workspace:*",
+    "@spaceship/ptyhost": "workspace:*",
     "@tanstack/react-devtools": "0.10.13",
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-query-devtools": "5.104.1",

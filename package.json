@@ -1,11 +1,11 @@
 {
-  "name": "mothership",
+  "name": "spaceship",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "ready": "vp check && vp run -r test && vp run -r build",
-    "dev": "vp run @mothership/station#dev",
+    "dev": "vp run @spaceship/station#dev",
     "prepare": "vp config"
   },
   "devDependencies": {

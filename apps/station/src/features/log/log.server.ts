@@ -1,4 +1,4 @@
-import type { RankInfo, ServerMsg } from "@mothership/protocol";
+import type { RankInfo, ServerMsg } from "@spaceship/protocol";
 import { and, asc, desc, eq, gte, inArray, lt, lte, or } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { Db } from "../../shared/db/client.server";

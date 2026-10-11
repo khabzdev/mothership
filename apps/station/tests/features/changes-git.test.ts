@@ -29,7 +29,7 @@ const git = (cwd: string, ...args: string[]) =>
   });
 
 beforeEach(() => {
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-changes-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-changes-")));
   repo = join(scratch, "shop");
   tree = join(scratch, "tree");
   execFileSync("git", ["init", "-q", repo]);
@@ -38,7 +38,7 @@ beforeEach(() => {
   git(repo, "add", ".");
   git(repo, "commit", "-qm", "init");
   home = git(repo, "rev-parse", "HEAD").trim();
-  git(repo, "worktree", "add", "-q", "-b", "mothership/x", tree);
+  git(repo, "worktree", "add", "-q", "-b", "spaceship/x", tree);
 });
 
 afterEach(() => rmSync(scratch, { recursive: true, force: true }));
@@ -61,7 +61,7 @@ describe("homeRefOf", () => {
 describe("readChanges", () => {
   test("a fresh worktree has nothing changed", async () => {
     expect(await readChanges(tree, home)).toEqual({
-      branch: "mothership/x",
+      branch: "spaceship/x",
       base: home,
       ahead: 0,
       files: [],

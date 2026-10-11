@@ -1,4 +1,4 @@
-import type { CrewActivity, CrewStatus } from "@mothership/protocol";
+import type { CrewActivity, CrewStatus } from "@spaceship/protocol";
 
 export type Waypoint =
   | { kind: "module"; moduleId: string }

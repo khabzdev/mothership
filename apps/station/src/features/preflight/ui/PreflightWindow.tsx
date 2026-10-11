@@ -1,6 +1,6 @@
 import { Badge, Button } from "@cloudflare/kumo";
 import { AirplaneTakeOff01Icon } from "@hugeicons/core-free-icons";
-import type { CheckVerdict, CrewInfo } from "@mothership/protocol";
+import type { CheckVerdict, CrewInfo } from "@spaceship/protocol";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";

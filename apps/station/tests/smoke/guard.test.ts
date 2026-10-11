@@ -5,13 +5,13 @@ import smokeConfig from "../../smoke.config.ts";
 import viteConfig from "../../vite.config.ts";
 
 describe("requireSmokeEnv", () => {
-  test("refuses to run without MOTHERSHIP_SMOKE=1", () => {
+  test("refuses to run without SPACESHIP_SMOKE=1", () => {
     expect(() => requireSmokeEnv({})).toThrow("Run with vp run smoke:real");
-    expect(() => requireSmokeEnv({ MOTHERSHIP_SMOKE: "0" })).toThrow("Run with vp run smoke:real");
+    expect(() => requireSmokeEnv({ SPACESHIP_SMOKE: "0" })).toThrow("Run with vp run smoke:real");
   });
 
-  test("runs with MOTHERSHIP_SMOKE=1", () => {
-    expect(() => requireSmokeEnv({ MOTHERSHIP_SMOKE: "1" })).not.toThrow();
+  test("runs with SPACESHIP_SMOKE=1", () => {
+    expect(() => requireSmokeEnv({ SPACESHIP_SMOKE: "1" })).not.toThrow();
   });
 });
 

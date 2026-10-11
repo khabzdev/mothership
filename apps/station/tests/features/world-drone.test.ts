@@ -1,4 +1,4 @@
-import type { CrewInfo, InspectionInfo } from "@mothership/protocol";
+import type { CrewInfo, InspectionInfo } from "@spaceship/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import {
   DOCK_FACING,

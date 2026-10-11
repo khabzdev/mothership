@@ -9,7 +9,7 @@ import {
   GitBranchIcon,
   Message01Icon,
 } from "@hugeicons/core-free-icons";
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { TerminalPanel } from "../../crew/ui/TerminalPanel";
@@ -17,7 +17,7 @@ import { CONSOLES } from "../layout";
 import { useWorld } from "../store";
 import { StatusBadge } from "./StatusBadge";
 
-const TALL_KEY = "mothership.terminal.tall";
+const TALL_KEY = "spaceship.terminal.tall";
 
 function readTall(): boolean {
   try {

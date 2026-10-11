@@ -3,7 +3,7 @@ import { openPullRequest, prBody, prTitle, type Exec } from "../../src/features/
 
 const request = {
   cwd: "/tree",
-  branch: "mothership/add-dark-mode-abc123",
+  branch: "spaceship/add-dark-mode-abc123",
   repoPath: "/repo",
   task: "Add dark mode\nwith a toggle in the header",
   name: "Nova",
@@ -44,7 +44,7 @@ describe("PR title and body", () => {
   test("prBody puts evidence before the sign-off", () => {
     const body = prBody({ ...request, evidence: "### Pre-flight: GO" }, ["Add toggle"]);
     expect(body.indexOf("### Pre-flight: GO")).toBeGreaterThan(body.indexOf("- Add toggle"));
-    expect(body.indexOf("### Pre-flight: GO")).toBeLessThan(body.indexOf("Opened from Mothership"));
+    expect(body.indexOf("### Pre-flight: GO")).toBeLessThan(body.indexOf("Opened from Spaceship"));
   });
 
   test("prBody puts the inspection after pre-flight and before the sign-off", () => {
@@ -56,7 +56,7 @@ describe("PR title and body", () => {
       body.indexOf("### Pre-flight: GO"),
     );
     expect(body.indexOf("## Inspection: Cleared")).toBeLessThan(
-      body.indexOf("Opened from Mothership"),
+      body.indexOf("Opened from Spaceship"),
     );
     expect(prBody(request, ["x"])).not.toContain("## Inspection");
   });
@@ -79,7 +79,7 @@ describe("openPullRequest", () => {
     });
     expect(await openPullRequest(request, x)).toBe("https://github.com/o/r/pull/7");
     expect(calls).toContain(
-      "/tree$ git push -u origin HEAD:refs/heads/mothership/add-dark-mode-abc123",
+      "/tree$ git push -u origin HEAD:refs/heads/spaceship/add-dark-mode-abc123",
     );
     expect(calls.find((c) => c.includes("pr create"))).toContain(
       "--base main --title Add dark mode",
@@ -98,6 +98,6 @@ describe("openPullRequest", () => {
     );
     await expect(
       openPullRequest(request, fake({ "git branch --show-current": "main\n" }).x),
-    ).rejects.toThrow("Nothing on mothership/add-dark-mode-abc123 that main lacks yet");
+    ).rejects.toThrow("Nothing on spaceship/add-dark-mode-abc123 that main lacks yet");
   });
 });

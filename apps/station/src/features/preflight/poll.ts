@@ -1,4 +1,4 @@
-import type { CheckVerdict, PreflightInfo, ServerMsg } from "@mothership/protocol";
+import type { CheckVerdict, PreflightInfo, ServerMsg } from "@spaceship/protocol";
 
 export type PreflightMsg = Extract<ServerMsg, { type: "crew.preflight" }>;
 

@@ -2,7 +2,7 @@ import { Button, Input } from "@cloudflare/kumo";
 import { Delete02Icon, Tag01Icon } from "@hugeicons/core-free-icons";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";
-import type { ConsoleLabel } from "@mothership/protocol";
+import type { ConsoleLabel } from "@spaceship/protocol";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { LABEL_IDEAS, MAX_LABEL, SIGN_COLORS } from "../../labels/model";

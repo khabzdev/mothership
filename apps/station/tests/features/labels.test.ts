@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vite-plus/test";
 import { LabelService } from "../../src/features/labels/labels.server.ts";

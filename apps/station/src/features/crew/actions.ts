@@ -1,7 +1,7 @@
 // Ported from agent-office (src/shared/actions.ts): what a crew member acts out, read off its
 // latest tool call: flipping papers while it reads, typing while it edits, leaning back while its
 // tests run, a globe spinning while it's on the web.
-import type { CrewAction } from "@mothership/protocol";
+import type { CrewAction } from "@spaceship/protocol";
 
 /** Tool names, lowercased, across Claude Code, Codex and OpenCode. */
 const READ_TOOLS = new Set([

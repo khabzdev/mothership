@@ -14,6 +14,6 @@ export const Route = createFileRoute("/lite")({
     await Promise.all(decks.map((d) => context.queryClient.ensureQueryData(rosterQuery(d.id))));
   },
   ssr: "data-only",
-  head: () => ({ meta: [{ title: "Mothership · lite" }] }),
+  head: () => ({ meta: [{ title: "Spaceship · lite" }] }),
   component: LitePage,
 });

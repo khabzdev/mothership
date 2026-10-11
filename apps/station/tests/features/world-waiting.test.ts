@@ -1,4 +1,4 @@
-import type { CrewInfo } from "@mothership/protocol";
+import type { CrewInfo } from "@spaceship/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import {
   Fresh,

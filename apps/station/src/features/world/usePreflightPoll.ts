@@ -5,7 +5,7 @@ import { rosterQuery } from "../crew/queries";
 import { useRealtime } from "../../shared/realtime/RealtimeProvider";
 import { playCheck, speak } from "./sound";
 
-const VOICE_KEY = "mothership.poll.voice";
+const VOICE_KEY = "spaceship.poll.voice";
 
 export function voiceOn(): boolean {
   try {

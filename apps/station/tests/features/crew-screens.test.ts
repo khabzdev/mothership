@@ -1,4 +1,4 @@
-import type { ScreenFrame, ServerMsg } from "@mothership/protocol";
+import type { ScreenFrame, ServerMsg } from "@spaceship/protocol";
 import { describe, expect, test } from "vite-plus/test";
 import { ScreenRelay, type ScreenSource } from "../../src/features/crew/screens.server.ts";
 

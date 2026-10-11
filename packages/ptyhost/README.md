@@ -1,4 +1,4 @@
-# @mothership/ptyhost
+# @spaceship/ptyhost
 
 Standalone process that owns crew terminals, so agents keep running when the station restarts.
 

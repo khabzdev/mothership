@@ -1,4 +1,4 @@
-import type { ServerMsg } from "@mothership/protocol";
+import type { ServerMsg } from "@spaceship/protocol";
 import { eq } from "drizzle-orm";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -43,7 +43,7 @@ let gates: { checks: boolean; inspector: boolean };
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(T0);
-  scratch = realpathSync(mkdtempSync(join(tmpdir(), "mothership-log-")));
+  scratch = realpathSync(mkdtempSync(join(tmpdir(), "spaceship-log-")));
   const repo = join(scratch, "shop");
   execFileSync("git", ["init", "-q", repo]);
   writeFileSync(join(repo, "README.md"), "hi");
@@ -182,7 +182,7 @@ function brief(
 /** O as the PR flow does it: the crew member keeps the PR's link, then its mission ends. */
 function pr(crewId: string, k = 1) {
   crew.setPr(crewId, `https://gh/pr/${k}`);
-  crew.endMission(crewId, "pr", { url: `https://gh/pr/${k}`, branch: `mothership/b${k}` });
+  crew.endMission(crewId, "pr", { url: `https://gh/pr/${k}`, branch: `spaceship/b${k}` });
 }
 const logged = () => sent.filter((m) => m.type === "deck.log");
 
@@ -204,7 +204,7 @@ describe("MissionLog writing", () => {
         endedAt: T0 + 100,
         how: "pr",
         prUrl: "https://gh/pr/1",
-        branch: "mothership/b1",
+        branch: "spaceship/b1",
         checksArmed: false,
         inspectorOn: false,
       },
@@ -220,7 +220,7 @@ describe("MissionLog writing", () => {
       endedAt: T0 + 200,
       how: "pr",
       prUrl: "https://gh/pr/1",
-      branch: "mothership/b1",
+      branch: "spaceship/b1",
       provider: "claude-code",
       ownWorktree: true,
     };
@@ -347,7 +347,7 @@ describe("MissionLog entries", () => {
       endedAt: T0 + 100,
       how: "pr",
       prUrl: "https://gh/pr/1",
-      branch: "mothership/b1",
+      branch: "spaceship/b1",
       outcome: "open",
       verdict: { kind: "open", line: "Not merged" },
       handBacks: 2,

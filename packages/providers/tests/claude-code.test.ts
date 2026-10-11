@@ -118,9 +118,9 @@ describe("launchPlan", () => {
   test("passes crew identity through the environment, not the command line", () => {
     const plan = claudeCode.launchPlan(options);
     expect(plan.env).toEqual({
-      MOTHERSHIP_CREW_ID: "crew-1",
-      MOTHERSHIP_HOOK_URL: "http://127.0.0.1:3000/api/hooks",
-      MOTHERSHIP_HOOK_TOKEN: "secret-token",
+      SPACESHIP_CREW_ID: "crew-1",
+      SPACESHIP_HOOK_URL: "http://127.0.0.1:3000/api/hooks",
+      SPACESHIP_HOOK_TOKEN: "secret-token",
     });
     expect(plan.args.join(" ")).not.toContain("secret-token");
   });
@@ -303,8 +303,8 @@ describe("hook commands (run the way Claude runs them)", () => {
     expect(received[0]!.body).toBe(payload);
     expect(received[0]!.headers).toMatchObject({
       "content-type": "application/json",
-      "x-mothership-crew": "crew-1",
-      "x-mothership-token": "secret-token",
+      "x-spaceship-crew": "crew-1",
+      "x-spaceship-token": "secret-token",
     });
   });
 
@@ -358,7 +358,7 @@ describe("reviewPlan", () => {
   test("carries no hooks and no station environment", () => {
     const plan = claudeCode.reviewPlan!({ cwd: "/w" });
     expect(plan.args).not.toContain("--settings");
-    expect(Object.keys(plan.env).filter((k) => k.startsWith("MOTHERSHIP_"))).toEqual([]);
+    expect(Object.keys(plan.env).filter((k) => k.startsWith("SPACESHIP_"))).toEqual([]);
   });
 
   test("edit tools appear only in the disallowed list", () => {

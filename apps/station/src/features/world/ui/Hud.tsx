@@ -12,7 +12,7 @@ import {
   TaskDaily01Icon,
 } from "@hugeicons/core-free-icons";
 import { Icon } from "../../../shared/ui/Icon";
-import type { ConsoleLabel, CrewInfo } from "@mothership/protocol";
+import type { ConsoleLabel, CrewInfo } from "@spaceship/protocol";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { crewBlocker } from "../../../app/diagnostics";
 import { diagnosticsQuery } from "../../../app/queries";

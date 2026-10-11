@@ -31,7 +31,7 @@ export function prTitle(task: string, branch: string): string {
   const line = task.split("\n")[0]?.trim() ?? "";
   if (!line)
     return branch
-      .replace(/^mothership\//, "")
+      .replace(/^spaceship\//, "")
       .replace(/-[0-9a-f]{6}$/, "")
       .replace(/-/g, " ");
   return line.length > MAX_TITLE ? `${line.slice(0, MAX_TITLE - 1)}…` : line;
@@ -46,7 +46,7 @@ export function prBody(request: PrRequest, commits: string[]): string {
     commits.length ? `## Commits\n\n${commits.map((c) => `- ${c}`).join("\n")}` : "",
     request.evidence ?? "",
     request.inspection ?? "",
-    `Opened from Mothership by ${request.name} at ${request.console}.`,
+    `Opened from Spaceship by ${request.name} at ${request.console}.`,
   ]
     .filter(Boolean)
     .join("\n\n");
