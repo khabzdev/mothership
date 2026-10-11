@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { BRIEF_INSTRUCTIONS } from "../../src/features/briefs/model.ts";
+import { lessonsPrompt } from "../../src/features/debrief/model.ts";
 import type { CrewLauncher, LaunchRequest } from "../../src/features/crew/launcher.server.ts";
 import { parseHireInput, parsePromptInput } from "../../src/features/crew/model.ts";
 import { CrewService, type MissionEnd } from "../../src/features/crew/service.server.ts";
@@ -615,5 +616,60 @@ describe("shells and resuming", () => {
     launcher.failWith = new Error("Command not found: claude");
     await expect(service.resume(nova.id)).rejects.toThrow("Command not found");
     expect(service.member(nova.id).status).toBe("asleep");
+  });
+});
+
+describe("kept lessons", () => {
+  const kept = ["Run vp check first.", "Never touch the lockfile."];
+
+  beforeEach(() => {
+    service.lessonsWith((deckId) => (deckId === "deck-1" ? kept : []));
+  });
+
+  test("a hire carries the deck's kept lessons as instructions", async () => {
+    await hire(1);
+    expect(launcher.launches.at(-1)!.instructions).toBe(lessonsPrompt(kept));
+  });
+
+  test("a task hire has both the plan and the instructions", async () => {
+    await hire(1, "Add dark mode");
+    expect(launcher.launches.at(-1)).toMatchObject({
+      plan: { instructions: BRIEF_INSTRUCTIONS },
+      instructions: lessonsPrompt(kept),
+    });
+  });
+
+  test("a resume carries them too", async () => {
+    const nova = await hire(1);
+    service.handleExit(nova.id);
+    await service.resume(nova.id);
+    expect(launcher.launches.at(-1)!.instructions).toBe(lessonsPrompt(kept));
+  });
+
+  test("another deck's crew get none", async () => {
+    db.insert(decks).values({ id: "deck-2", name: "other", repoPath: scratch, modules: [] }).run();
+    await service.hire({ deckId: "deck-2", consoleId: 0, task: "x", worktree: false });
+    expect(launcher.launches.at(-1)).not.toHaveProperty("instructions");
+  });
+
+  test("a shell gets none", async () => {
+    await service.openShell({ deckId: "deck-1", consoleId: 6 });
+    expect(launcher.launches.at(-1)).not.toHaveProperty("instructions");
+  });
+
+  test("nothing kept means no instructions key", async () => {
+    service.lessonsWith(() => []);
+    await hire(1);
+    expect(launcher.launches.at(-1)).not.toHaveProperty("instructions");
+  });
+
+  test("control characters in a kept lesson never reach the launch", async () => {
+    service.lessonsWith(() => ["Run\x1b[2J \x9b31m the\ntests"]);
+    await hire(1);
+    const { instructions } = launcher.launches.at(-1)!;
+    expect(typeof instructions).toBe("string");
+    expect(instructions).toBe(lessonsPrompt(["Run [2J 31m the tests"]));
+    // eslint-disable-next-line no-control-regex
+    expect(instructions).not.toMatch(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/);
   });
 });

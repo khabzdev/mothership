@@ -15,15 +15,18 @@ export const PENDING_DAYS = 7;
 /** The block given to new crew; "" when nothing is kept. */
 export function lessonsPrompt(kept: string[]): string {
   if (kept.length === 0) return "";
+  // The station owns control-character safety: whatever is stored, the launch gets clean lines.
+  const lessons = kept.map(cleanLesson).filter(Boolean);
+  if (lessons.length === 0) return "";
   return [
     "Lessons from earlier missions on this repo (follow them):",
-    ...kept.map((l) => `- ${l}`),
+    ...lessons.map((l) => `- ${l}`),
   ].join("\n");
 }
 
 // Lessons are model-written and end up in an argv element and a terminal: no control characters.
 // oxlint-disable-next-line no-control-regex
-const CONTROL = /[\x00-\x1f\x7f]/g;
+const CONTROL = /[\x00-\x1f\x7f-\x9f]/g;
 
 /** `text` as one clean line, cut to LESSON_MAX code points (ellipsis included). */
 export function cleanLesson(text: string): string {

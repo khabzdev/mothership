@@ -19,9 +19,22 @@ describe("lessonsPrompt", () => {
   });
 });
 
+describe("lessonsPrompt cleaning", () => {
+  test("cleans every lesson and drops those left empty", () => {
+    expect(lessonsPrompt(["a\nb", " \x1b ", "c"])).toBe(
+      "Lessons from earlier missions on this repo (follow them):\n- a b\n- c",
+    );
+    expect(lessonsPrompt(["\x1b", ""])).toBe("");
+  });
+});
+
 describe("cleanLesson", () => {
   test("strips escapes, carriage returns and newlines", () => {
     expect(cleanLesson("Run\x1b[201~ the\r\ntests\nfirst")).toBe("Run [201~ the tests first");
+  });
+
+  test("strips C1 controls, including the single-character CSI", () => {
+    expect(cleanLesson("a\x9b31mb\x85c")).toBe("a 31mb c");
   });
 
   test("collapses spaces and trims", () => {

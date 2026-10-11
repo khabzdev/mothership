@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Db } from "../../shared/db/client.server";
 import { BRIEF_INSTRUCTIONS } from "../briefs/model";
+import { lessonsPrompt } from "../debrief/model";
 import { crew, decks } from "../../shared/db/schema";
 import { toolAction } from "./actions";
 import type { CrewLauncher } from "./launcher.server";
@@ -84,6 +85,7 @@ type Describe = (crewId: string) => {
 };
 type Busy = (crewId: string) => boolean;
 type Briefed = (crewId: string) => boolean;
+type Lessons = (deckId: string) => string[];
 
 function toInfo(row: Row, describe?: Describe): CrewInfo {
   const { preflight, brief, inspection, rank, patches } = describe?.(row.id) ?? {};
@@ -121,6 +123,7 @@ export class CrewService {
   #busy: Busy = () => false;
   #briefWaiting: Briefed = () => false;
   #briefUnapproved: Briefed = () => false;
+  #lessons: Lessons = () => [];
   /** Crew with a prompt typed by the station or the app, whose submit hook is still to come. */
   readonly #submitting = new Set<string>();
   /** Crew under a station alert, which stands until they work again. */
@@ -160,6 +163,18 @@ export class CrewService {
   /** Ask whether a crew member has briefs, none of them approved, so a resume plans again. */
   briefUnapprovedWith(fn: Briefed): void {
     this.#briefUnapproved = fn;
+  }
+
+  /** Ask for a deck's kept lessons, which every Claude launch there carries as instructions. */
+  lessonsWith(fn: Lessons): void {
+    this.#lessons = fn;
+  }
+
+  /** The `instructions` option for a launch: the deck's kept lessons; none for a shell. */
+  #lessonsFor(deckId: string, provider: string): { instructions?: string } {
+    if (provider !== "claude-code") return {};
+    const instructions = lessonsPrompt(this.#lessons(deckId));
+    return instructions ? { instructions } : {};
   }
 
   /** Whether a crew member's "needs you" is only Claude idling at its prompt (safe to type into). */
@@ -272,6 +287,7 @@ export class CrewService {
         cwd: row.cwd,
         ...(row.sessionId && !shell && { resume: row.sessionId }),
         ...(plan && { plan: { instructions: BRIEF_INSTRUCTIONS } }),
+        ...this.#lessonsFor(row.deckId, row.provider),
       });
     } catch (error) {
       this.#update(crewId, "asleep", { action: null, detail: null });
@@ -336,6 +352,7 @@ export class CrewService {
         // A task for Claude starts in plan mode: it writes a brief for you to approve first.
         ...(provider === "claude-code" &&
           input.task.trim() && { plan: { instructions: BRIEF_INSTRUCTIONS } }),
+        ...this.#lessonsFor(deck.id, provider),
       });
     } catch (error) {
       db.delete(crew).where(eq(crew.id, id)).run();

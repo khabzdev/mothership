@@ -22,6 +22,8 @@ export interface LaunchRequest {
   resume?: string;
   /** Start in plan mode with these instructions. */
   plan?: { instructions: string };
+  /** Standing instructions appended to the agent's system prompt. */
+  instructions?: string;
 }
 
 /** Starts crew processes and types into them. */
@@ -89,6 +91,7 @@ export class PtyCrewLauncher implements CrewLauncher, TerminalSource, ScreenSour
       hookToken: token,
       ...(request.resume && { resume: request.resume }),
       ...(request.plan && { plan: request.plan }),
+      ...(request.instructions && { instructions: request.instructions }),
     });
     try {
       await client.spawn({

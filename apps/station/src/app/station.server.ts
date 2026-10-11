@@ -131,6 +131,7 @@ export function getStation(): Station {
     }));
     crew.briefWaitingWith((crewId) => briefs.waiting(crewId));
     crew.briefUnapprovedWith((crewId) => briefs.unapproved(crewId));
+    crew.lessonsWith((deckId) => debriefs.kept(deckId));
     preflight.planningWith((crewId) => briefs.planning(crewId));
 
     onCrewSignal((event) => crew.handleSignal(event));
