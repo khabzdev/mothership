@@ -6,9 +6,10 @@ import { briefs, inspections, lessons, preflightResults, preflights } from "../.
 import { goalOf } from "../briefs/model";
 import type { MissionEnd } from "../crew/service.server";
 import { getDeck } from "../decks/decks.server";
-import type { Finding } from "../inspection/model";
+import { parseFindings } from "../inspection/model";
 import { REVIEW_TIMEOUT_MS, runReview, type RunReview } from "../inspection/runner.server";
 import type { ReviewSlot } from "../inspection/slot.server";
+import { missionId } from "../log/model";
 import type { CheckService } from "../preflight/checks.server";
 import type { RankService } from "../ranks/ranks.server";
 import { evidenceSummary, missionHadTrouble, type MissionEvidence } from "./evidence";
@@ -179,6 +180,7 @@ export class DebriefService {
           text,
           fromName: end.name,
           evidence: summary,
+          missionId: missionId(end.crewId, end.missionSince),
           createdAt: now,
         })),
       )
@@ -323,13 +325,4 @@ function toLesson(row: Row): Lesson {
     createdAt: row.createdAt,
     ...(row.settledAt !== null && { settledAt: row.settledAt }),
   };
-}
-
-function parseFindings(json: string): Finding[] {
-  try {
-    const parsed: unknown = JSON.parse(json);
-    return Array.isArray(parsed) ? (parsed as Finding[]) : [];
-  } catch {
-    return [];
-  }
 }

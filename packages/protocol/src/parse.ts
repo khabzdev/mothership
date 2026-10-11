@@ -138,6 +138,7 @@ export function parseServerMsg(raw: string): ServerMsg | null {
           }
         : null;
     case "deck.lessons":
+    case "deck.log":
       return isId(o.deckId) ? { type: o.type, deckId: o.deckId } : null;
     case "crew.promoted":
       return isId(o.deckId) &&

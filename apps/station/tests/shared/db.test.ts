@@ -14,6 +14,7 @@ import {
   inspections,
   lessons,
   missionPrs,
+  missions,
   preflightResults,
   preflights,
   serviceRecords,
@@ -65,6 +66,7 @@ describe("database", () => {
       "inspections",
       "lessons",
       "mission_prs",
+      "missions",
       "preflight_results",
       "preflights",
       "queue_tasks",
@@ -235,6 +237,47 @@ describe("database", () => {
     expect(db.select().from(missionPrs).all()).toEqual([]);
   });
 
+  test("missions are one per crew member and start, check how they ended, and go with their deck", () => {
+    const d = deck();
+    const row = {
+      id: "c1:5",
+      deckId: d.id,
+      crewId: "c1",
+      name: "Nova",
+      task: "Add dark mode",
+      startedAt: 5,
+      endedAt: 9,
+      how: "pr" as const,
+    };
+    db.insert(missions).values(row).run();
+    expect(db.select().from(missions).get()).toMatchObject({ prUrl: null, branch: null });
+    expect(() =>
+      db
+        .insert(missions)
+        .values({ ...row, id: "other" })
+        .run(),
+    ).toThrow(/UNIQUE/);
+    expect(() =>
+      db
+        .insert(missions)
+        .values({ ...row, id: "c1:6", startedAt: 6, how: "lost" as never })
+        .run(),
+    ).toThrow(/CHECK/);
+    db.delete(decks).where(eq(decks.id, d.id)).run();
+    expect(db.select().from(missions).all()).toEqual([]);
+  });
+
+  test("migration 0013 adds missions and lessons.mission_id", () => {
+    const client = new Database(":memory:");
+    migrate(drizzle(client), { migrationsFolder });
+    const cols = client.prepare("pragma table_info(lessons)").all() as { name: string }[];
+    expect(cols.map((c) => c.name)).toContain("mission_id");
+    const indexes = client.prepare("pragma index_list(missions)").all() as { name: string }[];
+    expect(indexes.map((i) => i.name)).toEqual(
+      expect.arrayContaining(["missions_deck_idx", "missions_crew_started_unique"]),
+    );
+  });
+
   test("a new crew member starts a mission at 0", () => {
     expect(member(deck().id).missionSince).toBe(0);
   });
@@ -246,9 +289,7 @@ describe("database", () => {
     const journalPath = join(folder, "meta", "_journal.json");
     const journal = JSON.parse(readFileSync(journalPath, "utf8"));
     const full = JSON.stringify(journal);
-    journal.entries = journal.entries.filter(
-      (e: { tag: string }) => e.tag !== "0011_debrief" && e.tag !== "0012_reconcile",
-    );
+    journal.entries = journal.entries.filter((e: { idx: number }) => e.idx <= 10);
     expect(journal.entries.at(-1).tag).toBe("0010_brief_task");
     writeFileSync(journalPath, JSON.stringify(journal));
 
@@ -301,7 +342,7 @@ describe("database", () => {
     const journalPath = join(folder, "meta", "_journal.json");
     const journal = JSON.parse(readFileSync(journalPath, "utf8"));
     const full = JSON.stringify(journal);
-    journal.entries = journal.entries.filter((e: { tag: string }) => e.tag !== "0012_reconcile");
+    journal.entries = journal.entries.filter((e: { idx: number }) => e.idx <= 11);
     expect(journal.entries.at(-1).tag).toBe("0011_debrief");
     writeFileSync(journalPath, JSON.stringify(journal));
 

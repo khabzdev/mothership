@@ -14,6 +14,16 @@ export interface Finding {
   why: string;
 }
 
+/** Stored findings (JSON `Finding[]`); anything unreadable is none. */
+export function parseFindings(json: string): Finding[] {
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as Finding[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 /** The most findings an inspection keeps. */
 export const MAX_FINDINGS = 10;
 

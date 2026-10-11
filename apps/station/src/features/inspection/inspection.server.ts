@@ -13,7 +13,7 @@ import { afterVerdict } from "../preflight/flight";
 import type { PreflightService } from "../preflight/preflight.server";
 import { homeRefOf } from "../changes/git.server";
 import { readInspectionDiff } from "./diff.server";
-import { flaggedDetail, inspectionHandBack, type Finding } from "./model";
+import { flaggedDetail, inspectionHandBack, parseFindings, type Finding } from "./model";
 import { parseReview, reviewFailure, reviewPrompt } from "./review";
 import { REVIEW_TIMEOUT_MS, runReview, type RunReview } from "./runner.server";
 import { scopeCheck, type ChangedStat } from "./scope";
@@ -550,13 +550,4 @@ function toRecord(row: Row): InspectionRecord {
     startedAt: row.startedAt,
     ...(row.finishedAt !== null && { finishedAt: row.finishedAt }),
   };
-}
-
-function parseFindings(json: string): Finding[] {
-  try {
-    const parsed: unknown = JSON.parse(json);
-    return Array.isArray(parsed) ? (parsed as Finding[]) : [];
-  } catch {
-    return [];
-  }
 }

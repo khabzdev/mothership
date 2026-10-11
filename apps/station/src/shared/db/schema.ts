@@ -272,6 +272,8 @@ export const lessons = sqliteTable(
     fromName: text("from_name").notNull(),
     /** What it was drawn from, plain text. */
     evidence: text("evidence").notNull().default(""),
+    /** The logged mission it was drafted from (`missionId`); null for older lessons. */
+    missionId: text("mission_id"),
     createdAt: integer("created_at").notNull().default(now),
     settledAt: integer("settled_at"),
   },
@@ -316,3 +318,35 @@ export const missionPrs = sqliteTable("mission_prs", {
   /** When it was seen closed without merging; it then leaves the reconcile. */
   closedAt: integer("closed_at"),
 });
+
+export const MISSION_ENDS = ["pr", "home"] as const;
+
+/**
+ * One ended mission, for the captain's log: its id is `missionId(crewId, startedAt)`, and its
+ * evidence is read from the crew member's rows between `startedAt` and `endedAt`. Kept after the
+ * crew member leaves.
+ */
+export const missions = sqliteTable(
+  "missions",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    /** No foreign key: the crew row is deleted on send-home. */
+    crewId: text("crew_id").notNull(),
+    name: text("name").notNull(),
+    /** The task's first line, at most 200 characters. */
+    task: text("task").notNull(),
+    startedAt: integer("started_at").notNull(),
+    endedAt: integer("ended_at").notNull(),
+    how: text("how", { enum: MISSION_ENDS }).notNull(),
+    prUrl: text("pr_url"),
+    branch: text("branch"),
+  },
+  (t) => [
+    unique("missions_crew_started_unique").on(t.crewId, t.startedAt),
+    index("missions_deck_idx").on(t.deckId, t.endedAt),
+    check("missions_how_check", oneOf("how", MISSION_ENDS)),
+  ],
+);

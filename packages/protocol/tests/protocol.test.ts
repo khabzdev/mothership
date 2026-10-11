@@ -45,6 +45,7 @@ describe("types", () => {
       | "deck.checks"
       | "deck.clones"
       | "deck.lessons"
+      | "deck.log"
       | "crew.promoted"
       | "deck.debrief"
       | "pr.merged"
@@ -204,6 +205,7 @@ describe("parseServerMsg", () => {
     },
     { type: "pr.merged", deckId: "d1", number: 7, title: "Add toggle", crewId: "c1" },
     { type: "deck.lessons", deckId: "d1" },
+    { type: "deck.log", deckId: "d1" },
     { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", rank: "Ensign" },
     { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", patch: "clean-sheet" },
     { type: "deck.debrief", deckId: "d1", name: "Nova", drafted: 2 },
@@ -283,6 +285,7 @@ describe("parseServerMsg", () => {
   test("rejects malformed debrief messages", () => {
     const msg = (m: object) => JSON.stringify(m);
     expect(parseServerMsg(msg({ type: "deck.lessons" }))).toBeNull();
+    expect(parseServerMsg(msg({ type: "deck.log", deckId: 7 }))).toBeNull();
     expect(parseServerMsg(msg({ type: "crew.promoted", deckId: "d1", name: "Nova" }))).toBeNull();
     expect(
       parseServerMsg(

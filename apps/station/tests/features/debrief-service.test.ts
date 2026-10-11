@@ -11,6 +11,8 @@ import { BriefService } from "../../src/features/briefs/briefs.server.ts";
 import type { CrewLauncher } from "../../src/features/crew/launcher.server.ts";
 import { CrewService, type MissionEnd } from "../../src/features/crew/service.server.ts";
 import { DebriefService } from "../../src/features/debrief/debrief.server.ts";
+import { MissionLog } from "../../src/features/log/log.server.ts";
+import { missionId } from "../../src/features/log/model.ts";
 import { PENDING_DAYS } from "../../src/features/debrief/model.ts";
 import { InspectionService } from "../../src/features/inspection/inspection.server.ts";
 import type { ReviewRun, RunReview } from "../../src/features/inspection/runner.server.ts";
@@ -206,6 +208,22 @@ describe("DebriefService drafting", () => {
     ]);
     expect(debrief.pendingCount("deck-1")).toBe(1);
     expect(checks.message("deck-1")).toMatchObject({ lessonsPending: 1 });
+  });
+
+  test("drafted lessons are tagged with their mission and show in its log entry", async () => {
+    const log = new MissionLog({ db, broadcast: (msg) => sent.push(msg) });
+    crew.onMissionEnd((end) => log.onMissionEnd(end));
+    const nova = await hire();
+    const since = row(nova.id).missionSince;
+    nogo(nova.id);
+    answers = [drafted([LESSON])];
+    pr(nova.id);
+    await vi.waitFor(() => expect(debriefs()).toHaveLength(1));
+    const id = missionId(nova.id, since);
+    expect(db.select().from(lessons).get()?.missionId).toBe(id);
+    expect(log.entry(id)?.lessons).toEqual([
+      { id: expect.any(String), text: LESSON, state: "pending" },
+    ]);
   });
 
   test("a flagged inspection and a revised brief count as trouble too", async () => {

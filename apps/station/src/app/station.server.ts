@@ -13,6 +13,7 @@ import { announceLaunch, GitHubBoards } from "../features/github/github.server";
 import { InspectionService } from "../features/inspection/inspection.server";
 import { ReviewSlot } from "../features/inspection/slot.server";
 import { QueueService } from "../features/queue/queue.server";
+import { MissionLog } from "../features/log/log.server";
 import { RankService } from "../features/ranks/ranks.server";
 import { getDeck } from "../features/decks/decks.server";
 import { LabelService } from "../features/labels/labels.server";
@@ -45,6 +46,7 @@ interface Station {
   inspections: InspectionService;
   ranks: RankService;
   debrief: DebriefService;
+  log: MissionLog;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -102,6 +104,9 @@ export function getStation(): Station {
     });
     const debriefs = debrief;
     crew.onMissionEnd((end) => debriefs.onMissionEnd(end));
+    // The captain's log: each ended mission with its evidence, after ranks and the debrief.
+    const log = new MissionLog({ db: getDb(), broadcast: (msg) => hub.broadcast(msg) });
+    crew.onMissionEnd((end) => log.onMissionEnd(end));
 
     // Briefs: the plans Claude submits in plan mode; Y and N answer its approval dialog.
     const briefs = new BriefService({
@@ -239,6 +244,7 @@ export function getStation(): Station {
       inspections,
       ranks,
       debrief: debriefs,
+      log,
       diagnostics,
     };
   })();

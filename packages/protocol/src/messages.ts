@@ -207,6 +207,8 @@ export type ServerMsg =
   | { type: "deck.clones"; clones: CloneInfo[] }
   /** A deck's lessons changed. */
   | { type: "deck.lessons"; deckId: DeckId }
+  /** A deck's captain's log changed: a mission was logged, or one's outcome or lessons moved. */
+  | { type: "deck.log"; deckId: DeckId }
   /** A call sign was promoted and/or earned a patch. */
   | {
       type: "crew.promoted";
