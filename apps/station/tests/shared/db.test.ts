@@ -287,11 +287,12 @@ describe("database", () => {
     ]);
   });
 
-  test("migration 0012 adds merged_at to mission_prs", () => {
+  test("migration 0012 adds merged_at and closed_at to mission_prs", () => {
     const client = new Database(":memory:");
     migrate(drizzle(client), { migrationsFolder });
     const cols = client.prepare("pragma table_info(mission_prs)").all() as { name: string }[];
     expect(cols.map((c) => c.name)).toContain("merged_at");
+    expect(cols.map((c) => c.name)).toContain("closed_at");
   });
 
   test("migration 0012 marks pull requests already credited before it", () => {
@@ -317,8 +318,8 @@ describe("database", () => {
     writeFileSync(journalPath, full);
     migrate(old, { migrationsFolder: folder });
 
-    expect(client.prepare("select opened_at, merged_at from mission_prs").all()).toEqual([
-      { opened_at: 1234, merged_at: 1234 },
-    ]);
+    expect(client.prepare("select opened_at, merged_at, closed_at from mission_prs").all()).toEqual(
+      [{ opened_at: 1234, merged_at: 1234, closed_at: null }],
+    );
   });
 });

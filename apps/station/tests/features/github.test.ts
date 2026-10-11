@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 import {
   announceLaunch,
   GitHubBoards,
@@ -175,11 +175,59 @@ describe("merge reconcile", () => {
     rows: { url: string; branch: string }[],
   ) {
     const gh = fakeGh(state);
-    const boards = new GitHubBoards(gh.run, { unmerged: () => rows, now: () => NOW });
+    const closed: [string, string][] = [];
+    const boards = new GitHubBoards(gh.run, {
+      unmerged: () => rows,
+      closed: (deckId, u) => closed.push([deckId, u]),
+      now: () => NOW,
+    });
     const launches: Launch[] = [];
     boards.onLaunch((l) => launches.push(l));
-    return { boards, launches, viewed: gh.viewed };
+    return { boards, launches, viewed: gh.viewed, closed };
   }
+
+  test("a mission PR closed in the lists is marked closed, not looked up", async () => {
+    const { boards, launches, viewed, closed } = setup({ pulls: [pr(7, "CLOSED")] }, [
+      { url: url(7), branch: "mission/7" },
+    ]);
+    await boards.board("d", "/repo");
+    await flush();
+    expect(closed).toEqual([["d", url(7)]]);
+    expect(viewed).toEqual([]);
+    expect(launches).toEqual([]);
+  });
+
+  test("a looked-up mission PR that closed unmerged is marked closed", async () => {
+    const { boards, closed } = setup(
+      { pulls: [], views: { [url(8)]: async () => pr(8, "CLOSED") } },
+      [{ url: url(8), branch: "mission/8" }],
+    );
+    await boards.board("d", "/repo");
+    await flush();
+    expect(closed).toEqual([["d", url(8)]]);
+  });
+
+  test("a failing launch listener is not mistaken for a failed lookup", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { boards, viewed } = setup(
+      {
+        pulls: [],
+        views: { [url(7)]: async () => pr(7, "MERGED"), [url(8)]: async () => pr(8, "MERGED") },
+      },
+      [
+        { url: url(7), branch: "mission/7" },
+        { url: url(8), branch: "mission/8" },
+      ],
+    );
+    boards.onLaunch(() => {
+      throw new Error("credit failed");
+    });
+    await boards.board("d", "/repo");
+    await flush();
+    expect(viewed).toEqual([url(7)]);
+    expect(warn).toHaveBeenCalledWith("[github] reconcile failed:", expect.any(Error));
+    warn.mockRestore();
+  });
 
   test("a mission PR merged an hour ago is credited on the first fetch, not recent", async () => {
     const mergedAt = new Date(NOW - 60 * MIN).toISOString();
@@ -328,6 +376,14 @@ describe("launch announcement", () => {
     announce({ deckId: "d", pull, recent: false });
     expect(credited).toEqual([["d", { url: "u", branch: "b", mergedAt: pull.mergedAt }]]);
     expect(sent).toEqual([]);
+  });
+
+  test("a merge without a merge time credits without one", () => {
+    const { announce, credited } = wire();
+    const { mergedAt: _, ...untimed } = pull;
+    announce({ deckId: "d", pull: untimed, recent: true });
+    expect(credited).toEqual([["d", { url: "u", branch: "b" }]]);
+    expect(Object.keys((credited[0] as [string, object])[1])).not.toContain("mergedAt");
   });
 
   test("a recent merge credits and plays the show from its console", () => {

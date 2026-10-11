@@ -313,6 +313,34 @@ describe("RankService", () => {
     expect(ranks.unmerged("deck-2", now)).toEqual([]);
   });
 
+  test("a pull request closed without merging leaves the reconcile", async () => {
+    const nova = await hire();
+    const now = Date.now();
+    for (const n of [1, 2])
+      db.insert(missionPrs)
+        .values({
+          url: `https://gh/pr/${n}`,
+          deckId: "deck-1",
+          name: nova.name,
+          branch: `b${n}`,
+          openedAt: now - n,
+        })
+        .run();
+    ranks.onClosed("deck-1", "https://gh/pr/1");
+    ranks.onClosed("deck-2", "https://gh/pr/2");
+    expect(ranks.unmerged("deck-1", now).map((r) => r.url)).toEqual(["https://gh/pr/2"]);
+    expect(ranks.onMerged("deck-1", { url: "https://gh/pr/2", branch: "" })).toBe(true);
+    ranks.onClosed("deck-1", "https://gh/pr/2");
+    const closedAt = (n: number) =>
+      db
+        .select()
+        .from(missionPrs)
+        .all()
+        .find((r) => r.url === `https://gh/pr/${n}`)?.closedAt;
+    expect(closedAt(1)).toEqual(expect.any(Number));
+    expect(closedAt(2)).toBeNull();
+  });
+
   test("an unknown pull request changes nothing", async () => {
     await hire();
     sent = [];

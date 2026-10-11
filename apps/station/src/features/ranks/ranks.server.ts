@@ -166,7 +166,23 @@ export class RankService {
     return true;
   }
 
-  /** Pull requests opened in the last 30 days not yet seen merged, oldest first. */
+  /** A pull request closed without merging: it leaves the reconcile (merged ones stay as they are). */
+  onClosed(deckId: string, url: string): void {
+    this.#db
+      .update(missionPrs)
+      .set({ closedAt: Date.now() })
+      .where(
+        and(
+          eq(missionPrs.deckId, deckId),
+          eq(missionPrs.url, url),
+          isNull(missionPrs.mergedAt),
+          isNull(missionPrs.closedAt),
+        ),
+      )
+      .run();
+  }
+
+  /** Pull requests opened in the last 30 days not yet seen merged or closed, oldest first. */
   unmerged(deckId: string, now: number): { url: string; branch: string; openedAt: number }[] {
     return this.#db
       .select({ url: missionPrs.url, branch: missionPrs.branch, openedAt: missionPrs.openedAt })
@@ -175,6 +191,7 @@ export class RankService {
         and(
           eq(missionPrs.deckId, deckId),
           isNull(missionPrs.mergedAt),
+          isNull(missionPrs.closedAt),
           gte(missionPrs.openedAt, now - RECONCILE_DAYS * 24 * 60 * 60 * 1000),
         ),
       )

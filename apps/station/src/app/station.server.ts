@@ -194,7 +194,10 @@ export function getStation(): Station {
       if (list.length) hub.send(peer, { type: "deck.clones", clones: list });
     });
     // A pull request that merged: credited to the call sign; the launch klaxon when it's recent.
-    const boards = new GitHubBoards(undefined, { unmerged: (d, now) => ranks.unmerged(d, now) });
+    const boards = new GitHubBoards(undefined, {
+      unmerged: (d, now) => ranks.unmerged(d, now),
+      closed: (d, url) => ranks.onClosed(d, url),
+    });
     boards.onLaunch(
       announceLaunch({
         roster: (deckId) => crew.roster(deckId),

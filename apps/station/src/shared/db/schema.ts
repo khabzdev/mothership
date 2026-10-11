@@ -313,4 +313,6 @@ export const missionPrs = sqliteTable("mission_prs", {
   openedAt: integer("opened_at").notNull().default(now),
   /** When its merge was credited; null until then, so a merge counts once. */
   mergedAt: integer("merged_at"),
+  /** When it was seen closed without merging; it then leaves the reconcile. */
+  closedAt: integer("closed_at"),
 });

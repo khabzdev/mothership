@@ -95,6 +95,8 @@ export interface Launch {
 interface Options {
   /** The deck's mission PRs not yet credited as merged, oldest first. */
   unmerged?: (deckId: string, now: number) => { url: string; branch: string }[];
+  /** A mission PR seen closed without merging, so it stops being looked up. */
+  closed?: (deckId: string, url: string) => void;
   now?: () => number;
 }
 
@@ -133,6 +135,7 @@ export class GitHubBoards {
   readonly #inflight = new Map<string, Promise<BoardData>>();
   readonly #launchListeners = new Set<(launch: Launch) => void>();
   readonly #unmerged: NonNullable<Options["unmerged"]>;
+  readonly #closed: NonNullable<Options["closed"]>;
   readonly #now: () => number;
   /** Decks with a reconcile still looking things up (one at a time, so a merge is told once). */
   readonly #reconciling = new Set<string>();
@@ -140,6 +143,7 @@ export class GitHubBoards {
   constructor(ghRunner: Gh = gh, options: Options = {}) {
     this.#gh = ghRunner;
     this.#unmerged = options.unmerged ?? (() => []);
+    this.#closed = options.closed ?? (() => {});
     this.#now = options.now ?? Date.now;
   }
 
@@ -321,17 +325,20 @@ export class GitHubBoards {
           board.pulls.find((p) => !!row.url && p.url === row.url) ??
           board.pulls.find((p) => !!row.branch && p.headRefName === row.branch);
         if (pull?.state === "MERGED") merge(pull);
+        else if (pull?.state === "CLOSED") this.#closed(deckId, row.url || pull.url);
         else if (!pull && row.url) missing.push(row.url);
       }
       for (const url of missing.slice(0, RECONCILE_LOOKUPS)) {
+        let pull: GhPull;
         try {
-          const pull = toPull(
+          pull = toPull(
             JSON.parse(await this.#gh(["pr", "view", url, "--json", VIEW_FIELDS], cwd)) as Raw,
           );
-          if (pull.state === "MERGED") merge(pull);
         } catch {
-          // Not found, offline, signed out: tried again on a later fetch.
+          continue; // Not found, offline, signed out: tried again on a later fetch.
         }
+        if (pull.state === "MERGED") merge(pull);
+        else if (pull.state === "CLOSED") this.#closed(deckId, url);
       }
     } catch (error) {
       console.warn("[github] reconcile failed:", error);
