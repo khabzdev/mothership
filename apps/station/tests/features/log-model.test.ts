@@ -131,9 +131,11 @@ describe("missionVerdict", () => {
       }),
     ).toEqual({ kind: "clean", line: "Clean" });
     const home = { ...merged, outcome: "home" as const, firstGo: null, firstClear: null };
-    expect(missionVerdict(home)).toEqual({
+    // A mission sent home never launched, so skipped gates aren't trouble on it.
+    expect(missionVerdict(home)).toEqual({ kind: "home", line: "Sent home" });
+    expect(missionVerdict({ ...home, nogos: 1 })).toEqual({
       kind: "home",
-      line: "Sent home: launched without a GO · not inspected",
+      line: "Sent home: 1 NO-GO",
     });
     expect(missionVerdict({ ...home, checksArmed: false, inspectorOn: false })).toEqual({
       kind: "home",

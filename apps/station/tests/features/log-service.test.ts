@@ -490,16 +490,13 @@ describe("MissionLog entries", () => {
     });
   });
 
-  test("sent home with gates on and nothing passed says what was skipped", async () => {
+  test("sent home with gates on and nothing run doesn't claim a launch", async () => {
     gates = { checks: true, inspector: true };
     const nova = await hire();
     brief(nova.id, 1, "approved", T0 + 1);
     vi.setSystemTime(T0 + 100);
     await crew.sendHome(nova.id, "keep");
-    expect(log.list("deck-1")[0]!.verdict).toEqual({
-      kind: "home",
-      line: "Sent home: launched without a GO · not inspected",
-    });
+    expect(log.list("deck-1")[0]!.verdict).toEqual({ kind: "home", line: "Sent home" });
   });
 
   test("a brief never approved keeps a merge from being clean", async () => {

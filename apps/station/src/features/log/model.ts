@@ -73,9 +73,14 @@ export function missionVerdict(v: VerdictInput): { kind: VerdictKind; line: stri
     v.nogos > 0 && `${v.nogos} NO-GO`,
     v.flags > 0 && `flagged ${v.flags}×`,
     v.inspectorFailed && "Inspector couldn't run",
-    // A gate that was on but never passed: O forced past it, or it never ran.
-    v.firstGo === null && v.checksArmed && "launched without a GO",
-    v.firstClear === null && v.inspectorOn && !v.inspectorFailed && "not inspected",
+    // A gate that was on but never passed: O forced past it, or it never ran. Only a merge
+    // launched; a mission sent home skipped nothing.
+    v.outcome === "merged" && v.firstGo === null && v.checksArmed && "launched without a GO",
+    v.outcome === "merged" &&
+      v.firstClear === null &&
+      v.inspectorOn &&
+      !v.inspectorFailed &&
+      "not inspected",
     v.briefRevised && "brief revised",
   ]
     .filter((p): p is string => !!p)
