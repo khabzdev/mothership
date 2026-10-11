@@ -30,6 +30,10 @@ import { Icon } from "../../shared/ui/Icon";
 import { resumeCrew, sendHomeCrew } from "../crew/crew.functions";
 import { hireMutation, promptMutation, rosterQuery } from "../crew/queries";
 import { TerminalPanel } from "../crew/ui/TerminalPanel";
+import { MAX_KEPT_LESSONS } from "../debrief/model";
+import { lessonMutation, lessonsQuery, type LessonAction } from "../debrief/queries";
+import type { Lesson } from "../debrief/debrief.server";
+import { useDebriefNews } from "../debrief/ui/useDebriefNews";
 import { decksQuery } from "../decks/queries";
 import { REASON_MAX } from "../briefs/model";
 import { approveBriefMutation, briefQuery, reviseBriefMutation } from "../briefs/queries";
@@ -40,7 +44,9 @@ import { FindingList } from "../inspection/ui/FindingList";
 import { InspectorSwitch } from "../inspection/ui/InspectorSwitch";
 import { useInspectionNews } from "../inspection/ui/useInspectionNews";
 import { preflightChip } from "../preflight/model";
-import { preflightQuery, runPreflightMutation } from "../preflight/queries";
+import { checksQuery, preflightQuery, runPreflightMutation } from "../preflight/queries";
+import { RankChevrons } from "../ranks/ui/RankChevrons";
+import { ServiceRecordWindow } from "../ranks/ui/ServiceRecordWindow";
 import { useDeckChoice } from "../world/deck-choice";
 import { CONSOLES } from "../world/layout";
 import { StatusBadge } from "../world/ui/StatusBadge";
@@ -272,6 +278,117 @@ function LiteInspection({ member }: { member: CrewInfo }) {
   );
 }
 
+const NO_LESSONS: Lesson[] = [];
+
+/** The deck's debrief lessons: Keep or Drop what waits, Retire what is kept. */
+function LiteLessons({ deckId }: { deckId: string }) {
+  const queryClient = useQueryClient();
+  const { data: checks } = useQuery(checksQuery(deckId));
+  const [open, setOpen] = useState(false);
+  // The lessons are only read while the section is open.
+  const { data } = useQuery({ ...lessonsQuery(deckId), enabled: open });
+  const answer = useMutation(lessonMutation(queryClient, deckId));
+  const pending = data?.pending ?? NO_LESSONS;
+  const kept = data?.kept ?? NO_LESSONS;
+  const waiting = checks?.lessonsPending ?? 0;
+
+  const act = (action: LessonAction, lessonId: string) =>
+    answer.mutate(
+      { action, lessonId },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) notify(result.message, "warning");
+        },
+        onError: (e: Error) => notify(e.message, "error"),
+      },
+    );
+
+  const row = (lesson: Lesson, actions: [label: string, action: LessonAction][]) => (
+    <li key={lesson.id} className="lite-lessons__item">
+      <span className="lite-lessons__text">{lesson.text}</span>
+      <span className="muted">from {lesson.fromName}</span>
+      <div className="lite-lessons__actions">
+        {actions.map(([label, action]) => (
+          <Button
+            key={action}
+            size="sm"
+            variant={action === "keep" ? "primary" : "secondary"}
+            disabled={answer.isPending}
+            onClick={() => act(action, lesson.id)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+    </li>
+  );
+
+  return (
+    <section className="lite-lessons" aria-label="Lessons">
+      <Button
+        variant="ghost"
+        className="lite-lessons__chip"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <strong>Lessons</strong>
+        {waiting > 0 && (
+          <Badge variant="warning" appearance="dot">
+            {waiting} to review
+          </Badge>
+        )}
+      </Button>
+      {open && (
+        <div className="lite-lessons__sheet">
+          {!data && <p className="muted">Loading…</p>}
+          {data && !pending.length && !kept.length && (
+            <p className="muted">No lessons yet. A mission that hits trouble drafts some here.</p>
+          )}
+          {pending.length > 0 && (
+            <ul className="lite-lessons__list" aria-label="To review">
+              {pending.map((l) =>
+                row(l, [
+                  ["Drop", "drop"],
+                  ["Keep", "keep"],
+                ]),
+              )}
+            </ul>
+          )}
+          {kept.length > 0 && (
+            <>
+              <p className="muted">
+                Kept · {kept.length} of {MAX_KEPT_LESSONS}
+              </p>
+              <ul className="lite-lessons__list" aria-label="Kept">
+                {kept.map((l) => row(l, [["Retire", "retire"]]))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** The call sign's service record on this deck, as a chip that opens it. */
+function LiteRecord({ member }: { member: CrewInfo }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="lite-record" aria-label="Service record">
+      <Button
+        variant="ghost"
+        className="lite-record__chip"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <RankChevrons title={member.rank?.title} />
+        <strong>{member.rank?.title ?? "Service record"}</strong>
+      </Button>
+      {open && <ServiceRecordWindow member={member} />}
+    </section>
+  );
+}
+
 function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) {
   const { client } = useRealtime();
   const prompt = useMutation(promptMutation());
@@ -318,6 +435,7 @@ function CrewView({ member, onBack }: { member: CrewInfo; onBack: () => void }) 
       </div>
       {member.brief && <LiteBrief member={member} brief={member.brief} />}
       {member.inspection && <LiteInspection member={member} />}
+      {member.kind === "agent" && <LiteRecord member={member} />}
       {member.kind === "agent" && <LitePreflight member={member} />}
       <div className="lite-keys" role="toolbar" aria-label="Terminal keys">
         {KEYS.map(([label, data]) => (
@@ -473,6 +591,7 @@ function LiteDeck({
   const needs = crew.filter((c) => c.status === "needs_input").length;
   const done = crew.filter((c) => c.status === "done").length;
   useInspectionNews(deckId, crew);
+  useDebriefNews(deckId);
 
   return (
     <Toasty toastManager={toasts}>
@@ -504,6 +623,12 @@ function LiteDeck({
                     <span className="dot" style={{ "--dot": c.color } as CSSProperties} />
                     <span className="lite-list__who">
                       <strong>{c.name}</strong>
+                      {c.rank && (
+                        <span className="lite-list__rank muted">
+                          <RankChevrons title={c.rank.title} />
+                          {c.rank.title}
+                        </span>
+                      )}
                       <span className="muted">
                         {CONSOLES[c.consoleId]?.label} ·{" "}
                         {c.status === "needs_input" && c.detail
@@ -537,6 +662,7 @@ function LiteDeck({
             <section className="lite-deck" aria-label="Deck settings">
               <InspectorSwitch deckId={deckId} />
             </section>
+            <LiteLessons deckId={deckId} />
             <HireForm deckId={deckId} crew={crew} />
           </>
         )}

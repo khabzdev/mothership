@@ -1656,6 +1656,52 @@ kbd {
   color: var(--text-color-kumo-subtle);
 }
 
+.lite-lessons,
+.lite-lessons__sheet,
+.lite-lessons__list,
+.lite-record {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lite-lessons__chip,
+.lite-record__chip {
+  justify-self: start;
+}
+
+.lite-lessons__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lite-lessons__item {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-kumo-recessed);
+}
+
+.lite-lessons__text,
+.lite-lessons__item .muted {
+  overflow-wrap: anywhere;
+}
+
+.lite-lessons__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.lite-list__rank {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--text-xs);
+}
+
 .lite-list__who,
 .lite-crew__who {
   display: grid;
