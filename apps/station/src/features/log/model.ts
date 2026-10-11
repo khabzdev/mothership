@@ -97,3 +97,22 @@ export function endedAgo(ms: number): string {
   const hours = Math.floor(minutes / 60);
   return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
 }
+
+/** Where a mission sits in the list: the selected one's place, or the first when it's gone. */
+export function selectionIndex(ids: string[], selectedId: string | null): number {
+  return Math.max(selectedId === null ? 0 : ids.indexOf(selectedId), 0);
+}
+
+/**
+ * The mission selected after moving `delta` rows from `selectedId`, clamped to the list. By id, so
+ * a mission logged above the selected one doesn't change what you're reading.
+ */
+export function stepSelection(
+  ids: string[],
+  selectedId: string | null,
+  delta: number,
+): string | undefined {
+  if (!ids.length) return undefined;
+  const at = selectionIndex(ids, selectedId) + delta;
+  return ids[Math.min(Math.max(at, 0), ids.length - 1)];
+}

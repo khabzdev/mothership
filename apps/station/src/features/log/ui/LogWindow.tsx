@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { RankChevrons } from "../../ranks/ui/RankChevrons";
 import type { MissionSummary } from "../log.server";
-import { endedAgo } from "../model";
+import { endedAgo, selectionIndex, stepSelection } from "../model";
 import { logQuery, missionQuery } from "../queries";
 import { MissionEntryView, VERDICT_TONE } from "./MissionEntry";
 
@@ -36,12 +36,17 @@ export function LogWindow({ deckId }: { deckId: string }) {
     logQuery(deckId),
   );
   const missions = data?.pages.flat() ?? NO_MISSIONS;
-  const [index, setIndex] = useState(0);
-  const at = Math.min(index, Math.max(missions.length - 1, 0));
+  // By id: a mission logged while the window is open lands above, not in place of, this one.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const ids = missions.map((m) => m.id);
+  const at = selectionIndex(ids, selectedId);
   const selected = missions[at];
   /** The mission whose NO-GO output is showing, if any: Enter toggles it, moving on hides it. */
   const [shownFor, setShownFor] = useState<string | null>(null);
   const showOutput = !!selected && shownFor === selected.id;
+  // Shares the entry's cache: whether Enter has any output to show.
+  const entry = useQuery({ ...missionQuery(deckId, selected?.id ?? ""), enabled: !!selected });
+  const hasNogo = !!entry.data?.preflights.some((r) => r.state === "nogo");
 
   const rows = useRef<HTMLUListElement>(null);
   useEffect(() => {
@@ -49,8 +54,8 @@ export function LogWindow({ deckId }: { deckId: string }) {
   }, [at]);
 
   // ↑/↓, Enter and O never reach game keys or the window behind.
-  const keys = useRef({ selected, count: missions.length });
-  keys.current = { selected, count: missions.length };
+  const keys = useRef({ selected, ids, hasNogo });
+  keys.current = { selected, ids, hasNogo };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const step = e.code === "ArrowDown" ? 1 : e.code === "ArrowUp" ? -1 : 0;
@@ -64,15 +69,20 @@ export function LogWindow({ deckId }: { deckId: string }) {
       if (enter && target?.closest("a, [data-native-enter]")) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      const { selected, count } = keys.current;
+      const { selected, ids, hasNogo } = keys.current;
       if (step) {
-        if (count) setIndex((i) => Math.min(Math.max(Math.min(i, count - 1) + step, 0), count - 1));
+        const next = stepSelection(ids, selected?.id ?? null, step);
+        if (next) setSelectedId(next);
         return;
       }
       // A held key acts once.
       if (e.repeat || !selected) return;
-      if (enter) setShownFor((id) => (id === selected.id ? null : selected.id));
-      else if (selected.prUrl) window.open(selected.prUrl, "_blank", "noopener,noreferrer");
+      if (enter) {
+        // Enter on a mission row reached with Tab chooses that one.
+        const row = target?.closest<HTMLElement>("[data-mission]")?.dataset.mission;
+        if (row && row !== selected.id) setSelectedId(row);
+        else if (hasNogo) setShownFor((id) => (id === selected.id ? null : selected.id));
+      } else if (selected.prUrl) window.open(selected.prUrl, "_blank", "noopener,noreferrer");
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -96,8 +106,9 @@ export function LogWindow({ deckId }: { deckId: string }) {
               <button
                 type="button"
                 className="log__mission"
+                data-mission={m.id}
                 aria-selected={i === at}
-                onClick={() => setIndex(i)}
+                onClick={() => setSelectedId(m.id)}
               >
                 <span className="log__who">
                   <span className="log__name">{m.name}</span>
@@ -129,8 +140,13 @@ export function LogWindow({ deckId }: { deckId: string }) {
       </div>
       <footer className="log__foot">
         <span className="log__meta">
-          <kbd>↑</kbd> <kbd>↓</kbd> choose · <kbd>Enter</kbd>{" "}
-          {showOutput ? "hide the output" : "show the NO-GO output"}
+          <kbd>↑</kbd> <kbd>↓</kbd> choose
+          {hasNogo && (
+            <>
+              {" "}
+              · <kbd>Enter</kbd> {showOutput ? "hide the output" : "show the NO-GO output"}
+            </>
+          )}
           {selected?.prUrl && (
             <>
               {" "}

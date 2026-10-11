@@ -5,6 +5,7 @@ import {
   endedAgo,
   missionId,
   missionVerdict,
+  stepSelection,
   type VerdictInput,
 } from "../../src/features/log/model.ts";
 
@@ -149,5 +150,26 @@ describe("endedAgo", () => {
     expect(endedAgo(5 * min)).toBe("5m ago");
     expect(endedAgo(125 * min)).toBe("2h ago");
     expect(endedAgo(50 * 60 * min)).toBe("2d ago");
+  });
+});
+
+describe("stepSelection", () => {
+  test("keeps the same mission selected when a new one is logged above it", () => {
+    expect(stepSelection(["b", "c"], "c", 0)).toBe("c");
+    expect(stepSelection(["a", "b", "c"], "c", 0)).toBe("c");
+    expect(stepSelection(["a", "b", "c"], "b", -1)).toBe("a");
+    expect(stepSelection(["a", "b", "c"], "b", 1)).toBe("c");
+  });
+
+  test("clamps at the top and the bottom", () => {
+    expect(stepSelection(["a", "b"], "a", -1)).toBe("a");
+    expect(stepSelection(["a", "b"], "b", 1)).toBe("b");
+  });
+
+  test("a mission no longer listed, or none chosen yet, falls back to the first", () => {
+    expect(stepSelection(["a", "b"], "gone", 0)).toBe("a");
+    expect(stepSelection(["a", "b"], null, 0)).toBe("a");
+    expect(stepSelection(["a", "b"], null, 1)).toBe("b");
+    expect(stepSelection([], "a", 1)).toBeUndefined();
   });
 });
