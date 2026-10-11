@@ -286,7 +286,7 @@ function LiteLessons({ deckId }: { deckId: string }) {
   const { data: checks } = useQuery(checksQuery(deckId));
   const [open, setOpen] = useState(false);
   // The lessons are only read while the section is open.
-  const { data } = useQuery({ ...lessonsQuery(deckId), enabled: open });
+  const { data, error } = useQuery({ ...lessonsQuery(deckId), enabled: open });
   const answer = useMutation(lessonMutation(queryClient, deckId));
   const pending = data?.pending ?? NO_LESSONS;
   const kept = data?.kept ?? NO_LESSONS;
@@ -307,6 +307,9 @@ function LiteLessons({ deckId }: { deckId: string }) {
     <li key={lesson.id} className="lite-lessons__item">
       <span className="lite-lessons__text">{lesson.text}</span>
       <span className="muted">from {lesson.fromName}</span>
+      {lesson.state === "pending" && lesson.evidence && (
+        <span className="muted">{lesson.evidence}</span>
+      )}
       <div className="lite-lessons__actions">
         {actions.map(([label, action]) => (
           <Button
@@ -340,7 +343,8 @@ function LiteLessons({ deckId }: { deckId: string }) {
       </Button>
       {open && (
         <div className="lite-lessons__sheet">
-          {!data && <p className="muted">Loading…</p>}
+          {!data && !error && <p className="muted">Loading…</p>}
+          <ErrorNote error={error} />
           {data && !pending.length && !kept.length && (
             <p className="muted">No lessons yet. A mission that hits trouble drafts some here.</p>
           )}

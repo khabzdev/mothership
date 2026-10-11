@@ -174,7 +174,7 @@ export function useConsoleKeys(deckId: string, crew: CrewInfo[]): void {
           open({ kind: "inspection", crewId: member.id });
           return;
         case "KeyK":
-          if (!member) return;
+          if (!member || member.kind !== "agent") return;
           e.preventDefault();
           open({ kind: "record", crewId: member.id });
           return;

@@ -63,7 +63,11 @@ export type PatchId =
 
 export const PATCHES: { id: PatchId; name: string; rule: string }[] = [
   { id: "first-launch", name: "First Launch", rule: "1 merged PR" },
-  { id: "clean-sheet", name: "Clean Sheet", rule: "a mission with no rework" },
+  {
+    id: "clean-sheet",
+    name: "Clean Sheet",
+    rule: "a first-try brief, GO and clear inspection in one mission",
+  },
   { id: "steady-hand", name: "Steady Hand", rule: "5 first-try GOs" },
   { id: "sharpshooter", name: "Sharpshooter", rule: "5 first-try clear inspections" },
   { id: "old-hand", name: "Old Hand", rule: "10 merged PRs" },

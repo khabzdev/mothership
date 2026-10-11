@@ -71,7 +71,8 @@ export class RankService {
   info(crewId: string): { rank: RankInfo; patches?: string[] } | undefined {
     // Read straight from the table: the roster asks while it describes the crew member.
     const member = this.#member(crewId);
-    if (!member) return undefined;
+    // A shell never earns, and shares its call signs with the agents that do.
+    if (!member || member.provider === "shell") return undefined;
     const record = this.record(member.deckId, member.name);
     return {
       rank: rankOf(pointsOf(record)),
@@ -172,7 +173,7 @@ export class RankService {
 
   #member(crewId: string) {
     return this.#db
-      .select({ deckId: crewTable.deckId, name: crewTable.name })
+      .select({ deckId: crewTable.deckId, name: crewTable.name, provider: crewTable.provider })
       .from(crewTable)
       .where(eq(crewTable.id, crewId))
       .get();

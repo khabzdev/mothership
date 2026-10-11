@@ -6,6 +6,7 @@ export const realtimeKeys = {
   roster: (deckId: string) => ["decks", deckId, "crew"] as const,
   labels: (deckId: string) => ["decks", deckId, "labels"] as const,
   checks: (deckId: string) => ["decks", deckId, "checks"] as const,
+  ranks: (crewId: string) => ["ranks", crewId] as const,
   lessons: (deckId: string) => ["decks", deckId, "lessons"] as const,
   preflight: (crewId: string) => ["preflight", crewId] as const,
   brief: (crewId: string) => ["brief", crewId] as const,
@@ -14,10 +15,16 @@ export const realtimeKeys = {
   clones: ["clones"] as const,
 };
 
+const ranksFamily = ["ranks"] as const;
+
 /** Push realtime state into the Query cache; components only ever read from Query. */
 export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
-  if (msg.type === "crew.roster")
+  if (msg.type === "crew.roster") {
     queryClient.setQueryData(realtimeKeys.roster(msg.deckId), msg.crew);
+    // Counter changes always refresh the roster: an open service record is stale too.
+    void queryClient.invalidateQueries({ queryKey: ranksFamily });
+  } else if (msg.type === "crew.promoted")
+    void queryClient.invalidateQueries({ queryKey: ranksFamily });
   else if (msg.type === "deck.labels")
     queryClient.setQueryData(realtimeKeys.labels(msg.deckId), msg.labels);
   else if (msg.type === "deck.checks")

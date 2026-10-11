@@ -188,6 +188,22 @@ describe("applyServerMsg", () => {
     expect(qc.getQueryState(realtimeKeys.preflight("c2"))?.isInvalidated).toBe(false);
   });
 
+  test("a promotion or a roster change makes every service record stale", () => {
+    const msgs: ServerMsg[] = [
+      { type: "crew.promoted", deckId: "d1", crewId: "c1", name: "Nova", rank: "Ensign" },
+      { type: "crew.roster", deckId: "d1", crew: [] },
+    ];
+    for (const msg of msgs) {
+      const qc = new QueryClient();
+      qc.setQueryData(realtimeKeys.ranks("c1"), { name: "Nova" });
+      qc.setQueryData(realtimeKeys.ranks("c2"), { name: "Sol" });
+      applyServerMsg(qc, msg);
+      expect(realtimeKeys.ranks("c1")).toEqual(["ranks", "c1"]);
+      expect(qc.getQueryState(realtimeKeys.ranks("c1"))?.isInvalidated).toBe(true);
+      expect(qc.getQueryState(realtimeKeys.ranks("c2"))?.isInvalidated).toBe(true);
+    }
+  });
+
   test("ignores messages that don't belong in the cache", () => {
     const qc = new QueryClient();
     applyServerMsg(qc, { type: "terminal.output", crewId: "c1", data: "x" });

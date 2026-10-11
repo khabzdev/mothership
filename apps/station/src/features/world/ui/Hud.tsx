@@ -130,7 +130,7 @@ export function HintBar({
           {member.status === "asleep" && (
             <Key k="R" label={member.kind === "shell" ? "Restart" : "Resume"} />
           )}
-          <Key k="K" label="Record" />
+          {member.kind === "agent" && <Key k="K" label="Record" />}
           <Key k="X" label="Send home" />
           <Key k="L" label="Sign" />
         </>

@@ -322,6 +322,19 @@ describe("RankService", () => {
     expect(crew.member(elsewhere.id)).not.toHaveProperty("patches");
   });
 
+  test("a shell never shows a rank, even under a call sign with a record", async () => {
+    const nova = await hire();
+    pr(nova.id);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    await crew.sendHome(nova.id, "keep");
+
+    const shell = await crew.openShell({ deckId: "deck-1", consoleId: 3 });
+    expect(shell.name).toBe("Nova");
+    expect(ranks.info(shell.id)).toBeUndefined();
+    expect(crew.member(shell.id)).not.toHaveProperty("rank");
+    expect(crew.member(shell.id)).not.toHaveProperty("patches");
+  });
+
   test("an unknown crew member has no rank", () => {
     expect(ranks.info("nobody")).toBeUndefined();
     ranks.cleanBrief("nobody");
