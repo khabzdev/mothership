@@ -3,6 +3,8 @@ import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { configDefaults, defineConfig, lazyPlugins } from "vite-plus";
 
 export default defineConfig({
@@ -27,5 +29,10 @@ export default defineConfig({
         ],
   ),
   // The real-claude smoke runs only through `vp run smoke:real` (smoke.config.ts).
-  test: { environment: "node", exclude: [...configDefaults.exclude, "smoke/**"] },
+  test: {
+    environment: "node",
+    exclude: [...configDefaults.exclude, "smoke/**"],
+    // Never the real ~/.spaceship: a test that opens the station's home gets a throwaway one.
+    env: { SPACESHIP_HOME: join(tmpdir(), `spaceship-test-home-${process.pid}`) },
+  },
 });

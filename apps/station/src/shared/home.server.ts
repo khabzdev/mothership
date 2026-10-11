@@ -25,16 +25,20 @@ export function moveLegacyHome(legacy: string, home: string): boolean {
   return true;
 }
 
-let resolved: string | undefined;
+/** Where Spaceship keeps its data: $SPACESHIP_HOME or ~/.spaceship. Only works out the path. */
+export function spaceshipHome(): string {
+  return process.env.SPACESHIP_HOME ?? join(homedir(), ".spaceship");
+}
+
+let opened: string | undefined;
 
 /**
- * Where Spaceship keeps its data: $SPACESHIP_HOME or ~/.spaceship. The first call moves an old
- * ~/.mothership over, so it runs before anything opens files in the home.
+ * The station's home, ready to use: on the first call, an old ~/.mothership is moved over. Only the
+ * station's own startup calls this (the database, the crew registry and the station), never an import.
  */
-export function spaceshipHome(): string {
-  if (resolved) return resolved;
-  if (process.env.SPACESHIP_HOME) return (resolved = process.env.SPACESHIP_HOME);
-  resolved = join(homedir(), ".spaceship");
-  moveLegacyHome(join(homedir(), LEGACY.home), resolved);
-  return resolved;
+export function openHome(): string {
+  if (opened) return opened;
+  opened = spaceshipHome();
+  if (!process.env.SPACESHIP_HOME) moveLegacyHome(join(homedir(), LEGACY.home), opened);
+  return opened;
 }

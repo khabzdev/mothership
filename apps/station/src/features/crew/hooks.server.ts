@@ -63,7 +63,9 @@ export function publishCrewSignal(event: CrewSignalEvent): void {
 }
 
 export const defaultHookDeps: HookDeps = {
-  registry: crewRegistry,
+  get registry() {
+    return crewRegistry();
+  },
   providers: PROVIDERS,
   publish: publishCrewSignal,
 };

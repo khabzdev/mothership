@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { spaceshipHome } from "../../shared/home.server.ts";
+import { openHome } from "../../shared/home.server.ts";
 
 export interface CrewEntry {
   missionId: string;
@@ -62,6 +62,6 @@ export class CrewRegistry {
 const shared = globalThis as typeof globalThis & { __spaceshipCrew?: CrewRegistry };
 
 /** The station's crew registry (persisted in the station home), shared across reloads in dev. */
-export const crewRegistry: CrewRegistry = (shared.__spaceshipCrew ??= new CrewRegistry(
-  join(spaceshipHome(), "crew.json"),
-));
+export function crewRegistry(): CrewRegistry {
+  return (shared.__spaceshipCrew ??= new CrewRegistry(join(openHome(), "crew.json")));
+}

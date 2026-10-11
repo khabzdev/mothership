@@ -22,7 +22,7 @@ import { PreflightService } from "../features/preflight/preflight.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
 import { getDb } from "../shared/db/client.server";
-import { spaceshipHome } from "../shared/home.server";
+import { openHome, spaceshipHome } from "../shared/home.server";
 import { hub, type Peer } from "../shared/realtime/hub.server";
 import type { Diagnostics } from "./diagnostics";
 import { runDiagnostics } from "./diagnostics.server";
@@ -57,10 +57,10 @@ const shared = globalThis as typeof globalThis & { __spaceshipStation?: Station 
 /** The station: crew, PTY host, hooks and browser sockets, wired together once per process. */
 export function getStation(): Station {
   shared.__spaceshipStation ??= (() => {
-    const home = spaceshipHome();
+    const home = openHome();
     const launcher = new PtyCrewLauncher({
       home,
-      registry: crewRegistry,
+      registry: crewRegistry(),
       providers: PROVIDERS,
       stationUrl: stationUrl(),
     });
