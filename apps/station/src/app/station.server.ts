@@ -7,7 +7,7 @@ import { PtyCrewLauncher } from "../features/crew/launcher.server";
 import { crewRegistry } from "../features/crew/registry.server";
 import { CloneManager } from "../features/decks/clone.server";
 import { dockRepo } from "../features/decks/decks.server";
-import { GitHubBoards } from "../features/github/github.server";
+import { announceLaunch, GitHubBoards } from "../features/github/github.server";
 import { InspectionService } from "../features/inspection/inspection.server";
 import { ReviewSlot } from "../features/inspection/slot.server";
 import { QueueService } from "../features/queue/queue.server";
@@ -193,21 +193,15 @@ export function getStation(): Station {
       const list = clones.list();
       if (list.length) hub.send(peer, { type: "deck.clones", clones: list });
     });
-    // A pull request that merged: the launch klaxon, over the console it came from if we know it.
-    const boards = new GitHubBoards();
-    boards.onLaunch(({ deckId, pull }) => {
-      const from = crew
-        .roster(deckId)
-        .find((c) => c.prUrl === pull.url || (!!c.branch && c.branch === pull.headRefName));
-      hub.broadcast({
-        type: "pr.merged",
-        deckId,
-        number: pull.number,
-        title: pull.title,
-        ...(from && { crewId: from.id }),
-      });
-      ranks.onMerged(deckId, { url: pull.url, branch: pull.headRefName });
-    });
+    // A pull request that merged: credited to the call sign; the launch klaxon when it's recent.
+    const boards = new GitHubBoards(undefined, { unmerged: (d, now) => ranks.unmerged(d, now) });
+    boards.onLaunch(
+      announceLaunch({
+        roster: (deckId) => crew.roster(deckId),
+        broadcast: (msg) => hub.broadcast(msg),
+        onMerged: (deckId, pull) => ranks.onMerged(deckId, pull),
+      }),
+    );
     // The task queue: crew seated for queued tasks as consoles free up (checked every few seconds).
     const queue = new QueueService({
       db: getDb(),

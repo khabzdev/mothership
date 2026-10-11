@@ -1,3 +1,4 @@
+import type { ServerMsg } from "@mothership/protocol";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
@@ -78,10 +79,51 @@ export function toPull(p: Raw): GhPull {
 /** How long a deck's boards are served from the cache before GitHub is asked again (ms). */
 const FRESH_MS = 30_000;
 
-/** A pull request that merged since the last look: the launch klaxon. */
+/** A merge newer than this plays the launch show; older ones are only credited (ms). */
+const RECENT_MS = 10 * 60_000;
+/** At most this many mission PRs missing from the lists are looked up per fetch. */
+const RECONCILE_LOOKUPS = 5;
+const VIEW_FIELDS = "number,title,state,url,headRefName,mergedAt";
+
+/** A pull request that merged since the last look: the launch klaxon (`recent`), or a catch-up. */
 export interface Launch {
   deckId: string;
   pull: GhPull;
+  recent: boolean;
+}
+
+interface Options {
+  /** The deck's mission PRs not yet credited as merged, oldest first. */
+  unmerged?: (deckId: string, now: number) => { url: string; branch: string }[];
+  now?: () => number;
+}
+
+/** The station's launch listener: always credits the merge, plays the show only when recent. */
+export function announceLaunch(deps: {
+  roster: (deckId: string) => { id: string; prUrl?: string | null; branch?: string | null }[];
+  broadcast: (msg: ServerMsg) => void;
+  onMerged: (deckId: string, pull: { url: string; branch: string; mergedAt?: number }) => boolean;
+}): (launch: Launch) => void {
+  return ({ deckId, pull, recent }) => {
+    if (recent) {
+      // Over the console it came from, if we know it.
+      const from = deps
+        .roster(deckId)
+        .find((c) => c.prUrl === pull.url || (!!c.branch && c.branch === pull.headRefName));
+      deps.broadcast({
+        type: "pr.merged",
+        deckId,
+        number: pull.number,
+        title: pull.title,
+        ...(from && { crewId: from.id }),
+      });
+    }
+    deps.onMerged(deckId, {
+      url: pull.url,
+      branch: pull.headRefName,
+      ...(pull.mergedAt !== undefined && { mergedAt: pull.mergedAt }),
+    });
+  };
 }
 
 /** Each deck's issues and pull requests, from gh, cached briefly and refreshed on demand. */
@@ -90,9 +132,15 @@ export class GitHubBoards {
   readonly #cache = new Map<string, BoardData>();
   readonly #inflight = new Map<string, Promise<BoardData>>();
   readonly #launchListeners = new Set<(launch: Launch) => void>();
+  readonly #unmerged: NonNullable<Options["unmerged"]>;
+  readonly #now: () => number;
+  /** Decks with a reconcile still looking things up (one at a time, so a merge is told once). */
+  readonly #reconciling = new Set<string>();
 
-  constructor(ghRunner: Gh = gh) {
+  constructor(ghRunner: Gh = gh, options: Options = {}) {
     this.#gh = ghRunner;
+    this.#unmerged = options.unmerged ?? (() => []);
+    this.#now = options.now ?? Date.now;
   }
 
   /** The deck's boards, from the cache while fresh (or `force` to ask GitHub now). */
@@ -108,7 +156,8 @@ export class GitHubBoards {
     return pending;
   }
 
-  /** Called with every pull request that merged between two looks at GitHub. */
+  /** Called with every pull request that merged between two looks at GitHub, and each missed
+   *  mission PR merge the reconcile finds. */
   onLaunch(listener: (launch: Launch) => void): () => void {
     this.#launchListeners.add(listener);
     return () => this.#launchListeners.delete(listener);
@@ -214,14 +263,18 @@ export class GitHubBoards {
         fetchedAt: Date.now(),
       };
       this.#cache.set(deckId, board);
+      const reported = new Set<number>();
       if (before && !before.error) {
+        const now = this.#now();
         for (const p of pulls) {
           const was = before.pulls.find((b) => b.number === p.number);
           if (was?.state === "OPEN" && p.state === "MERGED") {
-            for (const listener of this.#launchListeners) listener({ deckId, pull: p });
+            reported.add(p.number);
+            this.#merged(deckId, p, p.mergedAt === undefined || now - p.mergedAt <= RECENT_MS);
           }
         }
       }
+      void this.#reconcile(deckId, cwd, board, reported);
       return board;
     } catch (error) {
       const e = error as NodeJS.ErrnoException & { stderr?: string };
@@ -237,6 +290,53 @@ export class GitHubBoards {
       };
       this.#cache.set(deckId, board);
       return board;
+    }
+  }
+
+  /** The one place a merge is told to the launch listeners. */
+  #merged(deckId: string, pull: GhPull, recent: boolean): void {
+    for (const listener of this.#launchListeners) listener({ deckId, pull, recent });
+  }
+
+  /** Mission PRs that merged without a transition being seen (between polls, or while the
+   *  station was down): matched in the fetched lists, else looked up, a few per fetch. */
+  async #reconcile(
+    deckId: string,
+    cwd: string,
+    board: BoardData,
+    reported: Set<number>,
+  ): Promise<void> {
+    if (this.#reconciling.has(deckId)) return;
+    this.#reconciling.add(deckId);
+    try {
+      const now = this.#now();
+      const merge = (pull: GhPull) => {
+        if (reported.has(pull.number)) return;
+        reported.add(pull.number);
+        this.#merged(deckId, pull, pull.mergedAt !== undefined && now - pull.mergedAt <= RECENT_MS);
+      };
+      const missing: string[] = [];
+      for (const row of this.#unmerged(deckId, now)) {
+        const pull =
+          board.pulls.find((p) => !!row.url && p.url === row.url) ??
+          board.pulls.find((p) => !!row.branch && p.headRefName === row.branch);
+        if (pull?.state === "MERGED") merge(pull);
+        else if (!pull && row.url) missing.push(row.url);
+      }
+      for (const url of missing.slice(0, RECONCILE_LOOKUPS)) {
+        try {
+          const pull = toPull(
+            JSON.parse(await this.#gh(["pr", "view", url, "--json", VIEW_FIELDS], cwd)) as Raw,
+          );
+          if (pull.state === "MERGED") merge(pull);
+        } catch {
+          // Not found, offline, signed out: tried again on a later fetch.
+        }
+      }
+    } catch (error) {
+      console.warn("[github] reconcile failed:", error);
+    } finally {
+      this.#reconciling.delete(deckId);
     }
   }
 }
