@@ -45,14 +45,18 @@ function hookSettings() {
 }
 
 function launchPlan(options: LaunchOptions): LaunchPlan {
+  // One flag, one argv element (no shell). The value follows the flag directly, so text starting
+  // with "-" cannot be read as an option of its own.
+  const appended = [options.plan?.instructions, options.instructions || undefined]
+    .filter((text) => text !== undefined)
+    .join("\n\n");
   return {
     command: "claude",
     args: [
       ...(options.model ? ["--model", options.model] : []),
       ...(options.resume ? ["--resume", options.resume] : []),
-      ...(options.plan
-        ? ["--permission-mode", "plan", "--append-system-prompt", options.plan.instructions]
-        : []),
+      ...(options.plan ? ["--permission-mode", "plan"] : []),
+      ...(options.plan || options.instructions ? ["--append-system-prompt", appended] : []),
       "--settings",
       JSON.stringify(hookSettings()),
       // End of options: a task starting with "-" must not be read as a flag.

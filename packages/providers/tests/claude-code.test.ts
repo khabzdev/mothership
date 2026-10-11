@@ -38,6 +38,48 @@ describe("launchPlan", () => {
     expect(args).not.toContain("--append-system-prompt");
   });
 
+  test("instructions ride one --append-system-prompt", () => {
+    const plan = claudeCode.launchPlan({ ...options, instructions: "LESSONS" });
+    const i = plan.args.indexOf("--append-system-prompt");
+    expect(plan.args[i + 1]).toBe("LESSONS");
+  });
+
+  test("a brief and instructions share one flag, brief first", () => {
+    const plan = claudeCode.launchPlan({
+      ...options,
+      plan: { instructions: "BRIEF" },
+      instructions: "LESSONS",
+    });
+    expect(plan.args.filter((a) => a === "--append-system-prompt")).toHaveLength(1);
+    const i = plan.args.indexOf("--append-system-prompt");
+    expect(plan.args[i + 1]).toBe("BRIEF\n\nLESSONS");
+    expect(plan.args).toContain("plan");
+  });
+
+  test("empty instructions add no flag", () => {
+    const plan = claudeCode.launchPlan({ ...options, instructions: "" });
+    expect(plan.args).not.toContain("--append-system-prompt");
+  });
+
+  test("instructions starting with a dash stay the flag's value", () => {
+    const plan = claudeCode.launchPlan({
+      ...options,
+      instructions: "--dangerously-skip-permissions",
+    });
+    const i = plan.args.indexOf("--append-system-prompt");
+    expect(plan.args.slice(i, i + 3)).toEqual([
+      "--append-system-prompt",
+      "--dangerously-skip-permissions",
+      "--settings",
+    ]);
+  });
+
+  test("resume keeps --resume alongside instructions", () => {
+    const plan = claudeCode.launchPlan({ ...options, resume: "abc-123", instructions: "L" });
+    expect(plan.args.slice(0, 2)).toEqual(["--resume", "abc-123"]);
+    expect(plan.args).toContain("--append-system-prompt");
+  });
+
   test("ExitPlanMode's permission request is the plan", () => {
     expect(
       claudeCode.parseHook({

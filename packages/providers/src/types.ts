@@ -25,6 +25,8 @@ export interface LaunchOptions {
   resume?: string;
   /** Start in plan mode: `instructions` tell the agent how to write its plan. */
   plan?: { instructions: string };
+  /** Standing guidance appended to the agent's system prompt (kept lessons); empty adds nothing. */
+  instructions?: string;
 }
 
 /** A read-only review run: the prompt goes on stdin. */
