@@ -1,6 +1,7 @@
 import { PROVIDERS } from "@mothership/providers";
 import { BriefService } from "../features/briefs/briefs.server";
 import { CrewService } from "../features/crew/service.server";
+import { DebriefService } from "../features/debrief/debrief.server";
 import { onCrewSignal } from "../features/crew/hooks.server";
 import { PtyCrewLauncher } from "../features/crew/launcher.server";
 import { crewRegistry } from "../features/crew/registry.server";
@@ -8,6 +9,7 @@ import { CloneManager } from "../features/decks/clone.server";
 import { dockRepo } from "../features/decks/decks.server";
 import { GitHubBoards } from "../features/github/github.server";
 import { InspectionService } from "../features/inspection/inspection.server";
+import { ReviewSlot } from "../features/inspection/slot.server";
 import { QueueService } from "../features/queue/queue.server";
 import { RankService } from "../features/ranks/ranks.server";
 import { getDeck } from "../features/decks/decks.server";
@@ -39,6 +41,7 @@ interface Station {
   briefs: BriefService;
   inspections: InspectionService;
   ranks: RankService;
+  debrief: DebriefService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -62,8 +65,14 @@ export function getStation(): Station {
       home,
     });
 
-    // Pre-flight: the deck's checks run in a crew member's worktree when it stops.
-    const checks = new CheckService({ db: getDb(), broadcast: (msg) => hub.broadcast(msg) });
+    // Pre-flight: the deck's checks run in a crew member's worktree when it stops. The deck's
+    // message carries its pending lessons, counted once the debrief exists.
+    let debrief: DebriefService | undefined;
+    const checks = new CheckService({
+      db: getDb(),
+      broadcast: (msg) => hub.broadcast(msg),
+      pendingCount: (deckId) => debrief?.pendingCount(deckId) ?? 0,
+    });
     const preflight = new PreflightService({
       db: getDb(),
       crew,
@@ -76,6 +85,20 @@ export function getStation(): Station {
     // Ranks: each call sign's service record on a deck, counted as its missions end.
     const ranks = new RankService({ db: getDb(), broadcast: (msg) => hub.broadcast(msg), crew });
     crew.onMissionEnd((end) => ranks.onMissionEnd(end));
+
+    // One `claude -p` review at a time, station-wide: the Inspector and the debrief take turns.
+    const slot = new ReviewSlot();
+    // The debrief: a mission that hit trouble drafts lessons for you to keep or drop.
+    debrief = new DebriefService({
+      db: getDb(),
+      ranks,
+      checks,
+      providers: PROVIDERS,
+      slot,
+      broadcast: (msg) => hub.broadcast(msg),
+    });
+    const debriefs = debrief;
+    crew.onMissionEnd((end) => debriefs.onMissionEnd(end));
 
     // Briefs: the plans Claude submits in plan mode; Y and N answer its approval dialog.
     const briefs = new BriefService({
@@ -95,6 +118,7 @@ export function getStation(): Station {
       preflight,
       providers: PROVIDERS,
       broadcast: (msg) => hub.broadcast(msg),
+      slot,
     });
     preflight.onGo((crewId, print) => inspections.afterGo(crewId, print));
     inspections.reconcile();
@@ -203,6 +227,7 @@ export function getStation(): Station {
       briefs,
       inspections,
       ranks,
+      debrief: debriefs,
       diagnostics,
     };
   })();

@@ -17,9 +17,9 @@ import { flaggedDetail, inspectionHandBack, type Finding } from "./model";
 import { parseReview, reviewFailure, reviewPrompt } from "./review";
 import { REVIEW_TIMEOUT_MS, runReview, type RunReview } from "./runner.server";
 import { scopeCheck, type ChangedStat } from "./scope";
+import { ReviewSlot } from "./slot.server";
 
-/** At most this many AI reviews run at once, station-wide; the rest wait their turn. */
-export const MAX_REVIEWS = 1;
+export { MAX_REVIEWS } from "./slot.server";
 
 /** What started an inspection: a stop (which can hand blockers back) or a Re-inspect. */
 export type InspectionTrigger = "stop" | "manual";
@@ -55,6 +55,8 @@ export interface InspectionDeps {
   /** Adapters by crew row `provider`; one without `reviewPlan` (a shell) is never inspected. */
   providers: Record<string, ProviderAdapter>;
   broadcast: (msg: ServerMsg) => void;
+  /** The station's review slots, shared with the debrief; one of its own when not given. */
+  slot?: ReviewSlot;
   run?: RunReview;
   readDiff?: typeof readInspectionDiff;
   fingerprint?: typeof worktreeFingerprint;
@@ -84,9 +86,6 @@ interface Job {
 /** Holds a crew member's place while its worktree is being read. */
 type Pending = { pending: true };
 
-/** A review waiting for its turn: `start(true)` when it gets one, `start(false)` when dropped. */
-type Waiting = { job: Job; start: (go: boolean) => void };
-
 type Row = typeof inspections.$inferSelect;
 
 const isBlocker = (f: Finding) => f.severity === "blocker";
@@ -111,8 +110,7 @@ export class InspectionService {
   /** One entry per crew member with an inspection on the way, so it never has two. */
   readonly #busy = new Map<string, Job | Pending>();
   readonly #active = new Map<string, Job>();
-  readonly #waiting: Waiting[] = [];
-  #reviews = 0;
+  readonly #slot: ReviewSlot;
   /** Crew whose hand-back is being typed: that prompt is the Inspector's own, not a new one. */
   readonly #handingBack = new Set<string>();
 
@@ -124,6 +122,7 @@ export class InspectionService {
     this.#preflight = deps.preflight;
     this.#providers = deps.providers;
     this.#broadcast = deps.broadcast;
+    this.#slot = deps.slot ?? new ReviewSlot();
     this.#run = deps.run ?? runReview;
     this.#readDiff = deps.readDiff ?? readInspectionDiff;
     this.#fingerprint = deps.fingerprint ?? worktreeFingerprint;
@@ -296,9 +295,8 @@ export class InspectionService {
     if (!entry) return;
     this.#busy.delete(crewId);
     if ("pending" in entry) return;
+    // A queued review leaves the slot's line; a running one releases its slot as it stops.
     entry.abort.abort();
-    const queued = this.#waiting.findIndex((w) => w.job === entry);
-    if (queued >= 0) this.#waiting.splice(queued, 1)[0]!.start(false);
     this.#settle(entry, { state: "cancelled", reason });
   }
 
@@ -387,7 +385,8 @@ export class InspectionService {
     }
     const scope = scopeCheck(job.files, job.prompt.brief);
     const prompt = reviewPrompt({ ...job.prompt, scope, diff: job.diff });
-    if (!(await this.#turn(job))) return;
+    const release = await this.#slot.acquire(job.abort.signal);
+    if (!release) return;
     let review;
     try {
       if (job.abort.signal.aborted) return;
@@ -400,8 +399,7 @@ export class InspectionService {
         signal: job.abort.signal,
       });
     } finally {
-      this.#reviews--;
-      this.#pump();
+      release();
     }
     if (job.abort.signal.aborted) return;
     if (!existsSync(job.cwd)) {
@@ -460,26 +458,6 @@ export class InspectionService {
       .set({ fuel: sql`max(${crewTable.fuel} - 1, 0)` })
       .where(and(eq(crewTable.id, job.crewId), eq(crewTable.flight, job.flight)))
       .run();
-  }
-
-  /** Wait for a review slot; false when the inspection was dropped first. */
-  #turn(job: Job): Promise<boolean> {
-    return new Promise((start) => {
-      this.#waiting.push({ job, start });
-      this.#pump();
-    });
-  }
-
-  #pump(): void {
-    while (this.#reviews < MAX_REVIEWS && this.#waiting.length > 0) {
-      const next = this.#waiting.shift()!;
-      if (next.job.abort.signal.aborted) {
-        next.start(false);
-        continue;
-      }
-      this.#reviews++;
-      next.start(true);
-    }
   }
 
   /**
