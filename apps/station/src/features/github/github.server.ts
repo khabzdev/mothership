@@ -24,9 +24,13 @@ export const gh: Gh = async (args, cwd) =>
     })
   ).stdout;
 
-const ISSUE_FIELDS = "number,title,state,url,author,labels,assignees,updatedAt,body,comments";
+export const ISSUE_FIELDS =
+  "number,title,state,url,author,labels,assignees,updatedAt,body,comments";
 export const PULL_FIELDS =
   "number,title,state,isDraft,url,author,labels,reviewDecision,headRefName,baseRefName,updatedAt,mergedAt,additions,deletions,statusCheckRollup,body,closingIssuesReferences";
+
+/** The fields a PR window asks `pr view` for: the list fields plus the thread. */
+export const PULL_VIEW_FIELDS = `${PULL_FIELDS},comments,reviews`;
 
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 type Raw = Record<string, unknown>;
@@ -35,7 +39,7 @@ const names = (v: unknown) =>
   Array.isArray(v) ? v.map((l: { name?: string; login?: string }) => l.name ?? l.login ?? "") : [];
 const clip = (v: unknown) => str(v).slice(0, 4000);
 
-function toIssue(i: Raw): GhIssue {
+export function toIssue(i: Raw): GhIssue {
   return {
     number: Number(i.number),
     title: str(i.title),
@@ -192,10 +196,7 @@ export class GitHubBoards {
   /** One pull request with its checks and reviews, for the PR window. */
   async pull(cwd: string, number: number): Promise<PullDetail> {
     const p = JSON.parse(
-      await this.#gh(
-        ["pr", "view", String(number), "--json", `${PULL_FIELDS},comments,reviews`],
-        cwd,
-      ),
+      await this.#gh(["pr", "view", String(number), "--json", PULL_VIEW_FIELDS], cwd),
     ) as Raw;
     const list = (v: unknown) => (Array.isArray(v) ? (v as Raw[]) : []);
     return {

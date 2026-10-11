@@ -3,6 +3,7 @@ import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { mothershipHome } from "../src/shared/db/client.server";
 import { claudeBasics } from "./claude-basics";
 import { claudeFlows } from "./claude-flows";
+import { ghChecks } from "./gh";
 import type { SmokeContext, SmokeGroup } from "./group";
 import { BUILD_PTYHOST, ptyhostBuilt, requireSmokeEnv, smokeModel } from "./guard";
 import { SmokeRun, table } from "./results";
@@ -10,7 +11,7 @@ import { SmokeRun, table } from "./results";
 requireSmokeEnv();
 
 /** Every check group, run in this order: one line each. */
-const GROUPS: SmokeGroup[] = [claudeBasics, claudeFlows];
+const GROUPS: SmokeGroup[] = [claudeBasics, claudeFlows, ghChecks];
 
 const model = smokeModel();
 const ctx: SmokeContext = {

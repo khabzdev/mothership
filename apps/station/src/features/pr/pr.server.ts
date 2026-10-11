@@ -52,17 +52,24 @@ export function prBody(request: PrRequest, commits: string[]): string {
     .join("\n\n");
 }
 
+/** The `gh` args that print the URL of the branch's open pull request (empty when none). */
+export const openPrForBranchArgs = (branch: string): string[] => [
+  "pr",
+  "view",
+  branch,
+  "--json",
+  "url,state",
+  "--jq",
+  'select(.state == "OPEN") | .url',
+];
+
 /**
  * Push the crew member's branch and open a pull request into the branch the deck has checked out
  * (agent-office's O). A PR that's already open for the branch is returned instead.
  */
 export async function openPullRequest(request: PrRequest, x: Exec = exec): Promise<string> {
   const { cwd, branch, repoPath } = request;
-  const existing = await x(
-    "gh",
-    ["pr", "view", branch, "--json", "url,state", "--jq", 'select(.state == "OPEN") | .url'],
-    cwd,
-  ).catch(() => "");
+  const existing = await x("gh", openPrForBranchArgs(branch), cwd).catch(() => "");
   if (existing.trim()) return existing.trim();
 
   const dirty = (await x("git", ["status", "--porcelain"], cwd)).trim();

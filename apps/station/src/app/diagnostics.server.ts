@@ -90,7 +90,8 @@ export async function checkClaude({ exec }: Pick<DiagnosticsDeps, "exec">): Prom
   };
 }
 
-async function checkGh({ exec }: DiagnosticsDeps): Promise<Check> {
+/** The installed GitHub CLI: its version line and whether it is signed in. */
+export async function checkGh({ exec }: Pick<DiagnosticsDeps, "exec">): Promise<Check> {
   const label = "GitHub CLI";
   const version = await exec("gh", ["--version"]);
   const failed = failure("gh", label, "gh --version", version, FIX.ghInstall);
