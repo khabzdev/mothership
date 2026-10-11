@@ -12,6 +12,9 @@ import {
 import type { CrewService, MissionEnd } from "../crew/service.server";
 import { newPatches, pointsOf, rankOf, type PatchId, type ServiceCounters } from "./model";
 
+/** How far back an unmerged pull request is still looked up (days). */
+export const RECONCILE_DAYS = 30;
+
 /** A call sign's service record on one deck: its counters and the patches it earned, in order. */
 export interface ServiceRecord extends ServiceCounters {
   patches: PatchId[];
@@ -172,7 +175,7 @@ export class RankService {
         and(
           eq(missionPrs.deckId, deckId),
           isNull(missionPrs.mergedAt),
-          gte(missionPrs.openedAt, now - 30 * 24 * 60 * 60 * 1000),
+          gte(missionPrs.openedAt, now - RECONCILE_DAYS * 24 * 60 * 60 * 1000),
         ),
       )
       .orderBy(asc(missionPrs.openedAt))

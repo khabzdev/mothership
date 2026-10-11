@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import type { CrewLauncher } from "../../src/features/crew/launcher.server.ts";
 import { CrewService } from "../../src/features/crew/service.server.ts";
-import { RankService } from "../../src/features/ranks/ranks.server.ts";
+import { RankService, RECONCILE_DAYS } from "../../src/features/ranks/ranks.server.ts";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
 import {
   briefs,
@@ -259,9 +259,14 @@ describe("RankService", () => {
   test("a merge is matched by branch when the url isn't known", async () => {
     const nova = await hire();
     pr(nova.id, 7);
-    ranks.onMerged("deck-2", { url: "https://gh/pr/x", branch: "mothership/b7" });
+    expect(ranks.onMerged("deck-2", { url: "https://gh/pr/x", branch: "mothership/b7" })).toBe(
+      false,
+    );
     expect(ranks.record("deck-1", "Nova").merged).toBe(0);
-    ranks.onMerged("deck-1", { url: "https://gh/pr/x", branch: "mothership/b7" });
+    expect(
+      ranks.onMerged("deck-1", { url: "https://gh/pr/x", branch: "mothership/b7", mergedAt: 77 }),
+    ).toBe(true);
+    expect(db.select().from(missionPrs).get()?.mergedAt).toBe(77);
     expect(ranks.record("deck-1", "Nova").merged).toBe(1);
   });
 
@@ -298,8 +303,10 @@ describe("RankService", () => {
     row(2, 31);
     row(3, 10);
     row(4, 5);
+    row(5, RECONCILE_DAYS);
     ranks.onMerged("deck-1", { url: "https://gh/pr/4", branch: "" });
     expect(ranks.unmerged("deck-1", now).map((r) => r.url)).toEqual([
+      "https://gh/pr/5",
       "https://gh/pr/3",
       "https://gh/pr/1",
     ]);

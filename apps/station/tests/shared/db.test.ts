@@ -293,4 +293,32 @@ describe("database", () => {
     const cols = client.prepare("pragma table_info(mission_prs)").all() as { name: string }[];
     expect(cols.map((c) => c.name)).toContain("merged_at");
   });
+
+  test("migration 0012 marks pull requests already credited before it", () => {
+    const folder = mkdtempSync(join(tmpdir(), "migrations-"));
+    cpSync(migrationsFolder, folder, { recursive: true });
+    const journalPath = join(folder, "meta", "_journal.json");
+    const journal = JSON.parse(readFileSync(journalPath, "utf8"));
+    const full = JSON.stringify(journal);
+    journal.entries = journal.entries.filter((e: { tag: string }) => e.tag !== "0012_reconcile");
+    expect(journal.entries.at(-1).tag).toBe("0011_debrief");
+    writeFileSync(journalPath, JSON.stringify(journal));
+
+    const client = new Database(":memory:");
+    client.pragma("foreign_keys = ON");
+    const old = drizzle(client);
+    migrate(old, { migrationsFolder: folder });
+    client.exec(
+      `insert into decks (id, name, repo_path, modules) values ('d1', 'repo', '/r', '[]');
+       insert into mission_prs (url, deck_id, name, branch, opened_at)
+       values ('https://gh/pr/1', 'd1', 'Nova', 'b1', 1234)`,
+    );
+
+    writeFileSync(journalPath, full);
+    migrate(old, { migrationsFolder: folder });
+
+    expect(client.prepare("select opened_at, merged_at from mission_prs").all()).toEqual([
+      { opened_at: 1234, merged_at: 1234 },
+    ]);
+  });
 });
