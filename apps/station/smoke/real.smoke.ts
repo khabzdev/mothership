@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { mothershipHome } from "../src/shared/db/client.server";
 import { claudeBasics } from "./claude-basics";
+import { claudeFlows } from "./claude-flows";
 import type { SmokeContext, SmokeGroup } from "./group";
 import { BUILD_PTYHOST, ptyhostBuilt, requireSmokeEnv, smokeModel } from "./guard";
 import { SmokeRun, table } from "./results";
@@ -9,7 +10,7 @@ import { SmokeRun, table } from "./results";
 requireSmokeEnv();
 
 /** Every check group, run in this order: one line each. */
-const GROUPS: SmokeGroup[] = [claudeBasics];
+const GROUPS: SmokeGroup[] = [claudeBasics, claudeFlows];
 
 const model = smokeModel();
 const ctx: SmokeContext = {
@@ -44,8 +45,8 @@ function interrupted(code: number) {
 }
 process.once("SIGINT", () => interrupted(130));
 process.once("SIGTERM", () => interrupted(143));
-// The test runner went away (its worker channel closed).
-process.once("disconnect", () => interrupted(1));
+// The test runner went away (its worker channel closed): after a finished run that is just the end.
+process.once("disconnect", () => interrupted(finished ? 0 : 1));
 
 beforeAll(async () => {
   if (!ptyhostBuilt()) {
