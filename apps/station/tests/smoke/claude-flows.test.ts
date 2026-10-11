@@ -1,6 +1,7 @@
 import { claudeCode } from "@mothership/providers";
 import { describe, expect, test } from "vite-plus/test";
 import {
+  awaitScreen,
   codeword,
   codewordSeen,
   debriefVerdict,
@@ -8,6 +9,7 @@ import {
   readonlyVerdict,
 } from "../../smoke/claude-flows.ts";
 import type { Signal } from "../../smoke/harness.ts";
+import { dialogShown } from "../../src/features/briefs/dialog.ts";
 import type { ReviewRun } from "../../src/features/inspection/runner.server.ts";
 
 /** A hook as the receiver records it: through the real parser. */
@@ -49,6 +51,12 @@ describe("codewordSeen", () => {
   test("not when only another code is shown", () => {
     expect(codewordSeen(["⏺ ORBIT-000000", "ORBIT-AB01F"], "ORBIT-AB01FF")).toBe(false);
   });
+
+  test("not when more hex follows the code", () => {
+    expect(codewordSeen(["⏺ ORBIT-AB01FFF"], "ORBIT-AB01FF")).toBe(false);
+    expect(codewordSeen(["⏺ XORBIT-AB01FF"], "ORBIT-AB01FF")).toBe(false);
+    expect(codewordSeen(["⏺ ORBIT-AB01FF."], "ORBIT-AB01FF")).toBe(true);
+  });
 });
 
 describe("isPlan", () => {
@@ -72,13 +80,14 @@ describe("readonlyVerdict", () => {
     });
   });
 
-  test("an envelope reporting an error still passes, with its reason", () => {
-    const verdict = readonlyVerdict(
-      review(envelope("", { subtype: "error_max_turns", is_error: true })),
-      NONE,
-    );
-    expect(verdict.state).toBe("passed");
-    expect(verdict.detail).toContain("review reported: error_max_turns");
+  test("fails when the envelope reports an error: nothing was proved", () => {
+    expect(
+      readonlyVerdict(review(envelope("", { subtype: "error_max_turns", is_error: true })), NONE),
+    ).toEqual({ state: "failed", detail: "review couldn't run: error_max_turns" });
+    expect(readonlyVerdict(review(envelope("Not logged in", { is_error: true })), NONE)).toEqual({
+      state: "failed",
+      detail: "review couldn't run: Not logged in",
+    });
   });
 
   test("fails naming each file that was written", () => {
@@ -130,6 +139,16 @@ describe("debriefVerdict", () => {
     });
   });
 
+  test("keeps at most 2 of a longer answer", () => {
+    const verdict = debriefVerdict(
+      review(
+        fenced('{ "lessons": ["Run npm test first.", "Use pnpm here.", "Keep docs short."] }'),
+      ),
+    );
+    expect(verdict.state).toBe("passed");
+    expect(verdict.detail).toBe("2 lessons: Run npm test first. · Use pnpm here.");
+  });
+
   test("passes with no lessons", () => {
     expect(debriefVerdict(review(fenced('{ "lessons": [] }')))).toEqual({
       state: "passed",
@@ -156,5 +175,48 @@ describe("debriefVerdict", () => {
       state: "failed",
       detail: "the answer had no lessons list",
     });
+  });
+});
+
+describe("awaitScreen", () => {
+  const gone = (lines: string[]) => !dialogShown(lines);
+  const DIALOG = [
+    "Would you like to proceed?",
+    "❯ 1. Yes, and auto-accept edits",
+    "  2. No, keep planning",
+  ];
+
+  test("done once a read satisfies the predicate", async () => {
+    const reads = [DIALOG, ["> "]];
+    const result = await awaitScreen(async () => reads.shift() ?? ["> "], gone, 1_000, 0);
+    expect(result).toEqual({ lines: ["> "], ok: true });
+  });
+
+  test("a failed read never counts as dialog gone", async () => {
+    const result = await awaitScreen(
+      () => Promise.reject(new Error("no such session")),
+      gone,
+      20,
+      5,
+    );
+    expect(result).toEqual({ lines: [], ok: false, error: "no such session" });
+  });
+
+  test("a failed read after the dialog keeps the dialog lines and reports the error", async () => {
+    let first = true;
+    const read = () => {
+      if (first) {
+        first = false;
+        return Promise.resolve(DIALOG);
+      }
+      return Promise.reject(new Error("host gone"));
+    };
+    const result = await awaitScreen(read, gone, 20, 5);
+    expect(result).toEqual({ lines: DIALOG, ok: false, error: "host gone" });
+  });
+
+  test("not done by the deadline: no error when every read worked", async () => {
+    const result = await awaitScreen(async () => DIALOG, gone, 20, 5);
+    expect(result).toEqual({ lines: DIALOG, ok: false });
   });
 });

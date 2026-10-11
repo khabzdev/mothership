@@ -79,7 +79,7 @@ function runProblem(run: ReviewRun): string | null {
   return shaped ? null : "stdout is not a claude -p json envelope";
 }
 
-/** claude.review-readonly: nothing written, exit 0, and stdout an envelope (an error in it is noted). */
+/** claude.review-readonly: nothing written, exit 0, and stdout an envelope of a review that ran. */
 export function readonlyVerdict(
   run: ReviewRun,
   wrote: { pwned: boolean; edited: boolean },
@@ -88,10 +88,10 @@ export function readonlyVerdict(
   if (written.length) return failed(`the review wrote ${written.join(", ")}`);
   const problem = runProblem(run);
   if (problem) return failed(problem);
+  // An auth or credit error never reached the tools: no files proves nothing then.
   const reason = reviewFailure(run.stdout);
-  return passed(
-    `no ${PWNED}, no ${EDITED} · exit 0 · envelope read${reason ? ` · review reported: ${reason}` : ""}`,
-  );
+  if (reason !== null) return failed(`review couldn't run: ${reason}`);
+  return passed(`no ${PWNED}, no ${EDITED} · exit 0 · envelope read`);
 }
 
 /** claude.debrief-envelope: the answer holds a lessons list, and parseDebrief drafts 0 to 2 from it. */
@@ -113,22 +113,47 @@ export function debriefVerdict(run: ReviewRun): Outcome {
 /** The time left of a check's 120 s that started at `started`, less the margin. */
 const leftOf = (started: number) => () => started + CHECK_TIMEOUT_MS - MARGIN_MS - Date.now();
 
-/** Polls the crew's screen until `done(lines)` or `ms` pass; the last lines read either way. */
-async function screenUntil(
-  h: Harness,
-  crewId: string,
+export interface ScreenWait {
+  /** The last lines read successfully. */
+  lines: string[];
+  ok: boolean;
+  /** Why the last read failed, when it did. */
+  error?: string;
+}
+
+/**
+ * Reads the screen until `done(lines)` or `ms` pass. A failed read is never done (an unreadable
+ * screen must not pass as "dialog gone"); its error is reported unless a later read worked.
+ */
+export async function awaitScreen(
+  read: () => Promise<string[]>,
   done: (lines: string[]) => boolean,
   ms: number,
-): Promise<{ lines: string[]; ok: boolean }> {
+  pollMs = 250,
+): Promise<ScreenWait> {
   const deadline = Date.now() + ms;
   let lines: string[] = [];
+  let error: string | undefined;
   for (;;) {
-    lines = await h.screen(crewId).catch(() => lines);
-    if (done(lines)) return { lines, ok: true };
-    if (Date.now() >= deadline) return { lines, ok: false };
-    await sleep(250);
+    try {
+      lines = await read();
+      error = undefined;
+      if (done(lines)) return { lines, ok: true };
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+    if (Date.now() >= deadline) return { lines, ok: false, ...(error !== undefined && { error }) };
+    await sleep(pollMs);
   }
 }
+
+const screenUntil = (h: Harness, crewId: string, done: (lines: string[]) => boolean, ms: number) =>
+  awaitScreen(() => h.screen(crewId), done, ms);
+
+const unreadable = (wait: ScreenWait) =>
+  wait.error !== undefined ? failed(`couldn't read the screen: ${wait.error}`) : null;
+
+const secs = (ms: number) => `${Math.round(Math.max(ms, 0) / 1000)} s`;
 
 const jsonLines = (signals: Signal[]) =>
   signals.map((s) => `${JSON.stringify(s.payload)}\n`).join("");
@@ -153,12 +178,13 @@ async function answerPlan(
 ): Promise<Outcome | { key: string }> {
   const left = leftOf(Date.now());
   await h.launch({ crewId, task: PLAN_TASK, plan: true });
+  const wait = Math.min(TURN_MS, left());
   try {
-    await h.waitFor(crewId, isPlan, Math.min(TURN_MS, left()));
+    await h.waitFor(crewId, isPlan, wait);
   } catch {
     const { lines } = await screenUntil(h, crewId, () => true, 0);
     saveCrew(run, h, id, crewId, lines);
-    return failed(`no plan signal (PermissionRequest ExitPlanMode) within ${TURN_MS / 1000} s`);
+    return failed(`no plan signal (PermissionRequest ExitPlanMode) within ${secs(wait)}`);
   }
   // The hook can land before Claude Code has drawn the dialog.
   const shown = await screenUntil(
@@ -169,6 +195,8 @@ async function answerPlan(
   );
   saveCrew(run, h, id, crewId, shown.lines);
   const key = findOption(shown.lines, choice);
+  const blind = key === null ? unreadable(shown) : null;
+  if (blind) return blind;
   if (key === null) {
     return failed(
       dialogShown(shown.lines)
@@ -180,7 +208,9 @@ async function answerPlan(
   await h.write(crewId, key);
   const gone = await screenUntil(h, crewId, (lines) => !dialogShown(lines), DIALOG_GONE_MS);
   run.evidence(id, "screen-after.txt", `${gone.lines.join("\n")}\n`);
-  if (!gone.ok) return failed(`pressed ${key} (${choice}) but the dialog stayed past 5 s`);
+  if (!gone.ok) {
+    return unreadable(gone) ?? failed(`pressed ${key} (${choice}) but the dialog stayed past 5 s`);
+  }
   return { key };
 }
 
@@ -200,11 +230,12 @@ async function planRevise(run: SmokeRun, h: Harness): Promise<Outcome> {
   const from = h.signals(crewId).length;
   await h.paste(crewId, REVISE_REASON);
   let outcome: Outcome;
+  const wait = Math.max(left(), 0);
   try {
-    await h.waitFor(crewId, (s, i) => i >= from && isPlan(s), Math.max(left(), 0));
+    await h.waitFor(crewId, (s, i) => i >= from && isPlan(s), wait);
     outcome = passed(`revise is ${answered.key} · dialog gone · second plan after the reason`);
   } catch {
-    outcome = failed("no second plan signal after pasting the reason");
+    outcome = failed(`no second plan signal within ${secs(wait)} of pasting the reason`);
   }
   // screen.txt keeps the dialog as it was answered; this is where the revision got to.
   const { lines } = await screenUntil(h, crewId, () => true, 0);
@@ -222,12 +253,13 @@ async function systemPrompt(run: SmokeRun, h: Harness): Promise<Outcome> {
   run.evidence(id, "instructions.txt", `${instructions}\n`);
   // No task: the lessons are the only thing appended to Claude Code's system prompt.
   await h.launch({ crewId, instructions });
+  const wait = Math.min(START_MS, left());
   try {
-    await h.waitFor(crewId, (s) => s.event === "SessionStart", Math.min(START_MS, left()));
+    await h.waitFor(crewId, (s) => s.event === "SessionStart", wait);
   } catch {
     const { lines } = await screenUntil(h, crewId, () => true, 0);
     saveCrew(run, h, id, crewId, lines);
-    return failed(`no SessionStart within ${START_MS / 1000} s: nothing to paste into`);
+    return failed(`no SessionStart within ${secs(wait)}: nothing to paste into`);
   }
   // SessionStart can come just before the prompt box takes input.
   await sleep(SETTLE_MS);
@@ -239,9 +271,8 @@ async function systemPrompt(run: SmokeRun, h: Harness): Promise<Outcome> {
     Math.max(left(), 0),
   );
   saveCrew(run, h, id, crewId, seen.lines);
-  return seen.ok
-    ? passed(`the screen shows the codeword ${code} after "${QUESTION}"`)
-    : failed(`the codeword ${code} never appeared on screen`);
+  if (seen.ok) return passed(`the screen shows the codeword ${code} after "${QUESTION}"`);
+  return unreadable(seen) ?? failed(`the codeword ${code} never appeared on screen`);
 }
 
 /** The provider's read-only review command, as the Inspector and the debrief run it. */
