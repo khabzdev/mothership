@@ -311,4 +311,6 @@ export const missionPrs = sqliteTable("mission_prs", {
   name: text("name").notNull(),
   branch: text("branch"),
   openedAt: integer("opened_at").notNull().default(now),
+  /** When its merge was credited; null until then, so a merge counts once. */
+  mergedAt: integer("merged_at"),
 });

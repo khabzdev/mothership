@@ -1,0 +1,1 @@
+ALTER TABLE `mission_prs` ADD `merged_at` integer;

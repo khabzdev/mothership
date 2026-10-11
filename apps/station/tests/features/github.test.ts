@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { GitHubBoards, type Gh, type Launch } from "../../src/features/github/github.server.ts";
+import {
+  GitHubBoards,
+  PULL_FIELDS,
+  toPull,
+  type Gh,
+  type Launch,
+} from "../../src/features/github/github.server.ts";
 import {
   checksOf,
   issueColumn,
@@ -50,6 +56,17 @@ describe("board columns", () => {
 
   test("a crew member handed an issue is told what closes it", () => {
     expect(issuePrompt(issue({ body: "It 500s." }))).toContain('"Closes #1"');
+  });
+});
+
+describe("merge time", () => {
+  test("gh's mergedAt becomes epoch ms; empty or missing is absent", () => {
+    expect(PULL_FIELDS.split(",")).toContain("mergedAt");
+    expect(toPull({ mergedAt: "2026-10-11T10:00:00Z" }).mergedAt).toBe(
+      Date.parse("2026-10-11T10:00:00Z"),
+    );
+    expect(toPull({ mergedAt: "" }).mergedAt).toBeUndefined();
+    expect(toPull({}).mergedAt).toBeUndefined();
   });
 });
 

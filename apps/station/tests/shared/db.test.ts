@@ -246,7 +246,9 @@ describe("database", () => {
     const journalPath = join(folder, "meta", "_journal.json");
     const journal = JSON.parse(readFileSync(journalPath, "utf8"));
     const full = JSON.stringify(journal);
-    journal.entries = journal.entries.filter((e: { tag: string }) => e.tag !== "0011_debrief");
+    journal.entries = journal.entries.filter(
+      (e: { tag: string }) => e.tag !== "0011_debrief" && e.tag !== "0012_reconcile",
+    );
     expect(journal.entries.at(-1).tag).toBe("0010_brief_task");
     writeFileSync(journalPath, JSON.stringify(journal));
 
@@ -283,5 +285,12 @@ describe("database", () => {
       { id: "c2", mission_since: 5678 },
       { id: "c3", mission_since: 9 },
     ]);
+  });
+
+  test("migration 0012 adds merged_at to mission_prs", () => {
+    const client = new Database(":memory:");
+    migrate(drizzle(client), { migrationsFolder });
+    const cols = client.prepare("pragma table_info(mission_prs)").all() as { name: string }[];
+    expect(cols.map((c) => c.name)).toContain("merged_at");
   });
 });

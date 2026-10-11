@@ -265,6 +265,47 @@ describe("RankService", () => {
     expect(ranks.record("deck-1", "Nova").merged).toBe(1);
   });
 
+  test("a pull request credits once, stamped with its merge time", async () => {
+    const nova = await hire();
+    pr(nova.id);
+    expect(ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "", mergedAt: 4242 })).toBe(
+      true,
+    );
+    expect(ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "", mergedAt: 9999 })).toBe(
+      false,
+    );
+    expect(ranks.record("deck-1", "Nova").merged).toBe(1);
+    expect(db.select().from(missionPrs).get()?.mergedAt).toBe(4242);
+    expect(ranks.onMerged("deck-1", { url: "https://gh/pr/404", branch: "" })).toBe(false);
+  });
+
+  test("unmerged lists the last 30 days' open pull requests, oldest first", async () => {
+    const nova = await hire();
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const row = (n: number, ago: number) =>
+      db
+        .insert(missionPrs)
+        .values({
+          url: `https://gh/pr/${n}`,
+          deckId: "deck-1",
+          name: nova.name,
+          branch: `b${n}`,
+          openedAt: now - ago * day,
+        })
+        .run();
+    row(1, 2);
+    row(2, 31);
+    row(3, 10);
+    row(4, 5);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/4", branch: "" });
+    expect(ranks.unmerged("deck-1", now).map((r) => r.url)).toEqual([
+      "https://gh/pr/3",
+      "https://gh/pr/1",
+    ]);
+    expect(ranks.unmerged("deck-2", now)).toEqual([]);
+  });
+
   test("an unknown pull request changes nothing", async () => {
     await hire();
     sent = [];

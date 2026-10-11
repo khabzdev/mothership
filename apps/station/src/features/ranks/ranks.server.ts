@@ -1,5 +1,5 @@
 import type { RankInfo, ServerMsg } from "@mothership/protocol";
-import { and, asc, desc, eq, gte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, ne } from "drizzle-orm";
 import type { Db } from "../../shared/db/client.server";
 import {
   briefs,
@@ -134,8 +134,11 @@ export class RankService {
     );
   }
 
-  /** A pull request merged: credit the call sign that opened it, matched by url, else branch. */
-  onMerged(deckId: string, pull: { url: string; branch: string }): void {
+  /**
+   * A pull request merged: credit the call sign that opened it, matched by url, else branch.
+   * Each pull request credits once; true only when this call did.
+   */
+  onMerged(deckId: string, pull: { url: string; branch: string; mergedAt?: number }): boolean {
     const opened =
       this.#db
         .select()
@@ -150,8 +153,31 @@ export class RankService {
             .orderBy(desc(missionPrs.openedAt))
             .get()
         : undefined);
-    if (!opened) return;
+    if (!opened || opened.mergedAt !== null) return false;
+    this.#db
+      .update(missionPrs)
+      .set({ mergedAt: pull.mergedAt ?? Date.now() })
+      .where(eq(missionPrs.url, opened.url))
+      .run();
     this.#change(deckId, opened.name, { merged: 1 });
+    return true;
+  }
+
+  /** Pull requests opened in the last 30 days not yet seen merged, oldest first. */
+  unmerged(deckId: string, now: number): { url: string; branch: string; openedAt: number }[] {
+    return this.#db
+      .select({ url: missionPrs.url, branch: missionPrs.branch, openedAt: missionPrs.openedAt })
+      .from(missionPrs)
+      .where(
+        and(
+          eq(missionPrs.deckId, deckId),
+          isNull(missionPrs.mergedAt),
+          gte(missionPrs.openedAt, now - 30 * 24 * 60 * 60 * 1000),
+        ),
+      )
+      .orderBy(asc(missionPrs.openedAt))
+      .all()
+      .map((r) => ({ ...r, branch: r.branch ?? "" }));
   }
 
   /** The mission's first stop run that wasn't cancelled. */

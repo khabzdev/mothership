@@ -27,6 +27,8 @@ export interface GhPull {
   headRefName: string;
   baseRefName: string;
   updatedAt: string;
+  /** When it merged (ms), if gh said. */
+  mergedAt?: number;
   additions: number;
   deletions: number;
   checks: ChecksState;

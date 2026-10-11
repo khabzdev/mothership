@@ -24,8 +24,8 @@ export const gh: Gh = async (args, cwd) =>
   ).stdout;
 
 const ISSUE_FIELDS = "number,title,state,url,author,labels,assignees,updatedAt,body,comments";
-const PULL_FIELDS =
-  "number,title,state,isDraft,url,author,labels,reviewDecision,headRefName,baseRefName,updatedAt,additions,deletions,statusCheckRollup,body,closingIssuesReferences";
+export const PULL_FIELDS =
+  "number,title,state,isDraft,url,author,labels,reviewDecision,headRefName,baseRefName,updatedAt,mergedAt,additions,deletions,statusCheckRollup,body,closingIssuesReferences";
 
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 type Raw = Record<string, unknown>;
@@ -49,8 +49,9 @@ function toIssue(i: Raw): GhIssue {
   };
 }
 
-function toPull(p: Raw): GhPull {
+export function toPull(p: Raw): GhPull {
   const state = (str(p.state) || "OPEN").toUpperCase();
+  const mergedAt = Date.parse(str(p.mergedAt)) || undefined;
   return {
     number: Number(p.number),
     title: str(p.title),
@@ -63,6 +64,7 @@ function toPull(p: Raw): GhPull {
     headRefName: str(p.headRefName),
     baseRefName: str(p.baseRefName),
     updatedAt: str(p.updatedAt),
+    ...(mergedAt && { mergedAt }),
     additions: Number(p.additions ?? 0),
     deletions: Number(p.deletions ?? 0),
     checks: checksOf(p.statusCheckRollup),
