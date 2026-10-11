@@ -1921,6 +1921,55 @@ kbd {
   margin-left: auto;
 }
 
+.flight-control__smoke {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.25rem 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.flight-control__smoke li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.flight-control__smoke code,
+.lite-smoke code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.flight-control__smoke [data-state="failed"] > span:first-of-type,
+.preflight__note[data-smoke="failed"],
+.preflight__note[data-smoke="stale"],
+.lite-smoke[data-smoke="failed"] .muted,
+.lite-smoke[data-smoke="stale"] .muted {
+  color: var(--text-color-kumo-warning);
+}
+
+.lite-smoke {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.lite-smoke p {
+  margin: 0;
+}
+
+.lite-smoke__failed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .inspector-switch {
   display: grid;
   gap: 0.2rem;

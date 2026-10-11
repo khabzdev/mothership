@@ -1,3 +1,5 @@
+import type { SmokeStatus } from "./smoke";
+
 export type CheckId = "git" | "claude" | "ptyhost" | "gh";
 export type CheckStatus = "ok" | "missing" | "unauthenticated" | "error";
 
@@ -6,6 +8,8 @@ export interface Check {
   label: string;
   status: CheckStatus;
   detail?: string;
+  /** The installed version, when known (claude only), for comparing with the smoke run. */
+  version?: string;
   fix?: string;
 }
 
@@ -15,6 +19,8 @@ export interface Diagnostics {
   crewReady: boolean;
   /** Missions can open PRs: git and gh (signed in) are ok. */
   launchReady: boolean;
+  /** When the real-claude smoke last ran and whether it still applies. */
+  smoke: SmokeStatus;
   checkedAt: number;
 }
 

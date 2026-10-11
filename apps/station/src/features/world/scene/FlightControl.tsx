@@ -15,6 +15,7 @@ function paint(
   armed: boolean | null,
   checks: DeckCheck[],
   lessonsPending: number,
+  smoke: { line: string; warn: boolean },
 ) {
   const c = canvas.getContext("2d")!;
   const { width: w, height: h } = canvas;
@@ -33,6 +34,11 @@ function paint(
   c.fillStyle = armed ? "#7bd88f" : KIT.amber;
   c.fillText(armed ? "ARMED" : "NOT ARMED", w - 28, 58);
   c.textAlign = "left";
+
+  // The last real-claude smoke, under the header.
+  c.font = '500 22px "Martian Mono", ui-monospace, monospace';
+  c.fillStyle = smoke.warn ? KIT.amber : "#9a9382";
+  c.fillText(smoke.line, 28, 96);
 
   // Lessons waiting at the Debrief (L), along the bottom on the right.
   if (lessonsPending > 0) {
@@ -63,17 +69,21 @@ function paint(
 
 /**
  * Flight Control: a desk against the deck's south edge, whose screen shows the deck's pre-flight
- * checks, whether they're armed and any lessons to review. E in front of it opens the Flight Control
+ * checks, whether they're armed, any lessons to review and when the real-claude smoke last passed. E in front of it opens the Flight Control
  * window, L the Debrief.
  */
 export function FlightControl({
   armed,
   checks,
   lessonsPending,
+  smokeLine,
+  smokeWarn,
 }: {
   armed: boolean | null;
   checks: DeckCheck[];
   lessonsPending: number;
+  smokeLine: string;
+  smokeWarn: boolean;
 }) {
   const surface = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -87,12 +97,12 @@ export function FlightControl({
 
   useEffect(() => {
     const draw = () => {
-      paint(surface.canvas, armed, checks, lessonsPending);
+      paint(surface.canvas, armed, checks, lessonsPending, { line: smokeLine, warn: smokeWarn });
       surface.texture.needsUpdate = true;
     };
     draw();
     void document.fonts?.ready.then(draw);
-  }, [surface, armed, checks, lessonsPending]);
+  }, [surface, armed, checks, lessonsPending, smokeLine, smokeWarn]);
   useEffect(() => () => surface.texture.dispose(), [surface]);
 
   const { width, depth, height } = FLIGHT_CONTROL_DESK;

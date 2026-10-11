@@ -3,6 +3,8 @@ import { RefreshIcon } from "@hugeicons/core-free-icons";
 import type { CrewInfo, DeckCheck } from "@mothership/protocol";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { diagnosticsQuery } from "../../../app/queries";
+import { NO_SMOKE } from "../../../app/smoke";
 import { ErrorNote } from "../../../shared/ui/ErrorNote";
 import { Icon } from "../../../shared/ui/Icon";
 import { InspectorSwitch } from "../../inspection/ui/InspectorSwitch";
@@ -112,6 +114,34 @@ function DeckHistory({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
   );
 }
 
+/** The last real-claude smoke: each check, and how to refresh it. */
+function Tooling() {
+  const { data } = useQuery(diagnosticsQuery);
+  const smoke = data?.smoke ?? NO_SMOKE;
+  return (
+    <section>
+      <h3 className="preflight__heading">Tooling</h3>
+      <p className="preflight__note" data-smoke={smoke.state}>
+        {smoke.line}
+      </p>
+      {smoke.checks.length > 0 && (
+        <ul className="flight-control__smoke">
+          {smoke.checks.map((check) => (
+            <li key={check.id} data-state={check.state}>
+              <code>{check.id}</code>
+              <span>{check.state}</span>
+              <span className="preflight__meta">{check.detail}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="preflight__note">
+        Run <code>vp run smoke:real</code> in apps/station to refresh
+      </p>
+    </section>
+  );
+}
+
 /** Flight Control: the deck's pre-flight checks, armed or not, each one editable. */
 export function FlightControlWindow({ deckId, crew }: { deckId: string; crew: CrewInfo[] }) {
   const queryClient = useQueryClient();
@@ -167,6 +197,7 @@ export function FlightControlWindow({ deckId, crew }: { deckId: string; crew: Cr
         </ul>
       )}
       <DeckHistory deckId={deckId} crew={crew} />
+      <Tooling />
     </div>
   );
 }

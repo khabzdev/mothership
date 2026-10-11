@@ -23,6 +23,8 @@ import type { CrewInfo } from "@mothership/protocol";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
+import { diagnosticsQuery } from "../../app/queries";
+import { NO_SMOKE } from "../../app/smoke";
 import { useRealtime } from "../../shared/realtime/RealtimeProvider";
 import { ErrorNote } from "../../shared/ui/ErrorNote";
 import { notify, toasts } from "../../shared/ui/toasts";
@@ -273,6 +275,26 @@ function LiteInspection({ member }: { member: CrewInfo }) {
           </div>
           <ErrorNote error={again.error} />
         </div>
+      )}
+    </section>
+  );
+}
+
+/** When the real-claude smoke last passed, and which of its checks failed. */
+function LiteSmoke() {
+  const { data } = useQuery(diagnosticsQuery);
+  const smoke = data?.smoke ?? NO_SMOKE;
+  return (
+    <section className="lite-smoke" aria-label="Smoke" data-smoke={smoke.state}>
+      <p className="muted">{smoke.line}</p>
+      {smoke.failed.length > 0 && (
+        <ul className="lite-smoke__failed">
+          {smoke.failed.map((check) => (
+            <li key={check.id}>
+              <code>{check.id}</code>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
@@ -666,6 +688,7 @@ function LiteDeck({
             <section className="lite-deck" aria-label="Deck settings">
               <InspectorSwitch deckId={deckId} />
             </section>
+            <LiteSmoke />
             <LiteLessons deckId={deckId} />
             <HireForm deckId={deckId} crew={crew} />
           </>

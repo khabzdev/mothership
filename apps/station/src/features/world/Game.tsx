@@ -3,6 +3,8 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { diagnosticsQuery } from "../../app/queries";
+import { NO_SMOKE } from "../../app/smoke";
 import { rosterQuery } from "../crew/queries";
 import { checksQuery } from "../preflight/queries";
 import { ArmCard } from "../preflight/ui/ArmCard";
@@ -126,6 +128,7 @@ export function Game({ deck }: { deck: Deck }) {
   const { data: queue } = useQuery(queueQuery(deck.id));
   const queued = useMemo(() => queueCards(queue?.tasks, queue?.limit ?? 3), [queue]);
   const { data: checks } = useQuery(checksQuery(deck.id));
+  const smoke = useQuery(diagnosticsQuery).data?.smoke ?? NO_SMOKE;
   const consoleId = useWorld((s) => s.consoleId);
   const [loaded, setLoaded] = useState(false);
   const ready = useCallback(() => setLoaded(true), []);
@@ -160,6 +163,8 @@ export function Game({ deck }: { deck: Deck }) {
               armed={checks?.armed ?? null}
               checks={checks?.checks ?? NO_CHECKS}
               lessonsPending={checks?.lessonsPending ?? 0}
+              smokeLine={smoke.line}
+              smokeWarn={smoke.state === "failed" || smoke.state === "stale"}
             />
             {CONSOLES.map((def) => (
               <Console

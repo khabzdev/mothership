@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { PROVIDERS } from "@mothership/providers";
 import { BriefService } from "../features/briefs/briefs.server";
 import { CrewService } from "../features/crew/service.server";
@@ -23,6 +25,7 @@ import { hub, type Peer } from "../shared/realtime/hub.server";
 import type { Diagnostics } from "./diagnostics";
 import { runDiagnostics } from "./diagnostics.server";
 import { exec } from "./exec.server";
+import { SMOKE_FILE } from "./smoke";
 
 /** Where crew hooks reach the station. */
 export function stationUrl(): string {
@@ -173,7 +176,17 @@ export function getStation(): Station {
     const diagnostics = ({ refresh = false } = {}) => {
       if (refresh || !cached || Date.now() - cachedAt > DIAGNOSTICS_TTL_MS) {
         cachedAt = Date.now();
-        cached = runDiagnostics({ exec, ptyhost: () => launcher.host() });
+        cached = runDiagnostics({
+          exec,
+          ptyhost: () => launcher.host(),
+          readSmoke: () => {
+            try {
+              return readFileSync(join(mothershipHome(), SMOKE_FILE), "utf8");
+            } catch {
+              return null;
+            }
+          },
+        });
       }
       return cached;
     };

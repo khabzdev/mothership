@@ -1,10 +1,13 @@
 import type { Check, Diagnostics } from "./diagnostics";
 import type { Exec, ExecResult } from "./exec.server";
+import { NO_SMOKE, parseSmokeFile, smokeStatus } from "./smoke";
 
 export interface DiagnosticsDeps {
   exec: Exec;
   /** Resolves once the PTY host is reachable, saying whether it's an outdated one kept for running crew. */
   ptyhost: () => Promise<{ outdated?: boolean; liveSessions?: number }>;
+  /** The text of $MOTHERSHIP_HOME/smoke.json, or null when there is none. */
+  readSmoke?: () => string | null;
 }
 
 const FIX = {
@@ -71,12 +74,19 @@ async function checkClaude({ exec }: DiagnosticsDeps): Promise<Check> {
       label,
       status: "unauthenticated",
       detail: `${versionText} · not signed in`,
+      version: versionText,
       fix: FIX.claudeLogin,
     };
   }
   // Only the method: never surface email or organisation.
   const method = typeof status.authMethod === "string" ? status.authMethod : "unknown";
-  return { id: "claude", label, status: "ok", detail: `${versionText} · signed in via ${method}` };
+  return {
+    id: "claude",
+    label,
+    status: "ok",
+    detail: `${versionText} · signed in via ${method}`,
+    version: versionText,
+  };
 }
 
 async function checkGh({ exec }: DiagnosticsDeps): Promise<Check> {
@@ -123,6 +133,17 @@ async function checkPtyhost({ ptyhost }: DiagnosticsDeps): Promise<Check> {
   }
 }
 
+/** The last smoke run against the installed claude. Never throws: anything unreadable is "no run". */
+function checkSmoke({ readSmoke }: DiagnosticsDeps, claude: Check) {
+  try {
+    const text = readSmoke?.();
+    const file = text ? parseSmokeFile(text) : null;
+    return smokeStatus(file, claude.version || null, Date.now());
+  } catch {
+    return NO_SMOKE;
+  }
+}
+
 /** Check the tools crew and launches depend on. Never throws. */
 export async function runDiagnostics(deps: DiagnosticsDeps): Promise<Diagnostics> {
   const [git, claude, ptyhost, gh] = await Promise.all([
@@ -136,6 +157,7 @@ export async function runDiagnostics(deps: DiagnosticsDeps): Promise<Diagnostics
     checks: [git, claude, ptyhost, gh],
     crewReady: ok(git) && ok(claude) && ok(ptyhost),
     launchReady: ok(git) && ok(gh),
+    smoke: checkSmoke(deps, claude),
     checkedAt: Date.now(),
   };
 }

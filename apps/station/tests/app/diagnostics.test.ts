@@ -181,4 +181,38 @@ describe("crewBlocker", () => {
       crewBlocker(await runDiagnostics(deps({ ...healthy, "gh --version": missing }))),
     ).toBeNull();
   });
+
+  test("no smoke file means no smoke run yet", async () => {
+    const { smoke } = await runDiagnostics({ ...deps(healthy), readSmoke: () => null });
+    expect(smoke.state).toBe("none");
+    expect((await runDiagnostics(deps(healthy))).smoke.state).toBe("none");
+  });
+
+  test("an unreadable smoke file is no run, never a throw", async () => {
+    for (const text of ["{", "{}", '{"checks":"x"}']) {
+      const { smoke } = await runDiagnostics({ ...deps(healthy), readSmoke: () => text });
+      expect(smoke.state).toBe("none");
+    }
+    const { smoke } = await runDiagnostics({
+      ...deps(healthy),
+      readSmoke: () => {
+        throw new Error("EACCES");
+      },
+    });
+    expect(smoke.state).toBe("none");
+  });
+
+  test("smoke is compared with the installed claude version", async () => {
+    const text = JSON.stringify({
+      ranAt: Date.now(),
+      claudeVersion: "2.0.0",
+      ghVersion: null,
+      model: "haiku",
+      checks: [{ id: "claude.version", state: "passed", detail: "2.0.0" }],
+    });
+    const { smoke, check } = await byId({ ...deps(healthy), readSmoke: () => text });
+    expect(check("claude").version).toBe("2.1.104");
+    expect(check("claude").detail).toBe("2.1.104 · signed in via claude.ai");
+    expect(smoke.line).toBe("Claude Code changed since smoke (2.0.0 → 2.1.104)");
+  });
 });
