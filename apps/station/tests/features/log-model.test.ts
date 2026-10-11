@@ -8,6 +8,7 @@ const merged: VerdictInput = {
   flags: 0,
   firstGo: true,
   firstClear: true,
+  inspectorFailed: false,
 };
 
 describe("missionId", () => {
@@ -41,6 +42,31 @@ describe("missionVerdict", () => {
     expect(missionVerdict({ ...merged, flags: 2, firstClear: false })).toEqual({
       kind: "rework",
       line: "Shipped after rework: flagged 2×",
+    });
+  });
+
+  test("handed back after a first-try GO or clear still isn't clean", () => {
+    expect(missionVerdict({ ...merged, nogos: 1 })).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: 1 NO-GO",
+    });
+    expect(missionVerdict({ ...merged, flags: 1 })).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: flagged 1×",
+    });
+  });
+
+  test("an Inspector that couldn't run isn't clean, and says so", () => {
+    expect(missionVerdict({ ...merged, firstClear: null, inspectorFailed: true })).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: Inspector couldn't run",
+    });
+    expect(
+      missionVerdict({ ...merged, flags: 1, briefRevisions: 2, inspectorFailed: true }).line,
+    ).toBe("Shipped after rework: flagged 1× · Inspector couldn't run · brief revised");
+    expect(missionVerdict({ ...merged, outcome: "home", inspectorFailed: true })).toEqual({
+      kind: "home",
+      line: "Sent home: Inspector couldn't run",
     });
   });
 

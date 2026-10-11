@@ -146,6 +146,7 @@ export class MissionLog {
     const row = this.#db.select().from(missions).where(eq(missions.id, id)).get();
     if (!row) return null;
     const { summary, outcome, runs, reviews, revisions } = this.#read(row);
+    const rank = this.#ranks(row.deckId, [row.name]).get(row.name) ?? rankOf(0);
     const failing = runs.length
       ? this.#db
           .select({ preflightId: preflightResults.preflightId, name: preflightResults.name })
@@ -170,6 +171,7 @@ export class MissionLog {
       .all();
     return {
       ...summary,
+      rank,
       startedAt: row.startedAt,
       ...(row.branch !== null && { branch: row.branch }),
       briefs: revisions.map((b) => ({
@@ -252,6 +254,9 @@ export class MissionLog {
       flags: reviews.filter((i) => i.trigger === "stop" && i.state === "flagged").length,
       firstGo: firstRun ? firstRun.state === "go" : null,
       firstClear: firstReview ? firstReview.state === "cleared" : null,
+      inspectorFailed:
+        reviews.some((i) => i.state === "cancelled" && i.reason?.startsWith("failed:")) &&
+        !reviews.some((i) => i.state === "cleared" || i.state === "flagged"),
     });
     const summary: MissionSummary = {
       id: row.id,

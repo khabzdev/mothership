@@ -126,7 +126,12 @@ function preflight(crewId: string, state: "go" | "nogo", at: number, trigger = "
   return id;
 }
 
-function inspection(crewId: string, state: "cleared" | "flagged", at: number) {
+function inspection(
+  crewId: string,
+  state: "cleared" | "flagged" | "cancelled",
+  at: number,
+  reason?: string,
+) {
   const id = `i${n++}`;
   db.insert(inspections)
     .values({
@@ -137,6 +142,7 @@ function inspection(crewId: string, state: "cleared" | "flagged", at: number) {
       attempt: n,
       trigger: "stop",
       state,
+      ...(reason && { reason }),
       fingerprint: "f",
       commit: "abc",
       findings: JSON.stringify(
@@ -327,6 +333,7 @@ describe("MissionLog entries", () => {
       outcome: "open",
       verdict: { kind: "open", line: "Not merged" },
       handBacks: 2,
+      rank: { title: "Cadet", points: 0, next: 5 },
       lessons: [],
       briefs: [
         { revision: 1, state: "revised", text: "## Goal\nPlan 1", reason: "Too broad" },
@@ -385,6 +392,29 @@ describe("MissionLog entries", () => {
     pr(nova.id);
     ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
     expect(log.list("deck-1")[0]!.verdict).toEqual({ kind: "clean", line: "Clean" });
+  });
+
+  test("an Inspector whose reviews all failed to run keeps a merge from being clean", async () => {
+    const nova = await hire();
+    preflight(nova.id, "go", T0 + 10);
+    inspection(nova.id, "cancelled", T0 + 20, "failed: Not logged in");
+    vi.setSystemTime(T0 + 100);
+    pr(nova.id);
+    const ada = await hire(1);
+    preflight(ada.id, "go", T0 + 110);
+    inspection(ada.id, "cancelled", T0 + 120, "superseded");
+    vi.setSystemTime(T0 + 200);
+    pr(ada.id, 2);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    ranks.onMerged("deck-1", { url: "https://gh/pr/2", branch: "" });
+    expect(log.entry(missionId(nova.id, T0))!.verdict).toEqual({
+      kind: "rework",
+      line: "Shipped after rework: Inspector couldn't run",
+    });
+    expect(log.entry(missionId(ada.id, T0 + 100))!.verdict).toEqual({
+      kind: "clean",
+      line: "Clean",
+    });
   });
 
   test("lessons tagged with the mission are in its entry", async () => {

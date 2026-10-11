@@ -86,7 +86,7 @@ export class DebriefService {
     if (!end.ownWorktree) return;
     const adapter = this.#providers[end.provider];
     if (!adapter?.reviewPlan) return;
-    const key = `${end.crewId}:${end.missionSince}`;
+    const key = missionId(end.crewId, end.missionSince);
     if (this.#debriefed.has(key)) return;
     const evidence = this.#evidence(end);
     if (!missionHadTrouble(evidence)) return;

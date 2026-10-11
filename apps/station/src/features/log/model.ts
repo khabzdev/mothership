@@ -21,6 +21,8 @@ export interface VerdictInput {
   firstGo: boolean | null;
   /** Whether the first stop inspection cleared. */
   firstClear: boolean | null;
+  /** The Inspector tried but no review could run (none cleared or flagged). */
+  inspectorFailed: boolean;
 }
 
 /** The mission's verdict, one line: clean, shipped after rework, not merged, or sent home. */
@@ -28,13 +30,15 @@ export function missionVerdict(v: VerdictInput): { kind: VerdictKind; line: stri
   const parts = [
     v.nogos > 0 && `${v.nogos} NO-GO`,
     v.flags > 0 && `flagged ${v.flags}×`,
+    v.inspectorFailed && "Inspector couldn't run",
     v.briefRevisions > 1 && "brief revised",
   ]
     .filter((p): p is string => !!p)
     .join(" · ");
   switch (v.outcome) {
     case "merged":
-      return v.briefRevisions <= 1 && v.firstGo !== false && v.firstClear !== false
+      // Clean: nothing handed back, nothing revised, and every first try that ran passed.
+      return !parts && v.firstGo !== false && v.firstClear !== false
         ? { kind: "clean", line: "Clean" }
         : {
             kind: "rework",
