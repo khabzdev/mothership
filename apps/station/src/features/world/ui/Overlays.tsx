@@ -5,6 +5,7 @@ import {
   GitBranchIcon,
   GitPullRequestIcon,
   LinkSquare02Icon,
+  Medal01Icon,
   Message01Icon,
   Rocket01Icon,
   Search01Icon,
@@ -21,6 +22,8 @@ import { LaunchCheck } from "../../preflight/ui/LaunchCheck";
 import { InspectionWindow } from "../../inspection/ui/InspectionWindow";
 import { BriefWindow } from "../../briefs/ui/BriefWindow";
 import { DebriefWindow } from "../../debrief/ui/DebriefWindow";
+import { RankChevrons } from "../../ranks/ui/RankChevrons";
+import { ServiceRecordWindow } from "../../ranks/ui/ServiceRecordWindow";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
@@ -183,6 +186,22 @@ function InspectionOverlay({ member }: { member: CrewInfo }) {
   );
 }
 
+function RecordOverlay({ member }: { member: CrewInfo }) {
+  return (
+    <Modal
+      icon={Medal01Icon}
+      title={`${member.name} · service record`}
+      subtitle={
+        <span className="with-icon">
+          <RankChevrons title={member.rank?.title} /> On this deck, kept under this call sign
+        </span>
+      }
+    >
+      <ServiceRecordWindow member={member} />
+    </Modal>
+  );
+}
+
 function PrWindow({ member }: { member: CrewInfo }) {
   const url = member.prUrl ?? "";
   const number = /\/pull\/(\d+)/.exec(url)?.[1];
@@ -253,6 +272,10 @@ export function Overlays({
     case "inspection": {
       const member = crew.find((c) => c.id === overlay.crewId);
       return member ? <InspectionOverlay member={member} /> : null;
+    }
+    case "record": {
+      const member = crew.find((c) => c.id === overlay.crewId);
+      return member ? <RecordOverlay member={member} /> : null;
     }
     case "launchCheck": {
       const member = crew.find((c) => c.id === overlay.crewId);

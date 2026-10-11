@@ -11,6 +11,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Icon } from "../../../shared/ui/Icon";
 import { inspectionChip } from "../../inspection/model";
+import { PatchIcons } from "../../ranks/ui/PatchIcons";
+import { RankChevrons } from "../../ranks/ui/RankChevrons";
 import { StatusBadge } from "./StatusBadge";
 import { needyFirst, waited } from "../waiting";
 
@@ -75,6 +77,13 @@ export function CrewPanel({ crew, open }: { crew: CrewInfo[]; open: (member: Cre
                   <span className="dot" style={{ "--dot": c.color } as CSSProperties} />
                   <span className="crew-panel__name">
                     {c.name}
+                    {c.rank && (
+                      <span className="crew-panel__sub crew-panel__rank with-icon">
+                        <RankChevrons title={c.rank.title} />
+                        {c.rank.title}
+                        <PatchIcons patches={c.patches} size={12} />
+                      </span>
+                    )}
                     {(c.branch || c.prUrl) && (
                       <span className="crew-panel__sub with-icon">
                         {c.branch && <Icon icon={GitBranchIcon} size={12} />}

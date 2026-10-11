@@ -1,3 +1,5 @@
+import type { ServerMsg } from "@mothership/protocol";
+
 /** Rank titles and the points each starts at. */
 export const RANKS = [
   ["Cadet", 0],
@@ -35,6 +37,22 @@ export function rankOf(points: number): { title: RankTitle; points: number; next
     : { title: RANKS[index]![0], points };
 }
 
+/** Chevrons on a crew tag: none for a Cadet, one to three, then a Captain's star. */
+export function chevronsFor(title: RankTitle): 0 | 1 | 2 | 3 | "star" {
+  switch (title) {
+    case "Cadet":
+      return 0;
+    case "Ensign":
+      return 1;
+    case "Lieutenant":
+      return 2;
+    case "Commander":
+      return 3;
+    case "Captain":
+      return "star";
+  }
+}
+
 export type PatchId =
   | "first-launch"
   | "clean-sheet"
@@ -67,4 +85,48 @@ export function newPatches(
     teacher: c.lessonsKept >= 1,
   };
   return PATCHES.filter((p) => earned[p.id] && !have.includes(p.id)).map((p) => p.id);
+}
+
+export type Patch = (typeof PATCHES)[number];
+
+const COUNTERS: [keyof ServiceCounters, string][] = [
+  ["missions", "Missions"],
+  ["merged", "Merged"],
+  ["firstTryGo", "First-try GOs"],
+  ["firstTryClear", "First-try clear inspections"],
+  ["cleanBriefs", "Clean briefs"],
+  ["lessonsKept", "Lessons kept"],
+];
+
+/** What the Service record window shows for a record. */
+export interface RecordView {
+  rank: RankTitle;
+  points: number;
+  /** "n to <next rank>"; absent at Captain. */
+  toNext?: string;
+  counters: { label: string; value: number }[];
+  /** In the order earned. */
+  earned: Patch[];
+  /** Not yet earned, in PATCHES order, each with its rule. */
+  locked: Patch[];
+}
+
+export function recordView(record: ServiceCounters & { patches: string[] }): RecordView {
+  const rank = rankOf(pointsOf(record));
+  const nextTitle = RANKS.find(([, from]) => from === rank.next)?.[0];
+  const earned = record.patches.flatMap((id) => PATCHES.filter((p) => p.id === id));
+  return {
+    rank: rank.title,
+    points: rank.points,
+    ...(rank.next !== undefined &&
+      nextTitle && { toNext: `${rank.next - rank.points} to ${nextTitle}` }),
+    counters: COUNTERS.map(([key, label]) => ({ label, value: record[key] })),
+    earned,
+    locked: PATCHES.filter((p) => !earned.includes(p)),
+  };
+}
+
+/** A promotion or patch for this crew member on this deck: it stands and cheers. */
+export function salutes(msg: ServerMsg, deckId: string, crewId: string): boolean {
+  return msg.type === "crew.promoted" && msg.deckId === deckId && msg.crewId === crewId;
 }

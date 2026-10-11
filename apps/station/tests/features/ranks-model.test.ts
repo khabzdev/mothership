@@ -1,9 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
+  chevronsFor,
   newPatches,
   PATCHES,
   pointsOf,
   rankOf,
+  recordView,
+  salutes,
   type ServiceCounters,
 } from "../../src/features/ranks/model.ts";
 
@@ -97,5 +100,93 @@ describe("PATCHES", () => {
       "Teacher",
     ]);
     expect(PATCHES.every((p) => p.rule.length > 0)).toBe(true);
+  });
+});
+
+describe("chevronsFor", () => {
+  test.each([
+    ["Cadet", 0],
+    ["Ensign", 1],
+    ["Lieutenant", 2],
+    ["Commander", 3],
+    ["Captain", "star"],
+  ] as const)("%s wears %s", (title, chevrons) => {
+    expect(chevronsFor(title)).toBe(chevrons);
+  });
+});
+
+describe("recordView", () => {
+  test("rank, points and how many to the next rank", () => {
+    const view = recordView({ ...zero, merged: 2, cleanBriefs: 1, patches: [] });
+    expect(view.rank).toBe("Ensign");
+    expect(view.points).toBe(7);
+    expect(view.toNext).toBe("8 to Lieutenant");
+  });
+
+  test("a Captain has no next rank", () => {
+    expect(recordView({ ...zero, merged: 30, patches: [] }).toNext).toBeUndefined();
+  });
+
+  test("the six counters, in order", () => {
+    const view = recordView({
+      missions: 1,
+      merged: 2,
+      firstTryGo: 3,
+      firstTryClear: 4,
+      cleanBriefs: 5,
+      lessonsKept: 6,
+      patches: [],
+    });
+    expect(view.counters.map((c) => c.value)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(view.counters.map((c) => c.label)).toEqual([
+      "Missions",
+      "Merged",
+      "First-try GOs",
+      "First-try clear inspections",
+      "Clean briefs",
+      "Lessons kept",
+    ]);
+  });
+
+  test("earned patches in the order earned, locked ones with their rule", () => {
+    const view = recordView({ ...zero, patches: ["teacher", "first-launch", "bogus"] });
+    expect(view.earned.map((p) => p.id)).toEqual(["teacher", "first-launch"]);
+    expect(view.locked.map((p) => p.id)).toEqual([
+      "clean-sheet",
+      "steady-hand",
+      "sharpshooter",
+      "old-hand",
+    ]);
+    expect(view.locked[1]).toEqual({
+      id: "steady-hand",
+      name: "Steady Hand",
+      rule: "5 first-try GOs",
+    });
+  });
+
+  test("nothing earned: every patch locked", () => {
+    const view = recordView({ ...zero, patches: [] });
+    expect(view.earned).toEqual([]);
+    expect(view.locked).toEqual(PATCHES);
+  });
+});
+
+describe("salutes", () => {
+  const msg = {
+    type: "crew.promoted",
+    deckId: "d1",
+    crewId: "c1",
+    name: "Nova",
+    rank: "Ensign",
+  } as const;
+
+  test("the crew member promoted on this deck salutes", () => {
+    expect(salutes(msg, "d1", "c1")).toBe(true);
+  });
+
+  test("anyone else, another deck or another message: no salute", () => {
+    expect(salutes(msg, "d1", "c2")).toBe(false);
+    expect(salutes(msg, "d2", "c1")).toBe(false);
+    expect(salutes({ type: "deck.lessons", deckId: "d1" }, "d1", "c1")).toBe(false);
   });
 });

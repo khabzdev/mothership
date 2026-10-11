@@ -12,6 +12,7 @@ export type Overlay =
   | { kind: "preflight"; crewId: string }
   | { kind: "brief"; crewId: string }
   | { kind: "inspection"; crewId: string }
+  | { kind: "record"; crewId: string }
   | { kind: "launchCheck"; crewId: string; reason: string }
   | { kind: "label"; consoleId: number }
   | { kind: "board"; board: BoardId; open?: number }
