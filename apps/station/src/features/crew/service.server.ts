@@ -4,6 +4,7 @@ import type {
   CrewStatus,
   InspectionInfo,
   PreflightInfo,
+  RankInfo,
   ServerMsg,
 } from "@mothership/protocol";
 import type { CrewSignal } from "@mothership/providers";
@@ -52,6 +53,24 @@ const STATUS_FOR_SIGNAL: Record<CrewSignal["type"], CrewStatus> = {
 /** Delay between pasting a prompt and pressing Enter (as agent-office does). */
 const SUBMIT_DELAY_MS = 120;
 
+/**
+ * A mission ending: its pull request opened (O), or the crew member sent home (X). Listeners
+ * read the mission's rows from `missionSince` up to `endedAt`.
+ */
+export interface MissionEnd {
+  crewId: string;
+  deckId: string;
+  name: string;
+  task: string;
+  missionSince: number;
+  endedAt: number;
+  how: "pr" | "home";
+  prUrl?: string;
+  branch?: string;
+  provider: string;
+  ownWorktree: boolean;
+}
+
 /** Who typed a prompt: you, or the station handing pre-flight failures back. */
 export type PromptFrom = "you" | "station";
 
@@ -60,12 +79,14 @@ type Describe = (crewId: string) => {
   preflight?: PreflightInfo;
   brief?: BriefInfo;
   inspection?: InspectionInfo;
+  rank?: RankInfo;
+  patches?: string[];
 };
 type Busy = (crewId: string) => boolean;
 type Briefed = (crewId: string) => boolean;
 
 function toInfo(row: Row, describe?: Describe): CrewInfo {
-  const { preflight, brief, inspection } = describe?.(row.id) ?? {};
+  const { preflight, brief, inspection, rank, patches } = describe?.(row.id) ?? {};
   return {
     id: row.id,
     kind: row.provider === "shell" ? "shell" : "agent",
@@ -84,6 +105,8 @@ function toInfo(row: Row, describe?: Describe): CrewInfo {
     ...(preflight && { preflight }),
     ...(brief && { brief }),
     ...(inspection && { inspection }),
+    ...(rank && { rank }),
+    ...(patches && patches.length > 0 && { patches }),
   };
 }
 
@@ -93,6 +116,7 @@ export class CrewService {
   readonly #goneListeners = new Set<(crewId: string) => void>();
   readonly #exitListeners = new Set<(crewId: string) => void>();
   readonly #promptListeners = new Set<(e: { crewId: string; from: PromptFrom }) => void>();
+  readonly #missionEndListeners = new Set<(end: MissionEnd) => void>();
   #describe: Describe | undefined;
   #busy: Busy = () => false;
   #briefWaiting: Briefed = () => false;
@@ -118,7 +142,7 @@ export class CrewService {
       .map((row) => this.#info(row));
   }
 
-  /** Add each crew member's pre-flight, brief and inspection summaries to what the roster says about it. */
+  /** Add each crew member's pre-flight, brief, inspection and rank to what the roster says about it. */
   describeWith(fn: Describe): void {
     this.#describe = fn;
   }
@@ -176,6 +200,43 @@ export class CrewService {
     if (!row) return;
     this.#deps.db.update(crew).set({ prUrl }).where(eq(crew.id, crewId)).run();
     this.#broadcast(row.deckId);
+  }
+
+  /** Its pull request opened: the mission ends, and whatever it does next is a new one. */
+  endMission(crewId: string, how: "pr", pr: { url: string; branch: string }): void {
+    const row = this.#row(crewId);
+    if (!row) return;
+    const endedAt = Date.now();
+    this.#endMission(row, { how, endedAt, prUrl: pr.url, branch: pr.branch });
+    this.#deps.db.update(crew).set({ missionSince: endedAt }).where(eq(crew.id, crewId)).run();
+  }
+
+  /** Called when a mission ends, while its crew member's row still exists. */
+  onMissionEnd(listener: (end: MissionEnd) => void): () => void {
+    this.#missionEndListeners.add(listener);
+    return () => this.#missionEndListeners.delete(listener);
+  }
+
+  #endMission(row: Row, end: Pick<MissionEnd, "how" | "endedAt" | "prUrl" | "branch">): void {
+    const { repoPath } = this.#deck(row.deckId);
+    const event: MissionEnd = {
+      crewId: row.id,
+      deckId: row.deckId,
+      name: row.name,
+      task: row.task,
+      missionSince: row.missionSince,
+      provider: row.provider,
+      ownWorktree: !!row.branch && row.cwd !== repoPath,
+      ...end,
+    };
+    for (const listener of this.#missionEndListeners) {
+      // A listener that fails mustn't stop the pull request or the send-home.
+      try {
+        listener(event);
+      } catch (error) {
+        console.error(`[crew] mission end listener failed for ${row.name}`, error);
+      }
+    }
   }
 
   async hire(input: HireInput): Promise<CrewInfo> {
@@ -260,6 +321,7 @@ export class CrewService {
         task: input.task,
         cwd,
         branch,
+        missionSince: Date.now(),
       })
       .run();
     this.#broadcast(deck.id);
@@ -328,6 +390,12 @@ export class CrewService {
     this.#submitting.delete(crewId);
     this.#alerted.delete(crewId);
     this.#idleWaiting.delete(crewId);
+    this.#endMission(row, {
+      how: "home",
+      endedAt: Date.now(),
+      ...(row.prUrl && { prUrl: row.prUrl }),
+      ...(row.branch && { branch: row.branch }),
+    });
     this.#deps.db.delete(crew).where(eq(crew.id, crewId)).run();
     this.#broadcast(row.deckId);
     for (const listener of this.#goneListeners) listener(crewId);

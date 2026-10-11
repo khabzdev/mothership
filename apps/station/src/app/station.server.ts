@@ -9,6 +9,7 @@ import { dockRepo } from "../features/decks/decks.server";
 import { GitHubBoards } from "../features/github/github.server";
 import { InspectionService } from "../features/inspection/inspection.server";
 import { QueueService } from "../features/queue/queue.server";
+import { RankService } from "../features/ranks/ranks.server";
 import { getDeck } from "../features/decks/decks.server";
 import { LabelService } from "../features/labels/labels.server";
 import { CheckService } from "../features/preflight/checks.server";
@@ -37,6 +38,7 @@ interface Station {
   preflight: PreflightService;
   briefs: BriefService;
   inspections: InspectionService;
+  ranks: RankService;
   diagnostics: (options?: { refresh?: boolean }) => Promise<Diagnostics>;
 }
 
@@ -71,6 +73,10 @@ export function getStation(): Station {
     });
     preflight.reconcile();
 
+    // Ranks: each call sign's service record on a deck, counted as its missions end.
+    const ranks = new RankService({ db: getDb(), broadcast: (msg) => hub.broadcast(msg), crew });
+    crew.onMissionEnd((end) => ranks.onMissionEnd(end));
+
     // Briefs: the plans Claude submits in plan mode; Y and N answer its approval dialog.
     const briefs = new BriefService({
       db: getDb(),
@@ -78,6 +84,7 @@ export function getStation(): Station {
       screens: launcher,
       broadcast: (msg) => hub.broadcast(msg),
       write: (crewId, data) => launcher.write(crewId, data),
+      cleanBrief: (crewId) => ranks.cleanBrief(crewId),
     });
     // The Inspector: every stop that passes pre-flight gets a scope check and a read-only review.
     const inspections = new InspectionService({
@@ -96,6 +103,7 @@ export function getStation(): Station {
       preflight: preflight.info(crewId),
       brief: briefs.info(crewId),
       inspection: inspections.info(crewId),
+      ...ranks.info(crewId),
     }));
     crew.briefWaitingWith((crewId) => briefs.waiting(crewId));
     crew.briefUnapprovedWith((crewId) => briefs.unapproved(crewId));
@@ -173,6 +181,7 @@ export function getStation(): Station {
         title: pull.title,
         ...(from && { crewId: from.id }),
       });
+      ranks.onMerged(deckId, { url: pull.url, branch: pull.headRefName });
     });
     // The task queue: crew seated for queued tasks as consoles free up (checked every few seconds).
     const queue = new QueueService({
@@ -193,6 +202,7 @@ export function getStation(): Station {
       preflight,
       briefs,
       inspections,
+      ranks,
       diagnostics,
     };
   })();

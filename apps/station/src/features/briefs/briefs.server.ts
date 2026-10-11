@@ -1,5 +1,5 @@
 import type { BriefInfo, BriefState, ServerMsg } from "@mothership/protocol";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { resolve, sep } from "node:path";
 import type { Db } from "../../shared/db/client.server";
 import { briefs, crew as crewTable } from "../../shared/db/schema";
@@ -40,6 +40,8 @@ interface Deps {
   broadcast: (msg: ServerMsg) => void;
   /** Type into a crew member's terminal (the launcher's write). */
   write: (crewId: string, data: string) => Promise<void>;
+  /** A brief was approved as first written (the ranks' clean brief). */
+  cleanBrief?: (crewId: string) => void;
 }
 
 type Row = typeof briefs.$inferSelect;
@@ -56,6 +58,7 @@ export class BriefService {
   readonly #screens: Pick<ScreenSource, "screen">;
   readonly #broadcast: (msg: ServerMsg) => void;
   readonly #write: (crewId: string, data: string) => Promise<void>;
+  readonly #cleanBrief: (crewId: string) => void;
   /** Each crew member's answer under way: the next one waits for it, so one brief gets one key. */
   readonly #answering = new Map<string, Promise<BriefAnswer>>();
 
@@ -65,6 +68,7 @@ export class BriefService {
     this.#screens = deps.screens;
     this.#broadcast = deps.broadcast;
     this.#write = deps.write;
+    this.#cleanBrief = deps.cleanBrief ?? (() => {});
     this.#crew.onGone((crewId) => this.#supersedeWaiting(crewId));
     // Its dialog went with its process: a resume must not inherit an answer it never got.
     this.#crew.onExit((crewId) => this.#supersedeWaiting(crewId));
@@ -289,23 +293,16 @@ export class BriefService {
 
   /** Approve a waiting brief; false when it was no longer waiting. */
   #approve(brief: BriefRecord, by: "you" | "terminal"): boolean {
-    const changed = this.#db.transaction((tx) => {
-      const { changes } = tx
-        .update(briefs)
-        .set({ state: "approved", approvedBy: by, settledAt: Date.now() })
-        .where(and(eq(briefs.id, brief.id), eq(briefs.state, "waiting")))
-        .run();
-      // A clean brief: approved as first written, with no revision asked for.
-      if (changes > 0 && brief.revision === 1) {
-        tx.update(crewTable)
-          .set({ cleanBriefs: sql`${crewTable.cleanBriefs} + 1` })
-          .where(eq(crewTable.id, brief.crewId))
-          .run();
-      }
-      return changes > 0;
-    });
-    if (changed) this.#changed(brief.deckId, brief.crewId);
-    return changed;
+    const { changes } = this.#db
+      .update(briefs)
+      .set({ state: "approved", approvedBy: by, settledAt: Date.now() })
+      .where(and(eq(briefs.id, brief.id), eq(briefs.state, "waiting")))
+      .run();
+    if (changes === 0) return false;
+    // A clean brief: approved as first written, with no revision asked for.
+    if (brief.revision === 1) this.#cleanBrief(brief.crewId);
+    this.#changed(brief.deckId, brief.crewId);
+    return true;
   }
 
   /** Settle a waiting brief; false when it was no longer waiting. */

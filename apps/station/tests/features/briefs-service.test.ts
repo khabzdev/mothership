@@ -12,6 +12,7 @@ import { BRIEF_INSTRUCTIONS } from "../../src/features/briefs/model.ts";
 import type { CrewLauncher, LaunchRequest } from "../../src/features/crew/launcher.server.ts";
 import type { PromptFrom } from "../../src/features/crew/service.server.ts";
 import { CrewService } from "../../src/features/crew/service.server.ts";
+import { RankService } from "../../src/features/ranks/ranks.server.ts";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
 import { crew as crewTable, decks } from "../../src/shared/db/schema.ts";
 
@@ -61,6 +62,7 @@ let onKey: ((data: string) => void) | null;
 /** Whether Claude takes a typed key: its dialog leaves the screen. */
 let keyCloses: boolean;
 let service: BriefService;
+let ranks: RankService;
 
 const frame = (lines: string[]): ScreenFrame => ({
   cols: 80,
@@ -94,6 +96,7 @@ beforeEach(() => {
     writes.push(data);
   };
   crew = new CrewService({ db, launcher, broadcast, home: join(scratch, "home") });
+  ranks = new RankService({ db, broadcast, crew });
   service = new BriefService({
     db,
     crew,
@@ -111,6 +114,7 @@ beforeEach(() => {
       writes.push(data);
       if (keyCloses) screens[crewId] = ["> "];
     },
+    cleanBrief: (crewId) => ranks.cleanBrief(crewId),
   });
   crew.describeWith((id) => ({ brief: service.info(id) }));
   crew.briefWaitingWith((id) => service.waiting(id));
@@ -134,8 +138,11 @@ const signal = (crewId: string, s: CrewSignal) => {
 
 const plan = (crewId: string, text = PLAN) => signal(crewId, { type: "plan", plan: text });
 
-const cleanBriefs = (crewId: string) =>
-  db.select().from(crewTable).where(eq(crewTable.id, crewId)).get()!.cleanBriefs;
+/** The clean briefs on its call sign's service record. */
+const cleanBriefs = (crewId: string) => {
+  const { deckId, name } = db.select().from(crewTable).where(eq(crewTable.id, crewId)).get()!;
+  return ranks.record(deckId, name).cleanBriefs;
+};
 
 const briefMsgs = () => sent.filter((m) => m.type === "crew.brief");
 

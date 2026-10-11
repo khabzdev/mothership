@@ -62,6 +62,8 @@ export const openCrewPr = createServerFn({ method: "POST" })
         console: CONSOLES[member.consoleId]?.label ?? `Console ${member.consoleId + 1}`,
       });
       crew.setPr(data.crewId, url);
+      // A pull request opened ends the mission; giving back the one it has (above) doesn't.
+      crew.endMission(data.crewId, "pr", { url, branch: member.branch });
       return { url, opened: true };
     } catch (error) {
       const e = error as NodeJS.ErrnoException & { stderr?: string };

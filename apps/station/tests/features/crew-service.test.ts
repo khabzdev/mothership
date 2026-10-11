@@ -9,9 +9,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/tes
 import { BRIEF_INSTRUCTIONS } from "../../src/features/briefs/model.ts";
 import type { CrewLauncher, LaunchRequest } from "../../src/features/crew/launcher.server.ts";
 import { parseHireInput, parsePromptInput } from "../../src/features/crew/model.ts";
-import { CrewService } from "../../src/features/crew/service.server.ts";
+import { CrewService, type MissionEnd } from "../../src/features/crew/service.server.ts";
 import { createDb, type Db } from "../../src/shared/db/client.server.ts";
-import { decks } from "../../src/shared/db/schema.ts";
+import { eq } from "drizzle-orm";
+import { crew as crewTable, decks } from "../../src/shared/db/schema.ts";
 
 class FakeLauncher implements CrewLauncher {
   launches: LaunchRequest[] = [];
@@ -501,6 +502,82 @@ describe("send home", () => {
     expect(branches()).toContain(keep.branch);
     expect(branches()).toContain(remove.branch);
     expect(branches()).not.toContain(del.branch);
+  });
+});
+
+describe("mission ends", () => {
+  const missionSince = (id: string) =>
+    db.select().from(crewTable).where(eq(crewTable.id, id)).get()?.missionSince;
+
+  test("hire starts the mission", async () => {
+    const before = Date.now();
+    const nova = await hire(0);
+    expect(missionSince(nova.id)).toBeGreaterThanOrEqual(before);
+  });
+
+  test("a pull request ends the mission, then the next one starts", async () => {
+    const nova = await hire(0, "Add dark mode", true);
+    const since = missionSince(nova.id)!;
+    const ends: MissionEnd[] = [];
+    service.onMissionEnd((end) => {
+      // Listeners read the mission's rows before the next one starts.
+      expect(missionSince(nova.id)).toBe(since);
+      ends.push(end);
+    });
+    service.endMission(nova.id, "pr", { url: "https://gh/pr/1", branch: nova.branch! });
+    expect(ends).toEqual([
+      {
+        crewId: nova.id,
+        deckId: "deck-1",
+        name: "Nova",
+        task: "Add dark mode",
+        missionSince: since,
+        endedAt: expect.any(Number),
+        how: "pr",
+        prUrl: "https://gh/pr/1",
+        branch: nova.branch,
+        provider: "claude-code",
+        ownWorktree: true,
+      },
+    ]);
+    expect(missionSince(nova.id)).toBe(ends[0]!.endedAt);
+  });
+
+  test("send home ends the mission while its row is still there", async () => {
+    const nova = await hire(0);
+    const ends: { end: MissionEnd; seated: boolean }[] = [];
+    service.onMissionEnd((end) => ends.push({ end, seated: !!missionSince(end.crewId) }));
+    await service.sendHome(nova.id, "keep");
+    expect(ends).toEqual([
+      {
+        end: expect.objectContaining({ crewId: nova.id, how: "home", ownWorktree: false }),
+        seated: true,
+      },
+    ]);
+    expect(ends[0]!.end).not.toHaveProperty("prUrl");
+  });
+
+  test("a failing listener doesn't stop the send-home or the others", async () => {
+    const nova = await hire(0);
+    const heard: string[] = [];
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    service.onMissionEnd(() => {
+      throw new Error("boom");
+    });
+    service.onMissionEnd((end) => heard.push(end.how));
+    service.endMission(nova.id, "pr", { url: "u", branch: "b" });
+    await service.sendHome(nova.id, "keep");
+    expect(heard).toEqual(["pr", "home"]);
+    expect(service.roster("deck-1")).toEqual([]);
+    expect(error).toHaveBeenCalledTimes(2);
+    error.mockRestore();
+  });
+
+  test("an unknown crew member's mission doesn't end", () => {
+    const heard: MissionEnd[] = [];
+    service.onMissionEnd((end) => heard.push(end));
+    service.endMission("nobody", "pr", { url: "u", branch: "b" });
+    expect(heard).toEqual([]);
   });
 });
 
