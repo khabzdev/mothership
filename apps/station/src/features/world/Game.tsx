@@ -1,5 +1,5 @@
 import type { CrewInfo, DeckCheck } from "@mothership/protocol";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useProgress } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +11,8 @@ import { ArmCard } from "../preflight/ui/ArmCard";
 import { launchCards, missionCards } from "../github/cards";
 import { boardQuery } from "../github/queries";
 import { labelsQuery } from "../labels/queries";
+import { logCards } from "../log/cards";
+import { logQuery } from "../log/queries";
 import { Palette } from "../palette/Palette";
 import { queueCards } from "../queue/cards";
 import { queueQuery } from "../queue/queries";
@@ -127,6 +129,9 @@ export function Game({ deck }: { deck: Deck }) {
   const launch = useMemo(() => launchCards(github), [github]);
   const { data: queue } = useQuery(queueQuery(deck.id));
   const queued = useMemo(() => queueCards(queue?.tasks, queue?.limit ?? 3), [queue]);
+  // The newest page only: loading older ones in the window doesn't repaint the board.
+  const newest = useInfiniteQuery(logQuery(deck.id)).data?.pages[0];
+  const logged = useMemo(() => logCards(newest ?? []), [newest]);
   const { data: checks } = useQuery(checksQuery(deck.id));
   const smoke = useQuery(diagnosticsQuery).data?.smoke ?? NO_SMOKE;
   const consoleId = useWorld((s) => s.consoleId);
@@ -159,6 +164,7 @@ export function Game({ deck }: { deck: Deck }) {
             <Board board="mission" trim={paint.trim} {...mission} />
             <Board board="launch" trim={paint.trim} {...launch} />
             <Board board="queue" trim={paint.trim} {...queued} />
+            <Board board="log" trim={paint.trim} cards={logged} note="newest first" />
             <FlightControl
               armed={checks?.armed ?? null}
               checks={checks?.checks ?? NO_CHECKS}

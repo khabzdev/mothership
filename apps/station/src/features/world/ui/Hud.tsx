@@ -4,6 +4,7 @@ import {
   AirplaneTakeOff01Icon,
   CheckmarkCircle02Icon,
   HandGrabIcon,
+  Notebook01Icon,
   Notification03Icon,
   Rocket01Icon,
   SpaceshipIcon,
@@ -30,10 +31,12 @@ function Key({ k, label }: { k: string; label: string }) {
   );
 }
 
+/** Each board's icon, what it is, and what E does there. */
 const BOARD_HINTS = {
-  mission: [Target02Icon, "Mission board · issues"],
-  launch: [Rocket01Icon, "Launch board · pull requests"],
-  queue: [TaskDaily01Icon, "Task queue"],
+  mission: [Target02Icon, "Mission board · issues", "Read the board"],
+  launch: [Rocket01Icon, "Launch board · pull requests", "Read the board"],
+  queue: [TaskDaily01Icon, "Task queue", "Read the board"],
+  log: [Notebook01Icon, "Captain's log", "Read the log"],
 } as const;
 
 /** What you're facing and what you can do there (agent-office's hint bar). */
@@ -74,7 +77,7 @@ export function HintBar({
           <Icon icon={BOARD_HINTS[atBoard][0]} />
           {BOARD_HINTS[atBoard][1]}
         </span>
-        <Key k="E" label="Read the board" />
+        <Key k="E" label={BOARD_HINTS[atBoard][2]} />
       </div>
     );
   }

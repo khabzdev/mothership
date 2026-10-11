@@ -31,7 +31,10 @@ const TITLES: Record<BoardId, string> = {
   mission: "MISSION BOARD",
   launch: "LAUNCH BOARD",
   queue: "TASK QUEUE",
+  log: "CAPTAIN'S LOG",
 };
+/** What a board with nothing on it says. */
+const EMPTY: Partial<Record<BoardId, string>> = { log: "No missions logged yet" };
 
 /** Wrap `text` into at most `lines` lines that fit `width`. */
 function wrap(c: CanvasRenderingContext2D, text: string, width: number, lines: number): string[] {
@@ -85,7 +88,7 @@ function paint(
   c.fillText(note, w - 32 * k, 58 * k);
   c.textAlign = "left";
 
-  const cols = board === "queue" ? 2 : 3;
+  const cols = board === "queue" || board === "log" ? 2 : 3;
   const cw = (w - 2 * margin - gap * (cols + 1)) / cols;
   const ch = (h - top - margin - gap * (NOTE.rows + 1)) / NOTE.rows;
   cards.slice(0, cols * NOTE.rows).forEach((card, i) => {
@@ -123,7 +126,7 @@ function paint(
     c.fillStyle = "#5e584b";
     c.font = font(500, 30, MONO);
     c.textAlign = "center";
-    c.fillText("Nothing pinned up", w / 2, h / 2 + 40 * k);
+    c.fillText(EMPTY[board] ?? "Nothing pinned up", w / 2, h / 2 + 40 * k);
     c.textAlign = "left";
   }
 }

@@ -191,24 +191,24 @@ export function shipInReach(x: number, z: number, reach = 1.5): boolean {
   return Math.hypot(x - SHIP_STOP.x, z - SHIP_STOP.z) < reach;
 }
 
-export type BoardId = "mission" | "launch" | "queue";
+export type BoardId = "mission" | "launch" | "queue" | "log";
 
 /** Where the board wall starts at its west end. */
-const WALL_WEST = -16.5;
+const WALL_WEST = -17;
 /** The gap between neighbouring boards in the wall. */
 export const BOARD_GAP = 0.4;
 const BOARD_HEIGHT = 4.2;
-const BOARD_WIDTHS: Record<BoardId, number> = { mission: 7, launch: 7, queue: 5.5 };
+const BOARD_WIDTHS: Record<BoardId, number> = { mission: 7, launch: 7, queue: 5.5, log: 4 };
 
 /**
  * The boards, side by side as one wall on the flat ring just north of the play area, from the
  * north-west eastward and well short of the ship pad: issues (Mission board), pull requests
- * (Launch board) and the task queue. The walk clamp keeps the Captain off them.
+ * (Launch board), the task queue and the Captain's log. The walk clamp keeps the Captain off them.
  */
 export const BOARDS = (() => {
   const boards = {} as Record<BoardId, { x: number; z: number; width: number; height: number }>;
   let west = WALL_WEST;
-  for (const id of ["mission", "launch", "queue"] as const) {
+  for (const id of ["mission", "launch", "queue", "log"] as const) {
     const width = BOARD_WIDTHS[id];
     boards[id] = { x: west + width / 2, z: DECK.minZ - 1.5, width, height: BOARD_HEIGHT };
     west += width + BOARD_GAP;

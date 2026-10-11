@@ -1,5 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
-import { missionId, missionVerdict, type VerdictInput } from "../../src/features/log/model.ts";
+import { logCards } from "../../src/features/log/cards.ts";
+import type { MissionSummary } from "../../src/features/log/log.server.ts";
+import {
+  endedAgo,
+  missionId,
+  missionVerdict,
+  type VerdictInput,
+} from "../../src/features/log/model.ts";
 
 const merged: VerdictInput = {
   outcome: "merged",
@@ -88,5 +95,59 @@ describe("missionVerdict", () => {
       kind: "home",
       line: "Sent home: 1 NO-GO",
     });
+  });
+});
+
+describe("logCards", () => {
+  const summary = (
+    id: string,
+    kind: MissionSummary["verdict"]["kind"],
+    line: string,
+  ): MissionSummary => ({
+    id,
+    name: `Crew ${id}`,
+    task: "a task",
+    endedAt: 1,
+    how: kind === "home" ? "home" : "pr",
+    verdict: { kind, line },
+  });
+
+  test("one card per mission: call sign, verdict line as is, coloured by kind", () => {
+    const cards = logCards([
+      summary("a", "clean", "Clean"),
+      summary("b", "rework", "Shipped after rework: 2 NO-GO · flagged 1×"),
+      summary("c", "open", "PR closed"),
+      summary("d", "home", "Sent home: brief revised"),
+    ]);
+    expect(cards.map((c) => [c.key, c.label, c.title])).toEqual([
+      ["a", "Crew a", "Clean"],
+      ["b", "Crew b", "Shipped after rework: 2 NO-GO · flagged 1×"],
+      ["c", "Crew c", "PR closed"],
+      ["d", "Crew d", "Sent home: brief revised"],
+    ]);
+    // The boards' colours: green, amber, dim, red.
+    expect(cards.map((c) => [c.color, c.dot])).toEqual([
+      ["#c8f2d5", "#06d6a0"],
+      ["#fff1b8", "#ffd166"],
+      ["#dcdfe6", "#8d99ae"],
+      ["#ffc2b3", "#ef476f"],
+    ]);
+  });
+
+  test("the 4 newest only", () => {
+    const many = ["a", "b", "c", "d", "e", "f"].map((id) => summary(id, "clean", "Clean"));
+    expect(logCards(many).map((c) => c.key)).toEqual(["a", "b", "c", "d"]);
+    expect(logCards([])).toEqual([]);
+  });
+});
+
+describe("endedAgo", () => {
+  test("how long ago a mission ended, roughly", () => {
+    const min = 60_000;
+    expect(endedAgo(30_000)).toBe("just now");
+    expect(endedAgo(-5)).toBe("just now");
+    expect(endedAgo(5 * min)).toBe("5m ago");
+    expect(endedAgo(125 * min)).toBe("2h ago");
+    expect(endedAgo(50 * 60 * min)).toBe("2d ago");
   });
 });

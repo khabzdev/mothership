@@ -7,6 +7,7 @@ import {
   LinkSquare02Icon,
   Medal01Icon,
   Message01Icon,
+  Notebook01Icon,
   Rocket01Icon,
   Search01Icon,
   SecurityCheckIcon,
@@ -27,6 +28,7 @@ import { ServiceRecordWindow } from "../../ranks/ui/ServiceRecordWindow";
 import { PreflightWindow } from "../../preflight/ui/PreflightWindow";
 import { ChangesPanel } from "../../changes/ui/ChangesPanel";
 import { BoardWindow } from "../../github/ui/BoardWindow";
+import { LogWindow } from "../../log/ui/LogWindow";
 import { QueueWindow } from "../../queue/ui/QueueWindow";
 import { SearchWindow } from "../../search/ui/SearchWindow";
 import { hireMutation, promptMutation } from "../../crew/queries";
@@ -307,6 +309,18 @@ export function Overlays({
             subtitle="Add tasks and walk away: the next free crew member takes each one in its own worktree."
           >
             <QueueWindow deckId={deckId} />
+          </Modal>
+        );
+      }
+      if (overlay.board === "log") {
+        return (
+          <Modal
+            wide
+            icon={Notebook01Icon}
+            title="Captain's log"
+            subtitle="Every mission that ended, with its evidence: why you can trust what landed."
+          >
+            <LogWindow deckId={deckId} />
           </Modal>
         );
       }

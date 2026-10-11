@@ -1,5 +1,5 @@
 import { ISLAND, TILE } from "../../src/features/world/island.ts";
-import { PAD_CLEARINGS } from "../../src/features/world/outpost.ts";
+import { OUTPOST_SCALE, PAD_CLEARINGS } from "../../src/features/world/outpost.ts";
 import { describe, expect, test } from "vite-plus/test";
 import {
   CONSOLES,
@@ -9,6 +9,7 @@ import {
   COLLIDERS,
   addCollider,
   BOARDS,
+  BOARD_GAP,
   BOARD_STAND_Z,
   SHIP_STOP,
   FLIGHT_CONTROL,
@@ -122,10 +123,10 @@ describe("deck layout", () => {
     for (const b of sorted) expect(b.height).toBeGreaterThanOrEqual(4);
   });
 
-  test("the board wall stays well clear of the ship pad's clearing", () => {
-    const clearing = PAD_CLEARINGS.find((c) => c.x === SHIP_PAD.x && c.z === SHIP_PAD.z)!;
-    for (const [, b] of boards)
-      expect(b.x + b.width / 2).toBeLessThanOrEqual(clearing.x - clearing.r - 2);
+  test("the board wall stops short of the ship's landing pad", () => {
+    // The large landing pad is 2.5 m across at the model's scale, so 5 m at the outpost's.
+    const padWest = SHIP_PAD.x - 1.25 * OUTPOST_SCALE;
+    for (const [, b] of boards) expect(b.x + b.width / 2 + BOARD_GAP / 2).toBeLessThan(padWest);
   });
 
   test("walking north toward a board stops at the walk limit, in reach of it", () => {
@@ -148,6 +149,20 @@ describe("deck layout", () => {
       const seat = consoleSeat(c, 1.25);
       expect(boardInReach(seat.x, seat.z)).toBeNull();
     }
+  });
+
+  test("the Captain's log hangs east of the Task queue, short of your ship", () => {
+    const log = BOARDS.log;
+    const queue = BOARDS.queue;
+    expect(log.width).toBe(4);
+    expect(log.z).toBe(queue.z);
+    expect(log.x - log.width / 2).toBeGreaterThanOrEqual(
+      queue.x + queue.width / 2 + BOARD_GAP - 1e-9,
+    );
+    expect(log.x + log.width / 2).toBeLessThan(SHIP_STOP.x - 1.5);
+    expect(boardInReach(log.x, BOARD_STAND_Z)).toBe("log");
+    expect(boardInReach(queue.x, BOARD_STAND_Z)).toBe("queue");
+    expect(boardInReach(SHIP_STOP.x, SHIP_STOP.z)).toBeNull();
   });
 
   test("you use Flight Control from in front of its desk, and can't walk into the desk", () => {

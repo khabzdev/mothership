@@ -88,3 +88,12 @@ export function missionVerdict(v: VerdictInput): { kind: VerdictKind; line: stri
       return { kind: "home", line: parts ? `Sent home: ${parts}` : "Sent home" };
   }
 }
+
+/** How long ago a mission ended: "just now", "5m ago", "2h ago", "3d ago". */
+export function endedAgo(ms: number): string {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
+}

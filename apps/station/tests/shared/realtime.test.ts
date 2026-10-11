@@ -166,6 +166,19 @@ describe("applyServerMsg", () => {
     expect(realtimeKeys.lessons("d1")).toEqual(["decks", "d1", "lessons"]);
   });
 
+  test("a deck.lessons makes that deck's log stale too: lessons drafted after it was logged", () => {
+    const qc = new QueryClient();
+    qc.setQueryData([...realtimeKeys.log("d1"), "mission", "m1"], {});
+    qc.setQueryData([...realtimeKeys.log("d2"), "mission", "m2"], {});
+    applyServerMsg(qc, { type: "deck.lessons", deckId: "d1" });
+    expect(qc.getQueryState([...realtimeKeys.log("d1"), "mission", "m1"])?.isInvalidated).toBe(
+      true,
+    );
+    expect(qc.getQueryState([...realtimeKeys.log("d2"), "mission", "m2"])?.isInvalidated).toBe(
+      false,
+    );
+  });
+
   test("a crew.inspection makes that crew member's inspection stale", () => {
     const qc = new QueryClient();
     qc.setQueryData(realtimeKeys.inspection("c1"), { latest: null });

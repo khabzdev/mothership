@@ -3,6 +3,7 @@ import {
   AirplaneTakeOff01Icon,
   ComputerTerminal01Icon,
   GitPullRequestIcon,
+  Notebook01Icon,
   Notification03Icon,
   Rocket01Icon,
   Search01Icon,
@@ -184,6 +185,7 @@ export function Palette({
         ["mission", "Mission board", "GitHub issues", Target02Icon],
         ["launch", "Launch board", "Pull requests", Rocket01Icon],
         ["queue", "Task queue", "Tasks waiting for crew", TaskDaily01Icon],
+        ["log", "Captain's log", "Missions that ended, with their evidence", Notebook01Icon],
       ] as const
     ).map(([board, title, subtitle, icon]): Entry => ({
       id: `b:${board}`,

@@ -36,9 +36,11 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
       inspector: msg.inspector,
       lessonsPending: msg.lessonsPending,
     });
-  else if (msg.type === "deck.lessons")
+  else if (msg.type === "deck.lessons") {
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.lessons(msg.deckId) });
-  else if (msg.type === "deck.log")
+    // The debrief drafts a mission's lessons after the mission is logged.
+    void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
+  } else if (msg.type === "deck.log")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
   else if (msg.type === "crew.preflight")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.preflight(msg.crewId) });
