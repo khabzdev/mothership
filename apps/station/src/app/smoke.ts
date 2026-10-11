@@ -1,4 +1,4 @@
-/** The smoke suite writes its result here, in $MOTHERSHIP_HOME. */
+/** The smoke suite writes its result here, in $SPACESHIP_HOME. */
 export const SMOKE_FILE = "smoke.json";
 
 export type SmokeCheckState = "passed" | "failed" | "skipped";

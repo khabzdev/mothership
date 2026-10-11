@@ -34,7 +34,7 @@ export async function ensurePtyHost({
   const child = spawn(process.execPath, [entry], {
     detached: true,
     stdio: "ignore",
-    env: { ...process.env, MOTHERSHIP_HOME: home },
+    env: { ...process.env, SPACESHIP_HOME: home },
   });
   child.unref();
 

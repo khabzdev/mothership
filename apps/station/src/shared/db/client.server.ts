@@ -2,8 +2,8 @@ import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { DB_FILE, spaceshipHome } from "../home.server.ts";
 import * as schema from "./schema.ts";
 
 export type Db = BetterSQLite3Database<typeof schema> & { $client: Database.Database };
@@ -24,15 +24,10 @@ export function createDb(path: string, options: CreateDbOptions = {}): Db {
   return db;
 }
 
-/** Where Mothership keeps its data: $MOTHERSHIP_HOME or ~/.mothership. */
-export function mothershipHome(): string {
-  return process.env.MOTHERSHIP_HOME ?? join(homedir(), ".mothership");
-}
-
 let instance: Db | undefined;
 
 /** The station's database, opened on first use. */
 export function getDb(): Db {
-  instance ??= createDb(join(mothershipHome(), "mothership.db"));
+  instance ??= createDb(join(spaceshipHome(), DB_FILE));
   return instance;
 }

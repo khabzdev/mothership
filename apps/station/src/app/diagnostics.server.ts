@@ -6,7 +6,7 @@ export interface DiagnosticsDeps {
   exec: Exec;
   /** Resolves once the PTY host is reachable, saying whether it's an outdated one kept for running crew. */
   ptyhost: () => Promise<{ outdated?: boolean; liveSessions?: number }>;
-  /** The text of $MOTHERSHIP_HOME/smoke.json, or null when there is none. */
+  /** The text of $SPACESHIP_HOME/smoke.json, or null when there is none. */
   readSmoke?: () => string | null;
 }
 

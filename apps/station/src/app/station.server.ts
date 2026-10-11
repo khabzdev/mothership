@@ -21,7 +21,8 @@ import { CheckService } from "../features/preflight/checks.server";
 import { PreflightService } from "../features/preflight/preflight.server";
 import { ScreenRelay } from "../features/crew/screens.server";
 import { TerminalRelay } from "../features/crew/terminals.server";
-import { getDb, mothershipHome } from "../shared/db/client.server";
+import { getDb } from "../shared/db/client.server";
+import { spaceshipHome } from "../shared/home.server";
 import { hub, type Peer } from "../shared/realtime/hub.server";
 import type { Diagnostics } from "./diagnostics";
 import { runDiagnostics } from "./diagnostics.server";
@@ -56,7 +57,7 @@ const shared = globalThis as typeof globalThis & { __mothershipStation?: Station
 /** The station: crew, PTY host, hooks and browser sockets, wired together once per process. */
 export function getStation(): Station {
   shared.__mothershipStation ??= (() => {
-    const home = mothershipHome();
+    const home = spaceshipHome();
     const launcher = new PtyCrewLauncher({
       home,
       registry: crewRegistry,
@@ -194,7 +195,7 @@ export function getStation(): Station {
           ptyhost: () => launcher.host(),
           readSmoke: () => {
             try {
-              return readFileSync(join(mothershipHome(), SMOKE_FILE), "utf8");
+              return readFileSync(join(spaceshipHome(), SMOKE_FILE), "utf8");
             } catch {
               return null;
             }

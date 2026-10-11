@@ -18,7 +18,7 @@ export interface Outcome {
 }
 
 export interface SmokeRunOptions {
-  /** $MOTHERSHIP_HOME: smoke.json and smoke/<id>/ evidence go here. */
+  /** $SPACESHIP_HOME: smoke.json and smoke/<id>/ evidence go here. */
   home: string;
   model: string;
   now?: () => number;

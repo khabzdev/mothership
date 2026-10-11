@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { startPtyHost } from "./server.ts";
 
-const home = process.env.MOTHERSHIP_HOME ?? join(homedir(), ".mothership");
+const home = process.env.SPACESHIP_HOME ?? join(homedir(), ".spaceship");
 const host = await startPtyHost({ home });
 
 const shutdown = async () => {

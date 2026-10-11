@@ -1,6 +1,6 @@
 // The real-claude smoke: `vp run smoke:real` in apps/station. Never part of plain `vp test`.
 import { afterAll, beforeAll, expect, test } from "vite-plus/test";
-import { mothershipHome } from "../src/shared/db/client.server";
+import { spaceshipHome } from "../src/shared/home.server";
 import { claudeBasics } from "./claude-basics";
 import { claudeFlows } from "./claude-flows";
 import { ghChecks } from "./gh";
@@ -15,7 +15,7 @@ const GROUPS: SmokeGroup[] = [claudeBasics, claudeFlows, ghChecks];
 
 const model = smokeModel();
 const ctx: SmokeContext = {
-  run: new SmokeRun({ home: mothershipHome(), model, secrets: () => ctx.harness?.secrets() ?? [] }),
+  run: new SmokeRun({ home: spaceshipHome(), model, secrets: () => ctx.harness?.secrets() ?? [] }),
   model,
   harness: null,
   harnessError: "",
@@ -32,7 +32,7 @@ function finish() {
     ctx.versions,
     GROUPS.flatMap((group) => group.ids),
   );
-  console.log(`\n${table(file)}\n\nWrote ${mothershipHome()}/smoke.json\n`);
+  console.log(`\n${table(file)}\n\nWrote ${spaceshipHome()}/smoke.json\n`);
 }
 
 /** Interrupted: still record what ran, and leave nothing behind. */
