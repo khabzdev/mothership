@@ -163,12 +163,17 @@ export class RankService {
       .where(eq(missionPrs.url, opened.url))
       .run();
     this.#change(deckId, opened.name, { merged: 1 });
+    // The mission's verdict is now "Shipped".
+    this.#broadcast({ type: "deck.log", deckId });
     return true;
   }
 
-  /** A pull request closed without merging: it leaves the reconcile (merged ones stay as they are). */
-  onClosed(deckId: string, url: string): void {
-    this.#db
+  /**
+   * A pull request closed without merging: it leaves the reconcile (merged ones stay as they are).
+   * True only when this call marked it.
+   */
+  onClosed(deckId: string, url: string): boolean {
+    const { changes } = this.#db
       .update(missionPrs)
       .set({ closedAt: Date.now() })
       .where(
@@ -180,6 +185,9 @@ export class RankService {
         ),
       )
       .run();
+    if (changes === 0) return false;
+    this.#broadcast({ type: "deck.log", deckId });
+    return true;
   }
 
   /** Pull requests opened in the last 30 days not yet seen merged or closed, oldest first. */

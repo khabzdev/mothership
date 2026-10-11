@@ -15,10 +15,7 @@ import {
 import type { MissionEnd } from "../crew/service.server";
 import { parseFindings, type Finding } from "../inspection/model";
 import { pointsOf, rankOf } from "../ranks/model";
-import { missionId, missionVerdict, type Outcome, type VerdictKind } from "./model";
-
-/** How many missions the log lists at a time. */
-export const LOG_PAGE = 30;
+import { LOG_PAGE, missionId, missionVerdict, type Outcome, type VerdictKind } from "./model";
 
 /** The most of a task's first line the log keeps. */
 const TASK_CHARS = 200;

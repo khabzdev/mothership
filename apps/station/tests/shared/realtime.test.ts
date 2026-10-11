@@ -146,6 +146,18 @@ describe("applyServerMsg", () => {
     expect(realtimeKeys.checks("d1")).toEqual(["decks", "d1", "checks"]);
   });
 
+  test("a deck.log makes the deck's log stale, the list and its entries alike", () => {
+    const qc = new QueryClient();
+    qc.setQueryData(realtimeKeys.log("d1"), []);
+    qc.setQueryData([...realtimeKeys.log("d1"), "m1"], {});
+    qc.setQueryData(realtimeKeys.log("d2"), []);
+    applyServerMsg(qc, { type: "deck.log", deckId: "d1" });
+    expect(qc.getQueryState(realtimeKeys.log("d1"))?.isInvalidated).toBe(true);
+    expect(qc.getQueryState([...realtimeKeys.log("d1"), "m1"])?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(realtimeKeys.log("d2"))?.isInvalidated).toBe(false);
+    expect(realtimeKeys.log("d1")).toEqual(["decks", "d1", "log"]);
+  });
+
   test("a deck.lessons makes that deck's lessons stale", () => {
     const qc = new QueryClient();
     qc.setQueryData(realtimeKeys.lessons("d1"), []);

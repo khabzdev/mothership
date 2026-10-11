@@ -1,3 +1,39 @@
+/** How many missions the log lists at a time. */
+export const LOG_PAGE = 30;
+
+const asRecord = (input: unknown) =>
+  (typeof input === "object" && input !== null ? input : {}) as Record<string, unknown>;
+
+function requiredId(o: Record<string, unknown>, key: string): string {
+  const value = typeof o[key] === "string" ? o[key].trim() : "";
+  if (!value) throw new Error(`${key} is required`);
+  return value;
+}
+
+/** Where the next page of the log starts: past this mission. */
+export interface LogCursor {
+  endedAt: number;
+  id: string;
+}
+
+export function parseLogInput(input: unknown): { deckId: string; before?: LogCursor } {
+  const o = asRecord(input);
+  const deckId = requiredId(o, "deckId");
+  if (o.before === undefined) return { deckId };
+  const before = asRecord(o.before);
+  if (typeof before.endedAt !== "number" || !Number.isFinite(before.endedAt))
+    throw new Error("before.endedAt must be a number");
+  return { deckId, before: { endedAt: before.endedAt, id: requiredId(before, "id") } };
+}
+
+export function parseMissionInput(input: unknown): { missionId: string } {
+  return { missionId: requiredId(asRecord(input), "missionId") };
+}
+
+export function parseRunInput(input: unknown): { preflightId: string } {
+  return { preflightId: requiredId(asRecord(input), "preflightId") };
+}
+
 /** A mission's id: its crew member and when it started, so the debrief can tag lessons before it's logged. */
 export function missionId(crewId: string, startedAt: number): string {
   return `${crewId}:${startedAt}`;

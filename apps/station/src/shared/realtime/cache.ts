@@ -8,6 +8,8 @@ export const realtimeKeys = {
   checks: (deckId: string) => ["decks", deckId, "checks"] as const,
   ranks: (crewId: string) => ["ranks", crewId] as const,
   lessons: (deckId: string) => ["decks", deckId, "lessons"] as const,
+  /** The Captain's log: the list and each entry share this prefix. */
+  log: (deckId: string) => ["decks", deckId, "log"] as const,
   preflight: (crewId: string) => ["preflight", crewId] as const,
   brief: (crewId: string) => ["brief", crewId] as const,
   inspection: (crewId: string) => ["inspection", crewId] as const,
@@ -36,6 +38,8 @@ export function applyServerMsg(queryClient: QueryClient, msg: ServerMsg): void {
     });
   else if (msg.type === "deck.lessons")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.lessons(msg.deckId) });
+  else if (msg.type === "deck.log")
+    void queryClient.invalidateQueries({ queryKey: realtimeKeys.log(msg.deckId) });
   else if (msg.type === "crew.preflight")
     void queryClient.invalidateQueries({ queryKey: realtimeKeys.preflight(msg.crewId) });
   else if (msg.type === "crew.brief")

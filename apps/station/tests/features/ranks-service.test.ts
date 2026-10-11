@@ -270,6 +270,25 @@ describe("RankService", () => {
     expect(ranks.record("deck-1", "Nova").merged).toBe(1);
   });
 
+  test("a credited merge or a real close refreshes the deck's log, nothing else does", async () => {
+    const nova = await hire();
+    pr(nova.id, 1);
+    pr(nova.id, 2);
+    const logged = () => sent.filter((m) => m.type === "deck.log");
+    sent = [];
+    ranks.onMerged("deck-1", { url: "https://gh/pr/404", branch: "" });
+    ranks.onClosed("deck-1", "https://gh/pr/404");
+    expect(logged()).toEqual([]);
+    expect(ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" })).toBe(true);
+    expect(logged()).toEqual([{ type: "deck.log", deckId: "deck-1" }]);
+    ranks.onMerged("deck-1", { url: "https://gh/pr/1", branch: "" });
+    ranks.onClosed("deck-1", "https://gh/pr/1");
+    expect(logged()).toHaveLength(1);
+    expect(ranks.onClosed("deck-1", "https://gh/pr/2")).toBe(true);
+    expect(ranks.onClosed("deck-1", "https://gh/pr/2")).toBe(false);
+    expect(logged()).toHaveLength(2);
+  });
+
   test("a pull request credits once, stamped with its merge time", async () => {
     const nova = await hire();
     pr(nova.id);

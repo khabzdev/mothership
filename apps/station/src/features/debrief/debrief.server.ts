@@ -285,6 +285,8 @@ export class DebriefService {
       return { ok: false, message: `Already ${now?.state ?? row.state}` };
     }
     this.#changed(row.deckId);
+    // The log shows a mission's lessons.
+    if (row.missionId !== null) this.#broadcast({ type: "deck.log", deckId: row.deckId });
     return { ok: true };
   }
 

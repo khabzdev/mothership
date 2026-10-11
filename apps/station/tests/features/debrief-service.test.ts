@@ -575,6 +575,27 @@ describe("DebriefService lessons", () => {
     );
   });
 
+  test("a lesson from a mission refreshes the log when it moves; one without doesn't", () => {
+    const [a, b, c] = seed(3);
+    db.update(lessons).set({ missionId: "m1" }).where(eq(lessons.id, a!)).run();
+    db.update(lessons).set({ missionId: "m1" }).where(eq(lessons.id, b!)).run();
+    sent = [];
+    debrief.keep(a!);
+    expect(sent).toContainEqual({ type: "deck.log", deckId: "deck-1" });
+    sent = [];
+    debrief.retire(a!);
+    expect(sent).toContainEqual({ type: "deck.log", deckId: "deck-1" });
+    sent = [];
+    debrief.drop(b!);
+    expect(sent).toContainEqual({ type: "deck.log", deckId: "deck-1" });
+    sent = [];
+    debrief.drop(c!);
+    expect(sent.some((m) => m.type === "deck.log")).toBe(false);
+    sent = [];
+    debrief.drop(b!); // already dropped: nothing changed
+    expect(sent.some((m) => m.type === "deck.log")).toBe(false);
+  });
+
   test("a 13th kept lesson waits for one to retire", () => {
     const ids = seed(13);
     for (const id of ids.slice(0, 12)) expect(debrief.keep(id)).toEqual({ ok: true });
