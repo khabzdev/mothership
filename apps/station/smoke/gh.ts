@@ -9,7 +9,7 @@ import {
   toIssue,
   toPull,
 } from "../src/features/github/github.server";
-import { checksOf } from "../src/features/github/model";
+import { checksOf, type GhPull } from "../src/features/github/model";
 import { openPrForBranchArgs } from "../src/features/pr/pr.server";
 import type { SmokeContext, SmokeGroup } from "./group";
 import { runCheck, type Outcome, type SmokeRun } from "./results";
@@ -55,7 +55,33 @@ async function gh(repo: string, args: string[]): Promise<string> {
 }
 
 const list = async (repo: string, args: string[]) => JSON.parse(await gh(repo, args)) as Raw[];
-const first = (items: Raw[]) => Number(items[0]?.number);
+
+/** A picked item, or why there's none: a mapping that loses the number fails, never skips. */
+export type Picked<T> = { item: T } | { outcome: Outcome };
+
+/** The first of `items` as the station parses it, for a view check to open. */
+export function firstOf<T extends { number: number }>(
+  items: Raw[],
+  parse: (raw: Raw) => T,
+  what: string,
+): Picked<T> {
+  if (!items.length) return { outcome: skipped(`no ${what} to view`) };
+  const item = parse(items[0]!);
+  if (!(item.number > 0)) {
+    return { outcome: failed(`the first of the ${what} parsed without a number`) };
+  }
+  return { item };
+}
+
+/** gh.pr-branch's PR: the first open one, parsed, with the branch and url it is asked about. */
+export function branchPick(open: Raw[]): Picked<GhPull> {
+  if (!open.length) return { outcome: skipped("no open pull requests") };
+  const pull = toPull(open[0]!);
+  if (!pull.headRefName || !pull.url) {
+    return { outcome: failed(`open PR #${pull.number} parsed without a branch or url`) };
+  }
+  return { item: pull };
+}
 
 /** gh.issues: the open and closed lists, every item through `toIssue`. */
 export function issuesVerdict(open: Raw[], closed: Raw[]): Outcome {
@@ -70,13 +96,16 @@ export function issuesVerdict(open: Raw[], closed: Raw[]): Outcome {
 export function pullsVerdict(open: Raw[], merged: Raw[], closed: Raw[]): Outcome {
   const pulls = [...open, ...merged, ...closed].map(toPull);
   if (!pulls.length) return skipped("no pull requests in the repo to parse");
+  const bad = pulls.find((p) => !(p.number > 0) || !p.url);
+  if (bad) return failed(`PR #${bad.number} parsed without a number or url`);
   const raw = [...open, ...merged, ...closed];
   const badState = raw.findIndex((p) => !STATES.includes(String(p.state).toUpperCase()));
   if (badState >= 0)
     return failed(`PR #${pulls[badState]!.number} has state ${String(raw[badState]!.state)}`);
   const noStamp = merged.map(toPull).find((p) => p.state !== "MERGED" || p.mergedAt === undefined);
   if (noStamp) return failed(`merged PR #${noStamp.number} has no mergedAt`);
-  return passed(`${open.length} open · ${merged.length} merged · ${closed.length} closed`);
+  const counts = `${open.length} open · ${merged.length} merged · ${closed.length} closed`;
+  return passed(merged.length ? counts : `${counts} · mergedAt unverified: no merged PRs`);
 }
 
 /** gh.issue-view: the detail carries its comments as a list. */
@@ -100,10 +129,11 @@ export function pullViewVerdict(view: Raw, number: number): Outcome {
   );
 }
 
-/** gh.pr-branch: the open-PR-for-branch query prints the PR's url. */
-export function branchVerdict(output: string, branch: string): Outcome {
+/** gh.pr-branch: the open-PR-for-branch query prints the url of the PR the branch was picked from. */
+export function branchVerdict(output: string, branch: string, expected: string): Outcome {
   const url = output.trim();
   if (!/^https?:\/\/\S+\/pull\/\d+$/.test(url)) return failed(`no pull request url for ${branch}`);
+  if (url !== expected) return failed(`${branch} → ${url}, expected ${expected}`);
   return passed(`${branch} → ${url}`);
 }
 
@@ -146,8 +176,9 @@ async function checkAll(run: SmokeRun, repo: string): Promise<void> {
   });
 
   await runCheck(run, "gh.issue-view", async () => {
-    const number = first(issues.flat());
-    if (!(number > 0)) return skipped("no issues to view");
+    const pick = firstOf(issues.flat(), toIssue, "issues");
+    if ("outcome" in pick) return pick.outcome;
+    const { number } = pick.item;
     const view = JSON.parse(
       await gh(repo, ["issue", "view", String(number), "--json", ISSUE_FIELDS]),
     ) as Raw;
@@ -155,8 +186,9 @@ async function checkAll(run: SmokeRun, repo: string): Promise<void> {
   });
 
   await runCheck(run, "gh.pr-view", async () => {
-    const number = first(pulls.flat());
-    if (!(number > 0)) return skipped("no pull requests to view");
+    const pick = firstOf(pulls.flat(), toPull, "pull requests");
+    if ("outcome" in pick) return pick.outcome;
+    const { number } = pick.item;
     const view = JSON.parse(
       await gh(repo, ["pr", "view", String(number), "--json", PULL_VIEW_FIELDS]),
     ) as Raw;
@@ -164,10 +196,10 @@ async function checkAll(run: SmokeRun, repo: string): Promise<void> {
   });
 
   await runCheck(run, "gh.pr-branch", async () => {
-    const open = pulls[0]?.[0];
-    const branch = open ? toPull(open).headRefName : "";
-    if (!branch) return skipped("no open pull requests");
-    return branchVerdict(await gh(repo, openPrForBranchArgs(branch)), branch);
+    const pick = branchPick(pulls[0] ?? []);
+    if ("outcome" in pick) return pick.outcome;
+    const { headRefName: branch, url } = pick.item;
+    return branchVerdict(await gh(repo, openPrForBranchArgs(branch)), branch, url);
   });
 }
 

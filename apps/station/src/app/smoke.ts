@@ -77,7 +77,9 @@ export function smokeStatus(
   claudeVersion: string | null,
   now: number,
 ): SmokeStatus {
-  if (!file) return { state: "none", line: "No smoke run yet", failed: [], checks: [] };
+  // A run that checked nothing proves nothing.
+  if (!file?.checks.length)
+    return { state: "none", line: "No smoke run yet", failed: [], checks: [] };
   const { checks, ranAt } = file;
   const failed = checks.filter((c) => c.state === "failed");
   if (failed.length) {

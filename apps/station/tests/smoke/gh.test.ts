@@ -1,12 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   assertReadOnly,
+  branchPick,
   branchVerdict,
+  firstOf,
   issuesVerdict,
   issueViewVerdict,
   pullsVerdict,
   pullViewVerdict,
 } from "../../smoke/gh.ts";
+import { toIssue, toPull } from "../../src/features/github/github.server.ts";
 
 describe("assertReadOnly", () => {
   test.each([
@@ -80,6 +83,57 @@ describe("pullsVerdict", () => {
   test("skips when there is nothing to parse", () => {
     expect(pullsVerdict([], [], []).state).toBe("skipped");
   });
+  test("fails on an item without a number or url", () => {
+    expect(
+      pullsVerdict([{ state: "OPEN", url: "https://github.com/a/b/pull/1" }], [], []).state,
+    ).toBe("failed");
+    expect(pullsVerdict([{ number: 1, state: "OPEN" }], [], []).state).toBe("failed");
+  });
+  test("says mergedAt went unverified without merged PRs, and still passes", () => {
+    expect(pullsVerdict([pull(1, "OPEN")], [], [])).toEqual({
+      state: "passed",
+      detail: "1 open · 0 merged · 0 closed · mergedAt unverified: no merged PRs",
+    });
+  });
+});
+
+describe("firstOf", () => {
+  test("the first item, parsed", () => {
+    expect(firstOf([issue(3), issue(4)], toIssue, "issues")).toMatchObject({
+      item: { number: 3 },
+    });
+    expect(firstOf([pull(5, "OPEN")], toPull, "pull requests")).toMatchObject({
+      item: { number: 5, url: "https://github.com/a/b/pull/5" },
+    });
+  });
+  test("skips an empty list", () => {
+    expect(firstOf([], toIssue, "issues")).toEqual({
+      outcome: { state: "skipped", detail: "no issues to view" },
+    });
+  });
+  test("fails when the parse loses the number", () => {
+    const out = firstOf([{ id: 3, state: "OPEN" }], toIssue, "issues");
+    expect(out).toMatchObject({ outcome: { state: "failed" } });
+  });
+});
+
+describe("branchPick", () => {
+  test("the first open PR, parsed", () => {
+    expect(branchPick([pull(9, "OPEN", { headRefName: "feat/x" })])).toMatchObject({
+      item: { number: 9, headRefName: "feat/x", url: "https://github.com/a/b/pull/9" },
+    });
+  });
+  test("skips without open PRs", () => {
+    expect(branchPick([])).toEqual({
+      outcome: { state: "skipped", detail: "no open pull requests" },
+    });
+  });
+  test("fails when the parse loses the branch or url", () => {
+    expect(branchPick([pull(9, "OPEN")])).toMatchObject({ outcome: { state: "failed" } });
+    expect(branchPick([{ number: 9, state: "OPEN", headRefName: "feat/x" }])).toMatchObject({
+      outcome: { state: "failed" },
+    });
+  });
 });
 
 describe("view verdicts", () => {
@@ -98,11 +152,17 @@ describe("view verdicts", () => {
 });
 
 describe("branchVerdict", () => {
-  test("passes on a pull request url", () => {
-    expect(branchVerdict("https://github.com/a/b/pull/9\n", "feat/x").state).toBe("passed");
+  const picked = "https://github.com/a/b/pull/9";
+  test("passes on the picked PR's url", () => {
+    expect(branchVerdict(`${picked}\n`, "feat/x", picked).state).toBe("passed");
   });
   test("fails on empty or other output", () => {
-    expect(branchVerdict("", "feat/x").state).toBe("failed");
-    expect(branchVerdict("nope", "feat/x").state).toBe("failed");
+    expect(branchVerdict("", "feat/x", picked).state).toBe("failed");
+    expect(branchVerdict("nope", "feat/x", picked).state).toBe("failed");
+  });
+  test("fails on another PR's url", () => {
+    const out = branchVerdict("https://github.com/a/b/pull/10\n", "feat/x", picked);
+    expect(out.state).toBe("failed");
+    expect(out.detail).toContain(picked);
   });
 });

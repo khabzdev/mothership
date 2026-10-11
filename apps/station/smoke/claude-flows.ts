@@ -13,6 +13,9 @@ import type { Harness, Signal } from "./harness";
 import { CHECK_TIMEOUT_MS, runCheck, type Outcome, type SmokeRun } from "./results";
 
 const PLAN_TASK = "Add a CONTRIBUTING.md with one line.";
+/** What PLAN_TASK writes once the plan is approved. */
+const PLAN_FILE = "CONTRIBUTING.md";
+const EDIT_TOOLS = ["Write", "Edit", "MultiEdit"];
 const REVISE_REASON = "Also add a line about tests.";
 const QUESTION = "What is the codeword?";
 const PWNED = "smoke-pwned";
@@ -56,6 +59,30 @@ export function codewordSeen(lines: string[], code: string): boolean {
 /** A plan signal (PermissionRequest ExitPlanMode) with a non-empty plan. */
 export function isPlan(signal: Signal): boolean {
   return signal.signal?.type === "plan" && signal.signal.plan.trim() !== "";
+}
+
+/** A PreToolUse that writes a file, outside Claude Code's own plan files. */
+function editTarget(signal: Signal): string | null {
+  const p = signal.payload as { tool_name?: unknown; tool_input?: { file_path?: unknown } } | null;
+  if (signal.event !== "PreToolUse" || !EDIT_TOOLS.includes(String(p?.tool_name))) return null;
+  const path = typeof p?.tool_input?.file_path === "string" ? p.tool_input.file_path : "";
+  // Plan mode keeps its plan in ~/.claude/plans: editing it is more planning, not work.
+  if (!path || path.includes("/.claude/")) return null;
+  return `${String(p?.tool_name)} ${path}`;
+}
+
+/**
+ * claude.plan-approve, after the dialog closed: keep-planning closes it too, so only work begun
+ * (a write, or PLAN_FILE on disk) and no second plan prove the digit approved.
+ */
+export function approveVerdict(signalsAfter: Signal[], fileExists: boolean): Outcome {
+  if (signalsAfter.some(isPlan)) {
+    return failed("a second plan signal after the answer — the approve digit revised");
+  }
+  const edit = signalsAfter.map(editTarget).find((t) => t !== null);
+  if (edit) return passed(`work began: ${edit}`);
+  if (fileExists) return passed(`work began: ${PLAN_FILE} written`);
+  return failed("dialog closed but no work started — the approve digit may have revised");
 }
 
 /** Why a review run can't be judged: it failed, or its stdout is no `claude -p` envelope. */
@@ -216,9 +243,27 @@ async function answerPlan(
 
 async function planApprove(run: SmokeRun, h: Harness): Promise<Outcome> {
   const id = "claude.plan-approve";
-  const answered = await answerPlan(run, h, id, "smoke-approve", "approve");
+  const crewId = "smoke-approve";
+  const left = leftOf(Date.now());
+  const answered = await answerPlan(run, h, id, crewId, "approve");
   if (!("key" in answered)) return answered;
-  return passed(`plan signal · approve is ${answered.key} · dialog gone within 5 s`);
+  // Everything after the plan that was answered: work begun, or another plan.
+  const from = h.signals(crewId).findIndex(isPlan) + 1;
+  const wait = Math.max(left(), 0);
+  await h
+    .waitFor(crewId, (s, i) => i >= from && (isPlan(s) || editTarget(s) !== null), wait)
+    .catch(() => {});
+  const verdict = approveVerdict(
+    h.signals(crewId).slice(from),
+    existsSync(join(h.repo, PLAN_FILE)),
+  );
+  // screen.txt keeps the dialog as it was answered; this is where the approval got to.
+  const { lines } = await screenUntil(h, crewId, () => true, 0);
+  run.evidence(id, "hooks.jsonl", jsonLines(h.signals(crewId)));
+  run.evidence(id, "screen-final.txt", `${lines.join("\n")}\n`);
+  return verdict.state === "passed"
+    ? passed(`approve is ${answered.key} · dialog gone · ${verdict.detail}`)
+    : failed(`pressed ${answered.key}: ${verdict.detail} (waited ${secs(wait)})`);
 }
 
 async function planRevise(run: SmokeRun, h: Harness): Promise<Outcome> {

@@ -298,9 +298,16 @@ export class GitHubBoards {
     }
   }
 
-  /** The one place a merge is told to the launch listeners. */
+  /** The one place a merge is told to the launch listeners. A listener that throws can neither
+   *  turn the board fetch into an error board nor stop the reconcile's remaining lookups. */
   #merged(deckId: string, pull: GhPull, recent: boolean): void {
-    for (const listener of this.#launchListeners) listener({ deckId, pull, recent });
+    for (const listener of this.#launchListeners) {
+      try {
+        listener({ deckId, pull, recent });
+      } catch (error) {
+        console.warn("[github] launch listener failed:", error);
+      }
+    }
   }
 
   /** Mission PRs that merged without a transition being seen (between polls, or while the

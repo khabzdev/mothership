@@ -38,7 +38,7 @@ function paint(
   // The last real-claude smoke, under the header.
   c.font = '500 22px "Martian Mono", ui-monospace, monospace';
   c.fillStyle = smoke.warn ? KIT.amber : "#9a9382";
-  c.fillText(smoke.line, 28, 96);
+  c.fillText(smoke.line, 28, 96, w - 2 * 28);
 
   // Lessons waiting at the Debrief (L), along the bottom on the right.
   if (lessonsPending > 0) {

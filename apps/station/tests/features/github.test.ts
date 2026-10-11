@@ -207,9 +207,9 @@ describe("merge reconcile", () => {
     expect(closed).toEqual([["d", url(8)]]);
   });
 
-  test("a failing launch listener is not mistaken for a failed lookup", async () => {
+  test("a failing launch listener neither fails a lookup nor stops the next", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { boards, viewed } = setup(
+    const { boards, viewed, launches } = setup(
       {
         pulls: [],
         views: { [url(7)]: async () => pr(7, "MERGED"), [url(8)]: async () => pr(8, "MERGED") },
@@ -224,8 +224,27 @@ describe("merge reconcile", () => {
     });
     await boards.board("d", "/repo");
     await flush();
-    expect(viewed).toEqual([url(7)]);
-    expect(warn).toHaveBeenCalledWith("[github] reconcile failed:", expect.any(Error));
+    expect(viewed).toEqual([url(7), url(8)]);
+    expect(launches.map((l) => l.pull.number)).toEqual([7, 8]);
+    expect(warn).toHaveBeenCalledWith("[github] launch listener failed:", expect.any(Error));
+    expect(warn).not.toHaveBeenCalledWith("[github] reconcile failed:", expect.anything());
+    warn.mockRestore();
+  });
+
+  test("a launch listener throwing on a transition leaves the board its data", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const state = { pulls: [pr(7, "OPEN")] as object[] };
+    const { boards, launches } = setup(state, []);
+    boards.onLaunch(() => {
+      throw new Error("credit failed");
+    });
+    await boards.board("d", "/repo");
+    state.pulls = [pr(7, "MERGED")];
+    const board = await boards.board("d", "/repo", true);
+    expect(board.error).toBeUndefined();
+    expect(board.pulls.map((p) => [p.number, p.state])).toEqual([[7, "MERGED"]]);
+    expect(launches.map((l) => l.pull.number)).toEqual([7]);
+    expect(warn).toHaveBeenCalledWith("[github] launch listener failed:", expect.any(Error));
     warn.mockRestore();
   });
 

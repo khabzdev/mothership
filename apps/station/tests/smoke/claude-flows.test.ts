@@ -1,6 +1,7 @@
 import { claudeCode } from "@mothership/providers";
 import { describe, expect, test } from "vite-plus/test";
 import {
+  approveVerdict,
   awaitScreen,
   codeword,
   codewordSeen,
@@ -69,6 +70,45 @@ describe("isPlan", () => {
     expect(isPlan(plan(undefined))).toBe(false);
     expect(isPlan(hook("PreToolUse", { tool_name: "ExitPlanMode", tool_input: {} }))).toBe(false);
     expect(isPlan(hook("Stop"))).toBe(false);
+  });
+});
+
+describe("approveVerdict", () => {
+  const write = (tool: string, file_path: string) =>
+    hook("PreToolUse", { tool_name: tool, tool_input: { file_path, content: "x" } });
+
+  test("work started: a Write, Edit or MultiEdit in the repo", () => {
+    for (const tool of ["Write", "Edit", "MultiEdit"]) {
+      expect(approveVerdict([write(tool, "/tmp/repo/CONTRIBUTING.md")], false).state).toBe(
+        "passed",
+      );
+    }
+  });
+
+  test("work started: CONTRIBUTING.md exists", () => {
+    expect(approveVerdict([], true).state).toBe("passed");
+  });
+
+  test("a second plan signal fails, even with work", () => {
+    const out = approveVerdict(
+      [write("Write", "/tmp/repo/CONTRIBUTING.md"), plan("# Again")],
+      true,
+    );
+    expect(out.state).toBe("failed");
+    expect(out.detail).toContain("second plan");
+  });
+
+  test("nothing fails", () => {
+    expect(approveVerdict([], false)).toEqual({
+      state: "failed",
+      detail: "dialog closed but no work started — the approve digit may have revised",
+    });
+  });
+
+  test("reads, and edits to Claude Code's own plan file, are not work", () => {
+    const read = hook("PreToolUse", { tool_name: "Read", tool_input: { file_path: "/r/a" } });
+    const planFile = write("Edit", "/Users/x/.claude/plans/plan.md");
+    expect(approveVerdict([read, planFile], false).state).toBe("failed");
   });
 });
 

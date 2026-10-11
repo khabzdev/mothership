@@ -22,6 +22,14 @@ describe("smokeStatus", () => {
     });
   });
 
+  test("a file without checks is none", () => {
+    expect(smokeStatus(file({ checks: [] }), "2.1.104", NOW)).toMatchObject({
+      state: "none",
+      line: "No smoke run yet",
+      checks: [],
+    });
+  });
+
   test("passed shows the age and version; skipped never fails", () => {
     const s = smokeStatus(file(), "2.1.104", NOW);
     expect(s.state).toBe("passed");
