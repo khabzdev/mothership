@@ -51,7 +51,7 @@ export function reviewPrompt(input: {
 }
 
 /** The first value that parses from the model's text: last fenced block first, else the whole text. */
-function extractJson(text: string): unknown {
+export function extractJson(text: string): unknown {
   const blocks = [...text.matchAll(/```(?:json)?[ \t]*\r?\n([\s\S]*?)```/gi)].map((m) => m[1]!);
   for (const body of [...blocks.reverse(), text]) {
     try {
@@ -74,7 +74,7 @@ const text = (value: unknown, lines = false): string => {
 };
 
 /** `value` cut to `max` characters, ellipsis included; counts code points so an emoji isn't halved. */
-function clip(value: string, max: number): string {
+export function clip(value: string, max: number): string {
   const chars = Array.from(value);
   return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : value;
 }
@@ -121,6 +121,16 @@ export function reviewFailure(stdout: string): string | null {
     (subtype !== "success" && subtype) ||
     "the review reported an error";
   return clip(text, FAILURE_MAX);
+}
+
+/** The `result` text of a `claude -p --output-format json` envelope; null when it has none. */
+export function resultText(stdout: string): string | null {
+  try {
+    const result = (JSON.parse(stdout) as { result?: unknown }).result;
+    return typeof result === "string" ? result : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The findings in `claude -p --output-format json` output; unreadable output is one note. */
